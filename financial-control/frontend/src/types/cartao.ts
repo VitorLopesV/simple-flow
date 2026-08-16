@@ -1,0 +1,82 @@
+import type { ID, OpcaoSelect, Periodo } from './common'
+
+export type Bandeira = 'VISA' | 'MASTERCARD' | 'ELO' | 'AMEX' | 'HIPERCARD'
+
+export interface Cartao {
+  id: ID
+  nome: string
+  bandeira: Bandeira
+  /** Últimos 4 dígitos — nunca armazenamos o número completo. */
+  ultimosDigitos: string
+  limite: number
+  /** Dia do mês em que a fatura fecha (1-28). */
+  diaFechamento: number
+  /** Dia do mês de vencimento da fatura (1-28). */
+  diaVencimento: number
+  cor: string
+  ativo: boolean
+  criadoEm: string
+}
+
+export type CartaoPayload = Omit<Cartao, 'id' | 'criadoEm'>
+
+export interface TransacaoCartao {
+  id: ID
+  cartaoId: ID
+  faturaId: ID
+  descricao: string
+  valor: number
+  data: string
+  categoriaId: ID
+  parcelaAtual: number
+  totalParcelas: number
+}
+
+export type FaturaStatus = 'ABERTA' | 'FECHADA' | 'PAGA' | 'ATRASADA'
+
+export interface Fatura {
+  id: ID
+  cartaoId: ID
+  /** Competência no formato `YYYY-MM`. */
+  competencia: string
+  fechamento: string
+  vencimento: string
+  total: number
+  status: FaturaStatus
+  pagoEm?: string | null
+}
+
+export interface FaturaDetalhada extends Fatura {
+  transacoes: TransacaoCartao[]
+}
+
+export interface CartaoComFatura {
+  cartao: Cartao
+  fatura: FaturaDetalhada | null
+  /** Percentual do limite comprometido pela fatura em aberto (0-100). */
+  usoLimite: number
+}
+
+export interface FaturaFiltro {
+  cartaoId?: ID | null
+  periodo: Periodo
+}
+
+export const BANDEIRA_LABEL: Record<Bandeira, string> = {
+  VISA: 'Visa',
+  MASTERCARD: 'Mastercard',
+  ELO: 'Elo',
+  AMEX: 'American Express',
+  HIPERCARD: 'Hipercard',
+}
+
+export const BANDEIRA_OPCOES: OpcaoSelect<Bandeira>[] = (
+  Object.keys(BANDEIRA_LABEL) as Bandeira[]
+).map((value) => ({ label: BANDEIRA_LABEL[value], value }))
+
+export const FATURA_STATUS_LABEL: Record<FaturaStatus, string> = {
+  ABERTA: 'Aberta',
+  FECHADA: 'Fechada',
+  PAGA: 'Paga',
+  ATRASADA: 'Atrasada',
+}
