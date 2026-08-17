@@ -47,21 +47,30 @@ function definirAno(evento: Event): void {
       <label class="sr-only" for="seletor-mes">Mês</label>
       <select
         id="seletor-mes"
-        class="focus-visible:outline-ring cursor-pointer rounded-md bg-transparent px-1 py-1 text-sm font-medium focus-visible:outline-2"
+        class="focus-visible:outline-ring [color-scheme:dark] cursor-pointer rounded-md bg-transparent px-1 py-1 text-sm font-medium focus-visible:outline-2"
         :value="modelo.mes"
         @change="definirMes"
       >
-        <option v-for="(nome, indice) in MESES" :key="nome" :value="indice + 1">{{ nome }}</option>
+        <option
+          v-for="(nome, indice) in MESES"
+          :key="nome"
+          :value="indice + 1"
+          class="bg-slate-800 text-white"
+        >
+          {{ nome }}
+        </option>
       </select>
 
       <label class="sr-only" for="seletor-ano">Ano</label>
       <select
         id="seletor-ano"
-        class="focus-visible:outline-ring cursor-pointer rounded-md bg-transparent px-1 py-1 text-sm font-medium focus-visible:outline-2"
+        class="focus-visible:outline-ring [color-scheme:dark] cursor-pointer rounded-md bg-transparent px-1 py-1 text-sm font-medium focus-visible:outline-2"
         :value="modelo.ano"
         @change="definirAno"
       >
-        <option v-for="ano in anos" :key="ano" :value="ano">{{ ano }}</option>
+        <option v-for="ano in anos" :key="ano" :value="ano" class="bg-slate-800 text-white">
+          {{ ano }}
+        </option>
       </select>
     </div>
 
