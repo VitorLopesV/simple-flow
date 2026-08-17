@@ -3,6 +3,7 @@ import { ArrowDownCircle, ArrowUpCircle, CreditCard, LayoutDashboard, X } from '
 import type { Component } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
+import logoSimpleFlow from '@/img/simple-flow-logo.png'
 import { USE_MOCK } from '@/services/http'
 
 defineProps<{ aberto: boolean }>()
@@ -37,22 +38,15 @@ const itens: ItemMenu[] = [
     :class="aberto ? 'translate-x-0' : '-translate-x-full'"
     :aria-hidden="!aberto ? 'true' : undefined"
   >
-    <div class="border-border flex h-16 items-center justify-between gap-2 border-b px-5">
-      <RouterLink
-        :to="{ name: 'dashboard' }"
-        class="flex items-center gap-2 font-semibold"
-        @click="emit('fechar')"
-      >
-        <span class="bg-success/15 text-success flex size-8 items-center justify-center rounded-lg">
-          <ArrowUpCircle class="size-5" aria-hidden="true" />
-        </span>
-        <span>Controle<span class="text-muted-foreground font-normal">Financeiro</span></span>
+    <div class="border-border relative flex h-28 items-center justify-center border-b">
+      <RouterLink :to="{ name: 'dashboard' }" @click="emit('fechar')">
+        <img :src="logoSimpleFlow" alt="SimpleFlow" class="mx-auto w-[160px]" />
       </RouterLink>
 
       <BaseButton
         variante="ghost"
         tamanho="icon"
-        class="lg:hidden"
+        class="absolute top-3 right-3 lg:hidden"
         aria-label="Fechar menu"
         @click="emit('fechar')"
       >
