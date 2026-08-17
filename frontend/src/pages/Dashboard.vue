@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet } from '@lucide/vue'
+import { ArrowDownCircle, ArrowUpCircle, Wallet } from '@lucide/vue'
 import { computed, onMounted, watch } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
@@ -61,7 +61,7 @@ watch(
       />
     </template>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-3">
       <SummaryCard
         rotulo="Entradas"
         :valor="resumo?.totalEntradas ?? 0"
@@ -86,15 +86,6 @@ watch(
         :tom="dashboardStore.saldoPositivo ? 'sucesso' : 'perigo'"
         :variacao="null"
         :detalhe="dashboardStore.saldoPositivo ? 'sobrou no período' : 'déficit no período'"
-        :carregando="carregandoInicial"
-      />
-      <SummaryCard
-        rotulo="Faturas em aberto"
-        :valor="resumo?.totalFaturas ?? 0"
-        :icone="CreditCard"
-        tom="aviso"
-        :variacao="null"
-        detalhe="cartões de crédito"
         :carregando="carregandoInicial"
       />
     </div>

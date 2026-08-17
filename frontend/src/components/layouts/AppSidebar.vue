@@ -4,7 +4,6 @@ import type { Component } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
 import logoSimpleFlow from '@/img/simple-flow-logo.png'
-import { USE_MOCK } from '@/services/http'
 
 defineProps<{ aberto: boolean }>()
 const emit = defineEmits<{ fechar: [] }>()
@@ -68,10 +67,8 @@ const itens: ItemMenu[] = [
       </RouterLink>
     </nav>
 
-    <div v-if="USE_MOCK" class="border-border border-t p-3">
-      <p class="bg-warning-soft text-warning rounded-lg px-3 py-2 text-xs">
-        Modo demonstração: os dados são gerados localmente e não são persistidos.
-      </p>
+    <div class="border-border border-t p-3 text-center">
+      <p class="text-muted-foreground text-xs">Versão atual: 0.1.0</p>
     </div>
   </aside>
 </template>
