@@ -28,14 +28,15 @@ export const dashboardService = {
     if (USE_MOCK) {
       const db = await mockDb()
 
+      const todasSaidas = db.saidasComFaturas()
       const entradasDoMes = db.entradas.filter((entrada) => dentroDoPeriodo(entrada.data, periodo))
-      const saidasDoMes = db.saidas.filter((saida) => dentroDoPeriodo(saida.data, periodo))
+      const saidasDoMes = todasSaidas.filter((saida) => dentroDoPeriodo(saida.data, periodo))
 
       const totalEntradas = somar(entradasDoMes)
       const totalSaidas = somar(saidasDoMes)
 
       const serieEntradas = serie(db.entradas, periodo)
-      const serieSaidas = serie(db.saidas, periodo)
+      const serieSaidas = serie(todasSaidas, periodo)
 
       const competencia = toCompetencia(periodo)
       const totalFaturas = db.faturas

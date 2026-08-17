@@ -45,6 +45,7 @@ const SEMENTE_CATEGORIAS: Omit<Categoria, 'id'>[] = [
   { nome: 'Lazer', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#f43f5e' },
   { nome: 'Compras', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#a855f7' },
   { nome: 'Educação', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#3b82f6' },
+  { nome: 'Fatura de cartão', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#64748b' },
   // Renda
   { nome: 'Salário', tipo: 'RENDA', movimento: 'ENTRADA', cor: '#10b981' },
   { nome: 'Freelance', tipo: 'RENDA', movimento: 'ENTRADA', cor: '#06b6d4' },
@@ -321,6 +322,38 @@ function descricaoVariavel(categoria: string): string {
     default:
       return faker.helpers.arrayElement(['Curso online', 'Livro técnico', 'Mensalidade do curso'])
   }
+}
+
+/**
+ * Cada cartão com fatura no período vira uma "saída" derivada, com o valor
+ * sempre lido ao vivo da fatura — nunca duplicado/armazenado, então qualquer
+ * mudança no total da fatura (hoje só via seed; futuramente via lançamentos
+ * no cartão) já aparece aqui sem sincronização manual.
+ */
+function faturasComoSaidas(): Saida[] {
+  const categoriaFatura = categoriaPorNome('Fatura de cartão')
+  return faturas.map((fatura) => {
+    const cartao = cartoes.find((item) => item.id === fatura.cartaoId)
+    return {
+      id: `sai_fat_${fatura.id}`,
+      descricao: `Fatura – ${cartao?.nome ?? 'Cartão'}`,
+      valor: fatura.total,
+      data: fatura.vencimento,
+      categoriaId: categoriaFatura.id,
+      status: fatura.status === 'PAGA' ? 'PAGO' : 'PENDENTE',
+      formaPagamento: 'CARTAO_CREDITO',
+      cartaoId: fatura.cartaoId,
+      recorrente: true,
+      criadoEm: '',
+      atualizadoEm: '',
+      automatica: true,
+    }
+  })
+}
+
+/** Saídas reais + uma por fatura de cartão do período (ver `faturasComoSaidas`). */
+export function saidasComFaturas(): Saida[] {
+  return [...saidas, ...faturasComoSaidas()]
 }
 
 /** Data ISO de hoje — usada como valor padrão nos formulários. */

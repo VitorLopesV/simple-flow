@@ -122,6 +122,7 @@ function comoSaida(transacao: Transacao): Saida {
 
               <td v-if="ehSaida" class="px-5 py-3">
                 <button
+                  v-if="!comoSaida(transacao).automatica"
                   type="button"
                   class="focus-visible:outline-ring rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
                   :title="
@@ -135,6 +136,9 @@ function comoSaida(transacao: Transacao): Saida {
                     {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
                   </BaseBadge>
                 </button>
+                <BaseBadge v-else :tom="comoSaida(transacao).status === 'PAGO' ? 'sucesso' : 'aviso'">
+                  {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
+                </BaseBadge>
               </td>
 
               <td class="numero-tabular px-5 py-3 text-right font-semibold" :class="corValor">
@@ -142,7 +146,7 @@ function comoSaida(transacao: Transacao): Saida {
               </td>
 
               <td class="px-5 py-3">
-                <div class="flex justify-end gap-1">
+                <div v-if="!ehSaida || !comoSaida(transacao).automatica" class="flex justify-end gap-1">
                   <BaseButton
                     variante="ghost"
                     tamanho="icon"
@@ -161,6 +165,7 @@ function comoSaida(transacao: Transacao): Saida {
                     <Trash2 class="size-4" aria-hidden="true" />
                   </BaseButton>
                 </div>
+                <span v-else class="text-muted-foreground text-xs">Ver em Cartões</span>
               </td>
             </tr>
           </tbody>
@@ -191,7 +196,7 @@ function comoSaida(transacao: Transacao): Saida {
               {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
             </BaseBadge>
 
-            <div class="ml-auto flex gap-1">
+            <div v-if="!ehSaida || !comoSaida(transacao).automatica" class="ml-auto flex gap-1">
               <BaseButton
                 variante="ghost"
                 tamanho="icon"
@@ -210,6 +215,7 @@ function comoSaida(transacao: Transacao): Saida {
                 <Trash2 class="size-4" aria-hidden="true" />
               </BaseButton>
             </div>
+            <span v-else class="text-muted-foreground ml-auto text-xs">Ver em Cartões</span>
           </div>
         </li>
       </ul>

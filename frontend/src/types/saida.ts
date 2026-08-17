@@ -20,6 +20,8 @@ export interface Saida {
   observacao?: string
   criadoEm: string
   atualizadoEm: string
+  /** true = gerado automaticamente a partir da fatura de um cartão (não editável/removível diretamente). */
+  automatica?: boolean
 }
 
 export type SaidaPayload = Omit<Saida, 'id' | 'criadoEm' | 'atualizadoEm'>
