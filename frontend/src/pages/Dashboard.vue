@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ArrowDownCircle, ArrowUpCircle, Wallet } from '@lucide/vue'
-import { computed, onMounted, watch } from 'vue'
+import { ArrowDownCircle, ArrowUpCircle, Download, Wallet } from '@lucide/vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -11,6 +12,7 @@ import StatisticsChart from '@/components/features/StatisticsChart.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
 import { notificar } from '@/composables/useNotify'
+import { exportarRelatorioPdf } from '@/services/exportService'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
 import { formatCurrency } from '@/utils/currencyFormatter'
@@ -18,6 +20,20 @@ import { formatDate, formatPeriodo } from '@/utils/dateFormatter'
 
 const periodoStore = usePeriodoStore()
 const dashboardStore = useDashboardStore()
+
+const exportando = ref(false)
+
+async function exportarDados(): Promise<void> {
+  exportando.value = true
+  try {
+    await exportarRelatorioPdf(periodoStore.periodo)
+    notificar.sucesso('Relatório exportado', formatPeriodo(periodoStore.periodo))
+  } catch {
+    notificar.erro('Não foi possível gerar o PDF do relatório.')
+  } finally {
+    exportando.value = false
+  }
+}
 
 const resumo = computed(() => dashboardStore.resumo)
 const carregandoInicial = computed(() => dashboardStore.loading && !resumo.value)
@@ -59,6 +75,10 @@ watch(
         class="sm:hidden"
         @hoje="periodoStore.irParaHoje()"
       />
+      <BaseButton variante="outline" :carregando="exportando" @click="exportarDados">
+        <Download class="size-4" aria-hidden="true" />
+        Exportar dados
+      </BaseButton>
     </template>
 
     <div class="grid gap-4 sm:grid-cols-3">
