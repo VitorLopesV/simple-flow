@@ -1,23 +1,13 @@
 <script setup lang="ts">
 import { Moon, Sun } from '@lucide/vue'
-import { ref } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import { usePreferencias } from '@/composables/usePreferencias'
 import { useTheme } from '@/composables/useTheme'
 
 const aberto = defineModel<boolean>('aberto', { default: false })
 
 const { tema, definirTema } = useTheme()
-const { pastaRelatorios, definirPastaRelatorios } = usePreferencias()
-
-const pasta = ref(pastaRelatorios.value)
-
-function salvarPasta(): void {
-  definirPastaRelatorios(pasta.value)
-}
 </script>
 
 <template>
@@ -46,14 +36,6 @@ function salvarPasta(): void {
           </BaseButton>
         </div>
       </div>
-
-      <BaseInput
-        v-model="pasta"
-        label="Pasta de exportação de relatórios"
-        placeholder="C:\Users\...\Relatorios"
-        dica="Ainda não é usada para exportar — só guardamos a preferência para quando essa função existir."
-        @change="salvarPasta"
-      />
     </div>
   </BaseModal>
 </template>
