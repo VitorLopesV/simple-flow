@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { Menu, Moon, Sun } from '@lucide/vue'
+import { Menu } from '@lucide/vue'
 import { useRoute } from 'vue-router'
 
 import BaseButton from '@/components/common/BaseButton.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
-import { useTheme } from '@/composables/useTheme'
 import { usePeriodoStore } from '@/stores/periodoStore'
 
 const emit = defineEmits<{ abrirMenu: [] }>()
 
 const route = useRoute()
 const periodoStore = usePeriodoStore()
-const { tema, alternarTema } = useTheme()
 </script>
 
 <template>
@@ -39,16 +37,6 @@ const { tema, alternarTema } = useTheme()
         class="hidden sm:flex"
         @hoje="periodoStore.irParaHoje()"
       />
-
-      <BaseButton
-        variante="outline"
-        tamanho="icon"
-        :aria-label="tema === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'"
-        @click="alternarTema"
-      >
-        <Sun v-if="tema === 'dark'" class="size-4" aria-hidden="true" />
-        <Moon v-else class="size-4" aria-hidden="true" />
-      </BaseButton>
     </div>
   </header>
 </template>

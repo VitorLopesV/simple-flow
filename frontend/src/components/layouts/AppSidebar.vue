@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, LayoutDashboard, X } from '@lucide/vue'
+import { ArrowDownCircle, ArrowUpCircle, CreditCard, LayoutDashboard, Settings, X } from '@lucide/vue'
 import type { Component } from 'vue'
+import { ref } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
+import ConfiguracoesModal from '@/components/features/ConfiguracoesModal.vue'
 import logoSimpleFlow from '@/img/simple-flow-logo.png'
 
 defineProps<{ aberto: boolean }>()
 const emit = defineEmits<{ fechar: [] }>()
+
+const configAberto = ref(false)
 
 interface ItemMenu {
   rota: string
@@ -53,7 +57,7 @@ const itens: ItemMenu[] = [
       </BaseButton>
     </div>
 
-    <nav class="flex-1 space-y-1 p-3" aria-label="Navegação principal">
+    <nav class="flex flex-1 flex-col space-y-1 p-3" aria-label="Navegação principal">
       <RouterLink
         v-for="item in itens"
         :key="item.rota"
@@ -65,10 +69,21 @@ const itens: ItemMenu[] = [
         <component :is="item.icone" class="size-4 shrink-0" aria-hidden="true" />
         {{ item.rotulo }}
       </RouterLink>
+
+      <BaseButton
+        variante="ghost"
+        class="text-muted-foreground hover:bg-muted hover:text-foreground mt-auto w-full justify-start gap-3 px-3 py-2 text-sm font-medium"
+        @click="configAberto = true"
+      >
+        <Settings class="size-4 shrink-0" aria-hidden="true" />
+        Configurações
+      </BaseButton>
     </nav>
 
-    <div class="border-border border-t p-3 text-center">
-      <p class="text-muted-foreground text-xs">Versão atual: 0.1.0</p>
+    <div class="border-border border-t p-3">
+      <p class="text-muted-foreground text-center text-xs">Versão atual: 0.1.0</p>
     </div>
   </aside>
+
+  <ConfiguracoesModal v-model:aberto="configAberto" />
 </template>
