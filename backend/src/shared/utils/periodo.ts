@@ -17,3 +17,7 @@ export function limitesDoMes(periodo: Periodo): { inicio: string; fim: string } 
   const fim = new Date(Date.UTC(periodo.ano, periodo.mes, 0))
   return { inicio: inicio.toISOString().slice(0, 10), fim: fim.toISOString().slice(0, 10) }
 }
+
+export function mesAnterior(periodo: Periodo): Periodo {
+  return periodo.mes === 1 ? { mes: 12, ano: periodo.ano - 1 } : { mes: periodo.mes - 1, ano: periodo.ano }
+}
