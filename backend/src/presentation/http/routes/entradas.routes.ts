@@ -4,8 +4,8 @@ import { asyncHandler } from '../../../shared/utils/asyncHandler'
 import { entradasController } from '../controllers/entradasController'
 import { authMiddleware } from '../middlewares/authMiddleware'
 import { validate } from '../middlewares/validate'
-import { idParamSchema } from '../schemas/common.schema'
-import { entradaPayloadSchema, listarEntradasQuerySchema, resumoQuerySchema } from '../schemas/entrada.schema'
+import { idParamSchema, resumoQuerySchema } from '../schemas/common.schema'
+import { entradaPayloadSchema, listarEntradasQuerySchema } from '../schemas/entrada.schema'
 
 export const entradasRoutes = Router()
 
