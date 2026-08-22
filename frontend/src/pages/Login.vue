@@ -6,8 +6,12 @@ import { toast } from 'vue-sonner'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
+import { authService } from '@/services/authService'
+import { mensagemDeErro } from '@/services/http'
+import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const email = ref('')
 const senha = ref('')
@@ -36,15 +40,13 @@ const handleSubmit = async () => {
   carregando.value = true
 
   try {
-    // Aqui você fará a chamada à API de login
-    // const response = await authService.login(email.value, senha.value)
-    // Simule o login
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    const sessao = await authService.login({ email: email.value, senha: senha.value })
+    authStore.definirSessao(sessao)
 
     toast.success('Login realizado com sucesso!')
     await router.push({ name: 'dashboard' })
   } catch (error) {
-    toast.error('Erro ao fazer login. Verifique seus dados.')
+    toast.error(mensagemDeErro(error, 'Erro ao fazer login. Verifique seus dados.'))
   } finally {
     carregando.value = false
   }

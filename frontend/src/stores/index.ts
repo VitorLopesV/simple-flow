@@ -1,3 +1,4 @@
+export { useAuthStore } from './authStore'
 export { useCartaoStore } from './cartaoStore'
 export { useCategoriaStore } from './categoriaStore'
 export { useDashboardStore } from './dashboardStore'

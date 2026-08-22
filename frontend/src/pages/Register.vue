@@ -6,8 +6,12 @@ import { toast } from 'vue-sonner'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
+import { authService } from '@/services/authService'
+import { mensagemDeErro } from '@/services/http'
+import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const nomeUsuario = ref('')
 const email = ref('')
@@ -57,20 +61,19 @@ const handleSubmit = async () => {
   carregando.value = true
 
   try {
-    // Aqui você fará a chamada à API de registro
-    // const response = await authService.register({
-    //   nomeUsuario: nomeUsuario.value,
-    //   email: email.value,
-    //   telefone: telefone.value,
-    //   senha: senha.value,
-    // })
-    // Simule o registro
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    // Telefone é validado no formulário, mas ainda não é persistido pelo backend
+    // (a tabela profiles só guarda nome) — fica como possível melhoria futura.
+    const sessao = await authService.registrar({
+      email: email.value,
+      senha: senha.value,
+      nome: nomeUsuario.value,
+    })
+    authStore.definirSessao(sessao)
 
-    toast.success('Registrado com sucesso! Redirecionando para login...')
-    await router.push({ name: 'login' })
+    toast.success('Cadastro realizado com sucesso!')
+    await router.push({ name: 'dashboard' })
   } catch (error) {
-    toast.error('Erro ao registrar. Tente novamente.')
+    toast.error(mensagemDeErro(error, 'Erro ao registrar. Tente novamente.'))
   } finally {
     carregando.value = false
   }

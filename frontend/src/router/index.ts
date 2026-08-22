@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 import AppLayout from '@/components/layouts/AppLayout.vue'
 import AuthLayout from '@/components/layouts/AuthLayout.vue'
+import { useAuthStore } from '@/stores/authStore'
 
 /**
  * Todas as páginas são carregadas sob demanda: o Vite gera um chunk por rota
@@ -72,6 +73,15 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior: (_to, _from, savedPosition) => savedPosition ?? { top: 0 },
+})
+
+router.beforeEach((to) => {
+  const { autenticado } = useAuthStore()
+  const exigeAuth = to.path.startsWith('/app')
+  const ehRotaDeAuth = to.path.startsWith('/auth')
+
+  if (exigeAuth && !autenticado) return { name: 'login' }
+  if (ehRotaDeAuth && autenticado) return { name: 'dashboard' }
 })
 
 router.afterEach((to) => {
