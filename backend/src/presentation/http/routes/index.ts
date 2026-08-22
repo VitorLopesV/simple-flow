@@ -3,6 +3,7 @@ import { Router } from 'express'
 import { authRoutes } from './auth.routes'
 import { cartoesRoutes } from './cartoes.routes'
 import { categoriasRoutes } from './categorias.routes'
+import { dashboardRoutes } from './dashboard.routes'
 import { entradasRoutes } from './entradas.routes'
 import { faturasRoutes } from './faturas.routes'
 import { saidasRoutes } from './saidas.routes'
@@ -16,3 +17,4 @@ routes.use('/entradas', entradasRoutes)
 routes.use('/saidas', saidasRoutes)
 routes.use('/cartoes', cartoesRoutes)
 routes.use('/faturas', faturasRoutes)
+routes.use('/dashboard', dashboardRoutes)

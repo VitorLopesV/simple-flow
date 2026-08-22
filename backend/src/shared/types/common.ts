@@ -23,6 +23,12 @@ export interface Paginated<T> {
   totalPages: number
 }
 
+/** Ponto de uma série temporal usado nos gráficos do dashboard. */
+export interface SeriePonto {
+  label: string
+  valor: number
+}
+
 /** Usuário autenticado, anexado à requisição pelo authMiddleware. */
 export interface UsuarioAutenticado {
   id: ID
