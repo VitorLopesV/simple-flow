@@ -1,12 +1,12 @@
 # Sistema de Controle Financeiro
 
-Monorepo do sistema de controle financeiro pessoal. Nesta entrega **apenas o frontend** foi
-implementado (Vue 3 + TypeScript); o diretório `backend/` está reservado e documenta o contrato
-REST esperado.
+Monorepo do sistema de controle financeiro pessoal: frontend em Vue 3 + TypeScript e backend em
+Node.js + TypeScript (Express, arquitetura limpa, Supabase). Veja [`backend/README.md`](./backend/README.md)
+para detalhes da API.
 
-O app roda 100% funcional sem backend: a camada de serviços possui um **modo mock** em memória
-alimentado por dados gerados com `@faker-js/faker` (seed fixa). Para plugar uma API real basta
-trocar uma variável de ambiente.
+O frontend roda 100% funcional sem backend: a camada de serviços possui um **modo mock** em
+memória alimentado por dados gerados com `@faker-js/faker` (seed fixa). Para plugar o backend
+real basta trocar uma variável de ambiente.
 
 ---
 
@@ -18,7 +18,7 @@ financial-control/
 │   ├── public/
 │   ├── src/
 │   └── package.json
-├── backend/           # fora do escopo desta entrega (ver backend/README.md)
+├── backend/           # API REST (workspace npm) — ver backend/README.md
 ├── package.json       # raiz do workspace: delega os scripts para o frontend
 └── README.md
 ```
@@ -125,11 +125,11 @@ frontend/src/
 │   └── layouts/       # AppLayout, AppHeader, AppSidebar, PageLayout
 ├── composables/       # useTheme, useNotify
 ├── pages/             # Dashboard, Entradas, Saidas, Cartoes, NotFound
-├── router/            # rotas com lazy loading e títulos por rota
-├── services/          # entrada/saida/cartao/categoria/dashboard + http (Axios)
+├── router/            # rotas com lazy loading, títulos por rota e guarda de autenticação
+├── services/          # auth/entrada/saida/cartao/categoria/dashboard + http (Axios)
 │   └── mock/          # base em memória gerada com faker (import dinâmico)
-├── stores/            # Pinia: periodo, categoria, entrada, saida, cartao, dashboard
-├── types/             # entrada, saida, cartao, categoria, dashboard, common
+├── stores/            # Pinia: auth, periodo, categoria, entrada, saida, cartao, dashboard
+├── types/             # auth, entrada, saida, cartao, categoria, dashboard, common
 ├── utils/             # currencyFormatter, dateFormatter, validators, cn
 ├── App.vue
 └── main.ts
@@ -207,5 +207,6 @@ categorias compatíveis com o tipo de lançamento em edição.
 
 ## 🔌 Backend
 
-Ainda não implementado. Veja [`backend/README.md`](./backend/README.md) para o contrato de API que o
-frontend já consome quando `VITE_USE_MOCK=false`.
+Implementado em `backend/` (Node.js + TypeScript, Express, arquitetura limpa, Supabase para
+persistência e autenticação, isolamento multi-tenant via Row Level Security). Veja
+[`backend/README.md`](./backend/README.md) para setup, endpoints e detalhes de arquitetura.
