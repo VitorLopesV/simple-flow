@@ -210,3 +210,10 @@ categorias compatíveis com o tipo de lançamento em edição.
 Implementado em `backend/` (Node.js + TypeScript, Express, arquitetura limpa, Supabase para
 persistência e autenticação, isolamento multi-tenant via Row Level Security). Veja
 [`backend/README.md`](./backend/README.md) para setup, endpoints e detalhes de arquitetura.
+
+---
+
+## 🚀 Deploy
+
+Guia passo a passo para publicar os dois projetos (backend + frontend) na Vercel em
+[`DEPLOY.md`](./DEPLOY.md).

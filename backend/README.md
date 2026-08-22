@@ -97,6 +97,5 @@ entidades de `src/domain/entities`.
 ## Deploy (Vercel)
 
 Projeto Vercel separado, com root directory `backend/`. `vercel.json` reescreve `/api/*` para
-a function serverless em `api/index.ts`. Variáveis de ambiente no dashboard da Vercel:
-`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CORS_ORIGINS` (domínio do
-frontend), `NODE_ENV=production`.
+a function serverless em `api/index.ts`. Guia passo a passo (criação dos dois projetos, env
+vars de cada um e ajuste de CORS) em [`../DEPLOY.md`](../DEPLOY.md).
