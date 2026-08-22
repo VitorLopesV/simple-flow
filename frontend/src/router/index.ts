@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
 import AppLayout from '@/components/layouts/AppLayout.vue'
+import AuthLayout from '@/components/layouts/AuthLayout.vue'
 
 /**
  * Todas as páginas são carregadas sob demanda: o Vite gera um chunk por rota
@@ -9,32 +10,54 @@ import AppLayout from '@/components/layouts/AppLayout.vue'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
+    redirect: { name: 'login' },
+  },
+  {
+    path: '/app',
     component: AppLayout,
     children: [
       { path: '', redirect: { name: 'dashboard' } },
       {
-        path: 'pages/dashboard',
+        path: 'dashboard',
         name: 'dashboard',
         component: () => import('@/pages/Dashboard.vue'),
         meta: { titulo: 'Dashboard', descricao: 'Visão geral das suas finanças' },
       },
       {
-        path: 'pages/entradas',
+        path: 'entradas',
         name: 'entradas',
         component: () => import('@/pages/Entradas.vue'),
         meta: { titulo: 'Entradas', descricao: 'Receitas registradas no período' },
       },
       {
-        path: 'pages/saidas',
+        path: 'saidas',
         name: 'saidas',
         component: () => import('@/pages/Saidas.vue'),
         meta: { titulo: 'Saídas', descricao: 'Despesas registradas no período' },
       },
       {
-        path: 'pages/cartoes',
+        path: 'cartoes',
         name: 'cartoes',
         component: () => import('@/pages/Cartoes.vue'),
         meta: { titulo: 'Cartões de Crédito', descricao: 'Cartões, faturas e transações' },
+      },
+    ],
+  },
+  {
+    path: '/auth',
+    component: AuthLayout,
+    children: [
+      {
+        path: 'login',
+        name: 'login',
+        component: () => import('@/pages/Login.vue'),
+        meta: { titulo: 'Login', descricao: 'Faça login na sua conta' },
+      },
+      {
+        path: 'registro',
+        name: 'registro',
+        component: () => import('@/pages/Register.vue'),
+        meta: { titulo: 'Registro', descricao: 'Crie uma nova conta' },
       },
     ],
   },
