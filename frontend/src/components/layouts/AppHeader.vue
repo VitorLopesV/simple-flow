@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 
 import BaseButton from '@/components/common/BaseButton.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
+import UsuarioPopover from '@/components/features/UsuarioPopover.vue'
 import { usePeriodoStore } from '@/stores/periodoStore'
 
 const emit = defineEmits<{ abrirMenu: [] }>()
@@ -37,6 +38,7 @@ const periodoStore = usePeriodoStore()
         class="hidden sm:flex"
         @hoje="periodoStore.irParaHoje()"
       />
+      <UsuarioPopover />
     </div>
   </header>
 </template>
