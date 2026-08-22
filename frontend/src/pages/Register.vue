@@ -106,6 +106,11 @@ const handlePhoneInput = (event: Event) => {
   <div class="w-full max-w-md">
     <BaseCard class="border shadow-lg">
       <div class="space-y-6">
+        <!-- Logo -->
+        <div class="flex justify-center mb-4">
+          <img src="@/img/simple-flow-logo.png" alt="SimpleFlow" class="h-12 w-auto" />
+        </div>
+
         <!-- Header -->
         <div class="text-center">
           <h1 class="text-2xl font-bold">Criar uma conta</h1>
