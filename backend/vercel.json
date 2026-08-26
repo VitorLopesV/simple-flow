@@ -1,4 +1,4 @@
 {
-  "buildCommand": "npm run build && echo 'module.exports = require(\"./api/index.js\").default;' > dist/index.js",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist"
 }
