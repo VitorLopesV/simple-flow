@@ -29,7 +29,7 @@ const periodoStore = usePeriodoStore()
     </BaseButton>
 
     <h1 class="truncate text-base font-semibold sm:text-lg">
-      {{ route.meta.titulo ?? 'Controle Financeiro' }}
+      {{ route.meta.titulo ?? 'SimpleFlow' }}
     </h1>
 
     <div class="ml-auto flex items-center gap-2">
