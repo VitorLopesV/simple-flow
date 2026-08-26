@@ -86,7 +86,7 @@ router.beforeEach((to) => {
 
 router.afterEach((to) => {
   const titulo = to.meta.titulo as string | undefined
-  document.title = titulo ? `${titulo} · SimpleFlow` : 'SimpleFlow'
+  document.title = titulo ? `SimpleFlow · ${titulo}` : 'SimpleFlow'
 })
 
 export default router
