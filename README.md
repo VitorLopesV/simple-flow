@@ -218,5 +218,5 @@ isolamento multi-tenant via Row Level Security).
 
 ## 🚀 Deploy
 
-Guia passo a passo para publicar o frontend na Vercel em [`DEPLOY.md`](./DEPLOY.md). O backend tem
-seu próprio guia no repositório dele.
+Frontend publicado na Vercel (Root Directory `frontend`, preset Vite). O backend tem deploy
+próprio no repositório dele.
