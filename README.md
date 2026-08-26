@@ -1,8 +1,8 @@
 # Sistema de Controle Financeiro
 
-Monorepo do sistema de controle financeiro pessoal: frontend em Vue 3 + TypeScript e backend em
-Node.js + TypeScript (Express, arquitetura limpa, Supabase). Veja [`backend/README.md`](./backend/README.md)
-para detalhes da API.
+Frontend em Vue 3 + TypeScript do sistema de controle financeiro pessoal. O backend (Node.js +
+TypeScript, Express, arquitetura limpa, Supabase) vive em um repositório separado:
+[`simple-flow-backend`](https://github.com/VitorLopesV/simple-flow-backend).
 
 O frontend roda 100% funcional sem backend: a camada de serviços possui um **modo mock** em
 memória alimentado por dados gerados com `@faker-js/faker` (seed fixa). Para plugar o backend
@@ -10,7 +10,7 @@ real basta trocar uma variável de ambiente.
 
 ---
 
-## 📁 Estrutura do monorepo
+## 📁 Estrutura
 
 ```
 financial-control/
@@ -18,10 +18,12 @@ financial-control/
 │   ├── public/
 │   ├── src/
 │   └── package.json
-├── backend/           # API REST (workspace npm) — ver backend/README.md
 ├── package.json       # raiz do workspace: delega os scripts para o frontend
 └── README.md
 ```
+
+O backend fica em [`simple-flow-backend`](https://github.com/VitorLopesV/simple-flow-backend),
+um repositório separado (deploy independente na Vercel).
 
 ---
 
@@ -95,7 +97,8 @@ Com `VITE_USE_MOCK=true`:
 2. `VITE_API_URL=<url da sua API>`
 
 Nenhuma outra mudança é necessária: cada método de serviço já implementa os dois caminhos. O
-contrato esperado (rotas, payloads e respostas) está descrito em [`backend/README.md`](./backend/README.md).
+contrato esperado (rotas, payloads e respostas) está descrito no README do
+[`simple-flow-backend`](https://github.com/VitorLopesV/simple-flow-backend).
 
 ---
 
@@ -207,13 +210,13 @@ categorias compatíveis com o tipo de lançamento em edição.
 
 ## 🔌 Backend
 
-Implementado em `backend/` (Node.js + TypeScript, Express, arquitetura limpa, Supabase para
-persistência e autenticação, isolamento multi-tenant via Row Level Security). Veja
-[`backend/README.md`](./backend/README.md) para setup, endpoints e detalhes de arquitetura.
+Repositório separado: [`simple-flow-backend`](https://github.com/VitorLopesV/simple-flow-backend)
+(Node.js + TypeScript, Express, arquitetura limpa, Supabase para persistência e autenticação,
+isolamento multi-tenant via Row Level Security).
 
 ---
 
 ## 🚀 Deploy
 
-Guia passo a passo para publicar os dois projetos (backend + frontend) na Vercel em
-[`DEPLOY.md`](./DEPLOY.md).
+Guia passo a passo para publicar o frontend na Vercel em [`DEPLOY.md`](./DEPLOY.md). O backend tem
+seu próprio guia no repositório dele.
