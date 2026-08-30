@@ -25,8 +25,8 @@ const id = useId()
       @click="modelo = !modelo"
     >
       <span
-        class="bg-card absolute top-0.5 size-5 rounded-full shadow transition-transform"
-        :class="modelo ? 'translate-x-5.5' : 'translate-x-0.5'"
+        class="bg-card absolute top-0.5 left-0.5 size-5 rounded-full shadow transition-transform"
+        :class="modelo ? 'translate-x-5' : 'translate-x-0'"
       />
     </button>
   </div>

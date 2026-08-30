@@ -155,7 +155,14 @@ const aoSubmeter = handleSubmit((formulario) => {
 
     <div class="grid gap-4 sm:grid-cols-2">
       <CurrencyInput v-model="valor" label="Valor" :erro="erroValor" obrigatorio />
-      <BaseInput v-model="data" label="Data" type="date" :erro="erroData" obrigatorio />
+      <BaseInput
+        v-model="data"
+        label="Data"
+        type="date"
+        lang="pt-BR"
+        :erro="erroData"
+        obrigatorio
+      />
     </div>
 
     <BaseSelect

@@ -26,7 +26,11 @@ export const useCategoriaStore = defineStore('categoria', () => {
   function opcoes(movimento: Movimento): OpcaoSelect[] {
     const lista = movimento === 'ENTRADA' ? deEntrada.value : deSaida.value
     return lista.map((categoria) => ({
-      label: `${categoria.nome} · ${CATEGORIA_TIPO_LABEL[categoria.tipo]}`,
+      // "Renda" é o tipo padrão de entrada — mostrar o sufixo só quando ele agrega informação.
+      label:
+        categoria.tipo === 'RENDA'
+          ? categoria.nome
+          : `${categoria.nome} · ${CATEGORIA_TIPO_LABEL[categoria.tipo]}`,
       value: categoria.id,
     }))
   }
