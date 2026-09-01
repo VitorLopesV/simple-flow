@@ -57,6 +57,31 @@ export function formatDate(iso: string | null | undefined): string {
   return toDate(iso).toLocaleDateString('pt-BR')
 }
 
+/** `'2026-08-15'` -> `'15/08/2026'`, vazio se não houver valor. Usado no texto editável do DateInput. */
+export function paraMascaraDataBR(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const [ano, mes, dia] = iso.split('-')
+  if (!ano || !mes || !dia) return ''
+  return `${dia}/${mes}/${ano}`
+}
+
+/** Reaplica a máscara dd/mm/aaaa a cada tecla digitada, ignorando o que não for dígito. */
+export function mascararDataBR(entrada: string): string {
+  const digitos = entrada.replace(/\D/g, '').slice(0, 8)
+  const dia = digitos.slice(0, 2)
+  const mes = digitos.slice(2, 4)
+  const ano = digitos.slice(4, 8)
+  return [dia, mes, ano].filter(Boolean).join('/')
+}
+
+/** `'15/08/2026'` -> `'2026-08-15'`, ou `null` se a máscara ainda estiver incompleta/inválida. */
+export function paraISODataBR(mascarada: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(mascarada)
+  if (!match) return null
+  const [, dia, mes, ano] = match
+  return `${ano}-${mes}-${dia}`
+}
+
 /** `'2026-08-15'` -> `'15 de ago.'`. */
 export function formatDateShort(iso: string | null | undefined): string {
   if (!iso) return '—'

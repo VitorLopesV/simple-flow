@@ -8,6 +8,7 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import BaseTextarea from '@/components/common/BaseTextarea.vue'
 import CurrencyInput from '@/components/common/CurrencyInput.vue'
+import DateInput from '@/components/common/DateInput.vue'
 import type { OpcaoSelect } from '@/types/common'
 import type { Movimento } from '@/types/categoria'
 import type { Entrada, EntradaPayload } from '@/types/entrada'
@@ -155,14 +156,7 @@ const aoSubmeter = handleSubmit((formulario) => {
 
     <div class="grid gap-4 sm:grid-cols-2">
       <CurrencyInput v-model="valor" label="Valor" :erro="erroValor" obrigatorio />
-      <BaseInput
-        v-model="data"
-        label="Data"
-        type="date"
-        lang="pt-BR"
-        :erro="erroData"
-        obrigatorio
-      />
+      <DateInput v-model="data" label="Data" :erro="erroData" obrigatorio />
     </div>
 
     <BaseSelect
