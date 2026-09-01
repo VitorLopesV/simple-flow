@@ -9,9 +9,10 @@ import { faker } from '@faker-js/faker/locale/pt_BR'
 
 import type { Cartao, Fatura, TransacaoCartao } from '@/types/cartao'
 import type { Categoria } from '@/types/categoria'
+import type { ID, Periodo } from '@/types/common'
 import type { Entrada } from '@/types/entrada'
 import type { FormaPagamento, Saida } from '@/types/saida'
-import { addMeses, diaDoPeriodo, periodoAtual, toCompetencia, toISODate } from '@/utils/dateFormatter'
+import { addMeses, diaDoPeriodo, periodoAtual, toCompetencia, toDate, toISODate } from '@/utils/dateFormatter'
 
 faker.seed(20260815)
 
@@ -359,3 +360,64 @@ export function saidasComFaturas(): Saida[] {
 
 /** Data ISO de hoje — usada como valor padrão nos formulários. */
 export const hojeISO = toISODate(new Date())
+
+function periodoDaData(iso: string): Periodo {
+  const data = toDate(iso)
+  return { mes: data.getMonth() + 1, ano: data.getFullYear() }
+}
+
+function ordinalDoPeriodo(periodo: Periodo): number {
+  return periodo.ano * 12 + periodo.mes
+}
+
+/**
+ * Projeta, para um período-alvo, a ocorrência de cada série recorrente (agrupada
+ * por descrição + categoria) que ainda não tenha lançamento real naquele período —
+ * nunca persiste, recalcula a cada leitura a partir da ocorrência real mais recente
+ * da série. Assim, desligar `recorrente` no original (ou editar seu valor) já
+ * reflete nos meses seguintes sozinho, sem nada pra apagar/sincronizar; e um mês que
+ * já tem lançamento próprio (histórico real, ou editado à mão) não é duplicado.
+ * `automatica` (fatura de cartão) fica de fora: aquelas já são geradas por período
+ * pelo mecanismo de faturas.
+ */
+export function comRecorrencias<
+  T extends {
+    id: ID
+    data: string
+    descricao: string
+    categoriaId: ID
+    recorrente: boolean
+    origemRecorrenciaId?: ID
+    automatica?: boolean
+  },
+>(itens: T[], periodoAlvo: Periodo): T[] {
+  const alvo = ordinalDoPeriodo(periodoAlvo)
+  const chaveDaSerie = (item: T) => `${item.descricao}::${item.categoriaId}`
+
+  const mesesJaLancados = new Set(
+    itens
+      .filter((item) => ordinalDoPeriodo(periodoDaData(item.data)) === alvo)
+      .map(chaveDaSerie),
+  )
+
+  const maisRecentePorSerie = new Map<string, T>()
+  for (const item of itens) {
+    if (!item.recorrente || item.origemRecorrenciaId || item.automatica) continue
+    if (ordinalDoPeriodo(periodoDaData(item.data)) >= alvo) continue
+
+    const chave = chaveDaSerie(item)
+    const atual = maisRecentePorSerie.get(chave)
+    if (!atual || item.data > atual.data) maisRecentePorSerie.set(chave, item)
+  }
+
+  const projetadas = [...maisRecentePorSerie.entries()]
+    .filter(([chave]) => !mesesJaLancados.has(chave))
+    .map(([, origem]) => ({
+      ...origem,
+      id: `${origem.id}_${toCompetencia(periodoAlvo)}`,
+      data: diaDoPeriodo(periodoAlvo, toDate(origem.data).getDate()),
+      origemRecorrenciaId: origem.id,
+    }))
+
+  return [...itens, ...projetadas]
+}

@@ -86,11 +86,16 @@ const descritoPor = computed(() => {
             'focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30',
             'disabled:cursor-not-allowed disabled:opacity-60',
             $slots.prefixo && 'pl-10',
+            $slots.sufixo && 'pr-10',
             alinharDireita && 'text-right numero-tabular',
             erro && 'border-danger focus:border-danger focus:ring-danger/30',
           )
         "
       />
+
+      <span v-if="$slots.sufixo" class="absolute inset-y-0 right-1.5 flex items-center">
+        <slot name="sufixo" />
+      </span>
     </div>
 
     <p v-if="erro" :id="idErro" class="text-danger text-xs" role="alert">{{ erro }}</p>

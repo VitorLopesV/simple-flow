@@ -13,6 +13,12 @@ export interface Entrada {
   observacao?: string
   criadoEm: string
   atualizadoEm: string
+  /**
+   * Preenchido só nas ocorrências futuras projetadas a partir de um lançamento
+   * recorrente (ver `comRecorrencias` em `services/mock/db.ts`) — nunca persistidas,
+   * recalculadas a cada leitura. Editável apenas pelo lançamento original.
+   */
+  origemRecorrenciaId?: ID
 }
 
 /** Dados aceitos pelo formulário de criação/edição. */

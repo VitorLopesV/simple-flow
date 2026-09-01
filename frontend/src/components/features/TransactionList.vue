@@ -52,6 +52,19 @@ const sinal = computed(() => (ehSaida.value ? '−' : '+'))
 function comoSaida(transacao: Transacao): Saida {
   return transacao as Saida
 }
+
+/** Ocorrência projetada de uma recorrência: só o lançamento original é editável/removível. */
+function ehProjecaoRecorrente(transacao: Transacao): boolean {
+  return Boolean(transacao.origemRecorrenciaId)
+}
+
+function bloqueada(transacao: Transacao): boolean {
+  return ehProjecaoRecorrente(transacao) || (ehSaida.value && Boolean(comoSaida(transacao).automatica))
+}
+
+function textoBloqueio(transacao: Transacao): string {
+  return ehSaida.value && comoSaida(transacao).automatica ? 'Ver em Cartões' : 'Editável no original'
+}
 </script>
 
 <template>
@@ -122,7 +135,7 @@ function comoSaida(transacao: Transacao): Saida {
 
               <td v-if="ehSaida" class="px-5 py-3">
                 <button
-                  v-if="!comoSaida(transacao).automatica"
+                  v-if="!bloqueada(transacao)"
                   type="button"
                   class="focus-visible:outline-ring rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
                   :title="
@@ -146,7 +159,7 @@ function comoSaida(transacao: Transacao): Saida {
               </td>
 
               <td class="px-5 py-3">
-                <div v-if="!ehSaida || !comoSaida(transacao).automatica" class="flex justify-end gap-1">
+                <div v-if="!bloqueada(transacao)" class="flex justify-end gap-1">
                   <BaseButton
                     variante="ghost"
                     tamanho="icon"
@@ -165,7 +178,7 @@ function comoSaida(transacao: Transacao): Saida {
                     <Trash2 class="size-4" aria-hidden="true" />
                   </BaseButton>
                 </div>
-                <span v-else class="text-muted-foreground text-xs">Ver em Cartões</span>
+                <span v-else class="text-muted-foreground text-xs">{{ textoBloqueio(transacao) }}</span>
               </td>
             </tr>
           </tbody>
@@ -196,7 +209,7 @@ function comoSaida(transacao: Transacao): Saida {
               {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
             </BaseBadge>
 
-            <div v-if="!ehSaida || !comoSaida(transacao).automatica" class="ml-auto flex gap-1">
+            <div v-if="!bloqueada(transacao)" class="ml-auto flex gap-1">
               <BaseButton
                 variante="ghost"
                 tamanho="icon"
@@ -215,7 +228,7 @@ function comoSaida(transacao: Transacao): Saida {
                 <Trash2 class="size-4" aria-hidden="true" />
               </BaseButton>
             </div>
-            <span v-else class="text-muted-foreground ml-auto text-xs">Ver em Cartões</span>
+            <span v-else class="text-muted-foreground ml-auto text-xs">{{ textoBloqueio(transacao) }}</span>
           </div>
         </li>
       </ul>

@@ -156,7 +156,14 @@ const aoSubmeter = handleSubmit((formulario) => {
 
     <div class="grid gap-4 sm:grid-cols-2">
       <CurrencyInput v-model="valor" label="Valor" :erro="erroValor" obrigatorio />
-      <DateInput v-model="data" label="Data" :erro="erroData" obrigatorio />
+      <DateInput
+        v-model="data"
+        label="Data"
+        :erro="erroData"
+        :desabilitado="recorrente"
+        :dica="recorrente ? 'Data travada enquanto o lançamento for recorrente.' : ''"
+        obrigatorio
+      />
     </div>
 
     <BaseSelect

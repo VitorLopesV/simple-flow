@@ -8,7 +8,8 @@ export const entradaService = {
   async listar(filtro: EntradaFiltro): Promise<Paginated<Entrada>> {
     if (USE_MOCK) {
       const db = await mockDb()
-      const encontradas = db.entradas
+      const encontradas = db
+        .comRecorrencias(db.entradas, filtro.periodo)
         .filter((entrada) => dentroDoPeriodo(entrada.data, filtro.periodo))
         .filter((entrada) => !filtro.categoriaId || entrada.categoriaId === filtro.categoriaId)
         .filter((entrada) =>
@@ -37,11 +38,14 @@ export const entradaService = {
       const db = await mockDb()
 
       const totalDoPeriodo = (alvo: Periodo) =>
-        db.entradas
+        db
+          .comRecorrencias(db.entradas, alvo)
           .filter((entrada) => dentroDoPeriodo(entrada.data, alvo))
           .reduce((soma, entrada) => soma + entrada.valor, 0)
 
-      const doPeriodo = db.entradas.filter((entrada) => dentroDoPeriodo(entrada.data, periodo))
+      const doPeriodo = db
+        .comRecorrencias(db.entradas, periodo)
+        .filter((entrada) => dentroDoPeriodo(entrada.data, periodo))
       const total = doPeriodo.reduce((soma, entrada) => soma + entrada.valor, 0)
 
       const agrupado = new Map<string, number>()
