@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarCheck, CircleCheck, Receipt } from '@lucide/vue'
+import { CalendarCheck, CircleCheck, Receipt, Repeat } from '@lucide/vue'
 import { computed } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
@@ -133,13 +133,20 @@ const resumoCategorias = computed(() => {
               class="border-border hover:bg-muted/50 border-b transition-colors last:border-0"
             >
               <td class="px-5 py-3">
-                <span class="font-medium">{{ transacao.descricao }}</span>
-                <span
-                  v-if="transacao.totalParcelas > 1"
-                  class="text-muted-foreground numero-tabular ml-2 text-xs"
-                >
-                  {{ transacao.parcelaAtual }}/{{ transacao.totalParcelas }}
-                </span>
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">{{ transacao.descricao }}</span>
+                  <Repeat
+                    v-if="transacao.recorrente"
+                    class="text-muted-foreground size-3.5 shrink-0"
+                    aria-label="Transação recorrente"
+                  />
+                  <span
+                    v-if="transacao.totalParcelas > 1"
+                    class="text-muted-foreground numero-tabular text-xs"
+                  >
+                    {{ transacao.parcelaAtual }}/{{ transacao.totalParcelas }}
+                  </span>
+                </div>
               </td>
               <td class="hidden px-5 py-3 sm:table-cell">
                 <BaseBadge :cor="categoriaStore.cor(transacao.categoriaId)">

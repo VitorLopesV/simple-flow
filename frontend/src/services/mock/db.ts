@@ -286,6 +286,7 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
         ).id,
         parcelaAtual: totalParcelas === 1 ? 1 : faker.number.int({ min: 1, max: totalParcelas }),
         totalParcelas,
+        recorrente: false,
       })
     }
 

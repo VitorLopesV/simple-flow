@@ -30,6 +30,14 @@ export interface TransacaoCartao {
   categoriaId: ID
   parcelaAtual: number
   totalParcelas: number
+  recorrente: boolean
+  /**
+   * Preenchido só nas ocorrências futuras projetadas a partir de uma transação
+   * recorrente — nunca persistido, recalculado a cada leitura. A fatura a que
+   * pertence pode inclusive ser virtual (ver `Fatura.id`), quando o mês ainda não
+   * tem fatura própria.
+   */
+  origemRecorrenciaId?: ID
 }
 
 export type FaturaStatus = 'ABERTA' | 'FECHADA' | 'PAGA' | 'ATRASADA'
