@@ -73,9 +73,16 @@ export const FORMA_PAGAMENTO_LABEL: Record<FormaPagamento, string> = {
   CARTAO_CREDITO: 'Cartão de crédito',
 }
 
+/**
+ * Sem cartão de crédito: gasto no cartão é lançado na aba Cartões (fica preso ao
+ * cartão) e chega na aba Saídas como a fatura inteira, uma saída derivada e só de
+ * leitura. O rótulo continua no mapa acima porque essas linhas derivadas o exibem.
+ */
 export const FORMA_PAGAMENTO_OPCOES: OpcaoSelect<FormaPagamento>[] = (
   Object.keys(FORMA_PAGAMENTO_LABEL) as FormaPagamento[]
-).map((value) => ({ label: FORMA_PAGAMENTO_LABEL[value], value }))
+)
+  .filter((value) => value !== 'CARTAO_CREDITO')
+  .map((value) => ({ label: FORMA_PAGAMENTO_LABEL[value], value }))
 
 export const SAIDA_STATUS_OPCOES: OpcaoSelect<SaidaStatus>[] = (
   Object.keys(SAIDA_STATUS_LABEL) as SaidaStatus[]

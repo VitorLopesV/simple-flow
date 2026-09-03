@@ -13,10 +13,10 @@ import TransactionForm from '@/components/features/TransactionForm.vue'
 import TransactionList from '@/components/features/TransactionList.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
 import { notificar } from '@/composables/useNotify'
-import { useCartaoStore } from '@/stores/cartaoStore'
 import { useCategoriaStore } from '@/stores/categoriaStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
 import { useSaidaStore } from '@/stores/saidaStore'
+import type { TransacaoCartaoPayload } from '@/types/cartao'
 import type { EntradaPayload } from '@/types/entrada'
 import type { Saida, SaidaPayload, SaidaStatus } from '@/types/saida'
 import { SAIDA_STATUS_OPCOES } from '@/types/saida'
@@ -24,7 +24,6 @@ import { formatPeriodo } from '@/utils/dateFormatter'
 
 const periodoStore = usePeriodoStore()
 const categoriaStore = useCategoriaStore()
-const cartaoStore = useCartaoStore()
 const saidaStore = useSaidaStore()
 
 const modalAberto = ref(false)
@@ -38,11 +37,7 @@ const opcoesStatus = computed(() =>
 )
 const tituloModal = computed(() => (emEdicao.value ? 'Editar saída' : 'Nova saída'))
 
-onMounted(() => {
-  void saidaStore.carregar()
-  // Os cartões alimentam o seletor exibido quando a forma é "cartão de crédito".
-  if (!cartaoStore.cartoes.length) void cartaoStore.carregar()
-})
+onMounted(() => void saidaStore.carregar())
 
 watch(() => periodoStore.periodo, () => void saidaStore.carregar(), { deep: true })
 watch(
@@ -60,7 +55,9 @@ function abrirEdicao(saida: Saida): void {
   modalAberto.value = true
 }
 
-async function salvar(payload: EntradaPayload | SaidaPayload): Promise<void> {
+async function salvar(
+  payload: EntradaPayload | SaidaPayload | TransacaoCartaoPayload,
+): Promise<void> {
   const saida = payload as SaidaPayload
   const editando = emEdicao.value
 
@@ -196,7 +193,6 @@ async function alternarStatus(saida: Saida): Promise<void> {
         tipo="SAIDA"
         :transacao="emEdicao"
         :categorias="opcoesCategoria"
-        :cartoes="cartaoStore.opcoesDeCartao"
         :salvando="saidaStore.salvando"
         @salvar="salvar"
         @cancelar="modalAberto = false"

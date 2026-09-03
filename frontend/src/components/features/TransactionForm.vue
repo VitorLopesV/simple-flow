@@ -9,6 +9,7 @@ import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import BaseTextarea from '@/components/common/BaseTextarea.vue'
 import CurrencyInput from '@/components/common/CurrencyInput.vue'
 import DateInput from '@/components/common/DateInput.vue'
+import type { TransacaoCartao, TransacaoCartaoPayload } from '@/types/cartao'
 import type { OpcaoSelect } from '@/types/common'
 import type { Movimento } from '@/types/categoria'
 import type { Entrada, EntradaPayload } from '@/types/entrada'
@@ -33,7 +34,6 @@ interface Valores {
   observacao: string
   status: SaidaStatus
   formaPagamento: FormaPagamento
-  cartaoId: string | null
   tipo: SaidaTipo
 }
 
@@ -41,19 +41,24 @@ const props = withDefaults(
   defineProps<{
     /** Define quais campos aparecem e o formato do payload emitido. */
     tipo: Movimento
-    transacao?: Entrada | Saida | null
+    /**
+     * `CARTAO` = débito lançado direto num cartão: mesmos campos de uma saída, sem
+     * forma de pagamento (é sempre o cartão) e sem situação (quem é paga é a fatura).
+     */
+    contexto?: 'PADRAO' | 'CARTAO'
+    transacao?: Entrada | Saida | TransacaoCartao | null
     categorias: OpcaoSelect<string>[]
-    cartoes?: OpcaoSelect<string>[]
     salvando?: boolean
   }>(),
-  { transacao: null, cartoes: () => [], salvando: false },
+  { contexto: 'PADRAO', transacao: null, salvando: false },
 )
 
 const emit = defineEmits<{
-  salvar: [payload: EntradaPayload | SaidaPayload]
+  salvar: [payload: EntradaPayload | SaidaPayload | TransacaoCartaoPayload]
   cancelar: []
 }>()
 
+const ehCartao = computed(() => props.contexto === 'CARTAO')
 const ehSaida = computed(() => props.tipo === 'SAIDA')
 const ehEdicao = computed(() => Boolean(props.transacao))
 
@@ -70,12 +75,11 @@ function valoresIniciais(): Valores {
     observacao: transacao?.observacao ?? '',
     status: saida?.status ?? 'PAGO',
     formaPagamento: saida?.formaPagamento ?? 'PIX',
-    cartaoId: saida?.cartaoId ?? null,
     tipo: saida?.tipo ?? 'OUTROS',
   }
 }
 
-const { handleSubmit, resetForm, values } = useForm<Valores>({
+const { handleSubmit, resetForm } = useForm<Valores>({
   initialValues: valoresIniciais(),
   validationSchema: {
     descricao: compor(
@@ -87,10 +91,6 @@ const { handleSubmit, resetForm, values } = useForm<Valores>({
     data: compor(obrigatorio('Data'), dataISO('Data')),
     categoriaId: obrigatorio('Categoria'),
     observacao: maximoCaracteres(280, 'Observação'),
-    cartaoId: (valor: unknown, ctx: { form?: Record<string, unknown> }) => {
-      const forma = ctx.form?.formaPagamento
-      return forma === 'CARTAO_CREDITO' && !valor ? 'Selecione o cartão utilizado.' : true
-    },
   },
 })
 
@@ -102,18 +102,7 @@ const { value: recorrente } = useField<boolean>('recorrente')
 const { value: observacao, errorMessage: erroObservacao } = useField<string>('observacao')
 const { value: status } = useField<SaidaStatus>('status')
 const { value: formaPagamento } = useField<FormaPagamento>('formaPagamento')
-const { value: cartaoId, errorMessage: erroCartao } = useField<string | null>('cartaoId')
 const { value: tipo } = useField<SaidaTipo>('tipo')
-
-const exigeCartao = computed(() => ehSaida.value && values.formaPagamento === 'CARTAO_CREDITO')
-
-// Trocar a forma de pagamento para algo que não é cartão limpa a seleção.
-watch(
-  () => values.formaPagamento,
-  (forma) => {
-    if (forma !== 'CARTAO_CREDITO') cartaoId.value = null
-  },
-)
 
 // Reabrir o modal com outra transação recarrega o formulário.
 watch(
@@ -136,12 +125,25 @@ const aoSubmeter = handleSubmit((formulario) => {
     return
   }
 
+  if (ehCartao.value) {
+    // Parcelamento não é editável por aqui: preserva o que a transação já tinha.
+    const atual = props.transacao as TransacaoCartao | null
+
+    emit('salvar', {
+      ...base,
+      tipo: formulario.tipo,
+      parcelaAtual: atual?.parcelaAtual ?? 1,
+      totalParcelas: atual?.totalParcelas ?? 1,
+    } satisfies TransacaoCartaoPayload)
+    return
+  }
+
   emit('salvar', {
     ...base,
     tipo: formulario.tipo,
     status: formulario.status,
     formaPagamento: formulario.formaPagamento,
-    cartaoId: formulario.formaPagamento === 'CARTAO_CREDITO' ? formulario.cartaoId : null,
+    cartaoId: null,
   } satisfies SaidaPayload)
 })
 </script>
@@ -151,7 +153,9 @@ const aoSubmeter = handleSubmit((formulario) => {
     <BaseInput
       v-model="descricao"
       label="Descrição"
-      :placeholder="ehSaida ? 'Ex.: Conta de energia' : 'Ex.: Salário mensal'"
+      :placeholder="
+        ehCartao ? 'Ex.: Supermercado' : ehSaida ? 'Ex.: Conta de energia' : 'Ex.: Salário mensal'
+      "
       :erro="erroDescricao"
       obrigatorio
       :maxlength="80"
@@ -188,7 +192,7 @@ const aoSubmeter = handleSubmit((formulario) => {
       <BaseSelect v-if="ehSaida" v-model="tipo" label="Tipo" :opcoes="SAIDA_TIPO_OPCOES" />
     </div>
 
-    <div v-if="ehSaida" class="grid gap-4 sm:grid-cols-2">
+    <div v-if="ehSaida && !ehCartao" class="grid gap-4 sm:grid-cols-2">
       <BaseSelect
         v-model="formaPagamento"
         label="Forma de pagamento"
@@ -197,21 +201,16 @@ const aoSubmeter = handleSubmit((formulario) => {
       <BaseSelect v-model="status" label="Situação" :opcoes="SAIDA_STATUS_OPCOES" />
     </div>
 
-    <BaseSelect
-      v-if="exigeCartao"
-      v-model="cartaoId"
-      label="Cartão"
-      placeholder="Selecione o cartão"
-      :opcoes="cartoes"
-      :erro="erroCartao"
-      obrigatorio
-      :dica="cartoes.length ? '' : 'Nenhum cartão ativo cadastrado.'"
-    />
-
     <BaseSwitch
       v-model="recorrente"
       label="Lançamento recorrente"
-      :descricao="ehSaida ? 'Repete todo mês (aluguel, assinatura...)' : 'Receita fixa mensal'"
+      :descricao="
+        ehCartao
+          ? 'Repete todo mês na fatura (assinatura, mensalidade...)'
+          : ehSaida
+            ? 'Repete todo mês (aluguel, assinatura...)'
+            : 'Receita fixa mensal'
+      "
     />
 
     <BaseTextarea

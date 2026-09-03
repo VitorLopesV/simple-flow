@@ -16,6 +16,7 @@ import { notificar } from '@/composables/useNotify'
 import { useCategoriaStore } from '@/stores/categoriaStore'
 import { useEntradaStore } from '@/stores/entradaStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
+import type { TransacaoCartaoPayload } from '@/types/cartao'
 import type { Entrada, EntradaPayload } from '@/types/entrada'
 import type { SaidaPayload } from '@/types/saida'
 import { formatPeriodo } from '@/utils/dateFormatter'
@@ -49,7 +50,9 @@ function abrirEdicao(entrada: Entrada): void {
   modalAberto.value = true
 }
 
-async function salvar(payload: EntradaPayload | SaidaPayload): Promise<void> {
+async function salvar(
+  payload: EntradaPayload | SaidaPayload | TransacaoCartaoPayload,
+): Promise<void> {
   const entrada = payload as EntradaPayload
   const editando = emEdicao.value
 

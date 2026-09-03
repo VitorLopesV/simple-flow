@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarCheck, CircleCheck, Receipt, Repeat } from '@lucide/vue'
+import { CalendarCheck, CircleCheck, Pencil, Plus, Receipt, Repeat, Trash2 } from '@lucide/vue'
 import { computed } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
@@ -7,13 +7,19 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useCategoriaStore } from '@/stores/categoriaStore'
-import type { CartaoComFatura } from '@/types/cartao'
+import type { CartaoComFatura, TransacaoCartao } from '@/types/cartao'
 import { FATURA_STATUS_LABEL } from '@/types/cartao'
+import { SAIDA_TIPO_LABEL } from '@/types/saida'
 import { formatCurrency } from '@/utils/currencyFormatter'
 import { diasAte, formatDate } from '@/utils/dateFormatter'
 
 const props = defineProps<{ item: CartaoComFatura | null; processando?: boolean }>()
-const emit = defineEmits<{ pagar: [faturaId: string] }>()
+const emit = defineEmits<{
+  pagar: [faturaId: string]
+  novoDebito: []
+  editarDebito: [transacao: TransacaoCartao]
+  removerDebito: [transacao: TransacaoCartao]
+}>()
 
 const categoriaStore = useCategoriaStore()
 
@@ -42,6 +48,11 @@ const resumoCategorias = computed(() => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 4)
 })
+
+/** Ocorrência projetada de uma recorrência: só o lançamento original é editável/removível. */
+function ehProjecao(transacao: TransacaoCartao): boolean {
+  return Boolean(transacao.origemRecorrenciaId)
+}
 </script>
 
 <template>
@@ -64,9 +75,13 @@ const resumoCategorias = computed(() => {
       </p>
     </template>
 
-    <template v-if="fatura" #acoes>
+    <template #acoes>
+      <BaseButton v-if="item" variante="outline" tamanho="sm" @click="emit('novoDebito')">
+        <Plus class="size-4" aria-hidden="true" />
+        Novo débito
+      </BaseButton>
       <BaseButton
-        v-if="podePagar"
+        v-if="fatura && podePagar"
         variante="success"
         tamanho="sm"
         :carregando="processando"
@@ -75,7 +90,7 @@ const resumoCategorias = computed(() => {
         <CircleCheck class="size-4" aria-hidden="true" />
         Marcar como paga
       </BaseButton>
-      <BaseBadge v-else tom="sucesso">
+      <BaseBadge v-else-if="fatura" tom="sucesso">
         <CalendarCheck class="size-3.5" aria-hidden="true" />
         Paga em {{ formatDate(fatura.pagoEm) }}
       </BaseBadge>
@@ -84,10 +99,16 @@ const resumoCategorias = computed(() => {
     <EmptyState
       v-if="!fatura"
       titulo="Sem fatura neste período"
-      descricao="Este cartão não possui fatura gerada para o mês selecionado."
+      descricao="Nenhum débito lançado neste cartão no mês selecionado."
     >
       <template #icone>
         <Receipt class="size-6" aria-hidden="true" />
+      </template>
+      <template #acao>
+        <BaseButton variante="outline" @click="emit('novoDebito')">
+          <Plus class="size-4" aria-hidden="true" />
+          Lançar débito
+        </BaseButton>
       </template>
     </EmptyState>
 
@@ -122,8 +143,12 @@ const resumoCategorias = computed(() => {
             <tr class="text-muted-foreground border-border border-b text-left">
               <th scope="col" class="px-5 py-3 font-medium">Descrição</th>
               <th scope="col" class="hidden px-5 py-3 font-medium sm:table-cell">Categoria</th>
+              <th scope="col" class="hidden px-5 py-3 font-medium sm:table-cell">Tipo</th>
               <th scope="col" class="px-5 py-3 font-medium">Data</th>
               <th scope="col" class="px-5 py-3 text-right font-medium">Valor</th>
+              <th scope="col" class="px-5 py-3 text-right font-medium">
+                <span class="sr-only">Ações</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -153,11 +178,38 @@ const resumoCategorias = computed(() => {
                   {{ categoriaStore.nome(transacao.categoriaId) }}
                 </BaseBadge>
               </td>
+              <td class="text-muted-foreground hidden px-5 py-3 whitespace-nowrap sm:table-cell">
+                {{ SAIDA_TIPO_LABEL[transacao.tipo] }}
+              </td>
               <td class="text-muted-foreground numero-tabular px-5 py-3 whitespace-nowrap">
                 {{ formatDate(transacao.data) }}
               </td>
               <td class="numero-tabular px-5 py-3 text-right font-semibold">
                 {{ formatCurrency(transacao.valor) }}
+              </td>
+              <td class="px-5 py-3">
+                <div v-if="!ehProjecao(transacao)" class="flex justify-end gap-1">
+                  <BaseButton
+                    variante="ghost"
+                    tamanho="icon"
+                    :aria-label="`Editar ${transacao.descricao}`"
+                    @click="emit('editarDebito', transacao)"
+                  >
+                    <Pencil class="size-4" aria-hidden="true" />
+                  </BaseButton>
+                  <BaseButton
+                    variante="ghost"
+                    tamanho="icon"
+                    class="hover:text-danger"
+                    :aria-label="`Excluir ${transacao.descricao}`"
+                    @click="emit('removerDebito', transacao)"
+                  >
+                    <Trash2 class="size-4" aria-hidden="true" />
+                  </BaseButton>
+                </div>
+                <span v-else class="text-muted-foreground block text-right text-xs">
+                  Editável no original
+                </span>
               </td>
             </tr>
           </tbody>

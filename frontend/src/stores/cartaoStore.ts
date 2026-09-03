@@ -3,7 +3,12 @@ import { computed, ref } from 'vue'
 
 import { cartaoService } from '@/services/cartaoService'
 import { mensagemDeErro } from '@/services/http'
-import type { Cartao, CartaoComFatura, CartaoPayload } from '@/types/cartao'
+import type {
+  Cartao,
+  CartaoComFatura,
+  CartaoPayload,
+  TransacaoCartaoPayload,
+} from '@/types/cartao'
 import { usePeriodoStore } from './periodoStore'
 
 export const useCartaoStore = defineStore('cartao', () => {
@@ -102,6 +107,52 @@ export const useCartaoStore = defineStore('cartao', () => {
     }
   }
 
+  async function criarTransacao(cartaoId: string, payload: TransacaoCartaoPayload): Promise<boolean> {
+    salvando.value = true
+    try {
+      await cartaoService.criarTransacao(cartaoId, payload)
+      await carregar()
+      return true
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'Não foi possível salvar o débito.')
+      return false
+    } finally {
+      salvando.value = false
+    }
+  }
+
+  async function atualizarTransacao(
+    cartaoId: string,
+    id: string,
+    payload: TransacaoCartaoPayload,
+  ): Promise<boolean> {
+    salvando.value = true
+    try {
+      await cartaoService.atualizarTransacao(cartaoId, id, payload)
+      await carregar()
+      return true
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'Não foi possível atualizar o débito.')
+      return false
+    } finally {
+      salvando.value = false
+    }
+  }
+
+  async function removerTransacao(cartaoId: string, id: string): Promise<boolean> {
+    salvando.value = true
+    try {
+      await cartaoService.removerTransacao(cartaoId, id)
+      await carregar()
+      return true
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'Não foi possível excluir o débito.')
+      return false
+    } finally {
+      salvando.value = false
+    }
+  }
+
   async function pagarFatura(faturaId: string): Promise<boolean> {
     salvando.value = true
     try {
@@ -148,6 +199,9 @@ export const useCartaoStore = defineStore('cartao', () => {
     criar,
     atualizar,
     remover,
+    criarTransacao,
+    atualizarTransacao,
+    removerTransacao,
     pagarFatura,
     porId,
   }

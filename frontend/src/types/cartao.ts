@@ -1,4 +1,5 @@
 import type { ID, OpcaoSelect, Periodo } from './common'
+import type { SaidaTipo } from './saida'
 
 export type Bandeira = 'VISA' | 'MASTERCARD' | 'ELO' | 'AMEX' | 'HIPERCARD'
 
@@ -20,6 +21,10 @@ export interface Cartao {
 
 export type CartaoPayload = Omit<Cartao, 'id' | 'criadoEm'>
 
+/**
+ * Débito lançado direto no cartão — mesmo formato de uma `Saida`, sem forma de
+ * pagamento (é sempre o cartão) e sem situação própria (quem é paga é a fatura).
+ */
 export interface TransacaoCartao {
   id: ID
   cartaoId: ID
@@ -28,9 +33,13 @@ export interface TransacaoCartao {
   valor: number
   data: string
   categoriaId: ID
+  tipo: SaidaTipo
   parcelaAtual: number
   totalParcelas: number
   recorrente: boolean
+  observacao?: string | null
+  criadoEm: string
+  atualizadoEm: string
   /**
    * Preenchido só nas ocorrências futuras projetadas a partir de uma transação
    * recorrente — nunca persistido, recalculado a cada leitura. A fatura a que
@@ -39,6 +48,11 @@ export interface TransacaoCartao {
    */
   origemRecorrenciaId?: ID
 }
+
+export type TransacaoCartaoPayload = Omit<
+  TransacaoCartao,
+  'id' | 'cartaoId' | 'faturaId' | 'criadoEm' | 'atualizadoEm' | 'origemRecorrenciaId'
+>
 
 export type FaturaStatus = 'ABERTA' | 'FECHADA' | 'PAGA' | 'ATRASADA'
 

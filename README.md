@@ -108,8 +108,8 @@ contrato esperado (rotas, payloads e respostas) está descrito no README do
 | ------------------- | ------------------------------------------------------------------------------------------------- |
 | `/pages/dashboard`  | Cards totalizadores, gráfico de barras Entradas × Saídas (6 meses), rosca de gastos por categoria, últimas transações e comprometimento da renda |
 | `/pages/entradas`   | Listagem por período, filtro por categoria, busca, paginação, criar/editar/excluir e total do mês  |
-| `/pages/saidas`     | Idem entradas + filtro por status (Pago/Pendente), forma de pagamento e vínculo com cartão         |
-| `/pages/cartoes`    | Cartões cadastrados, uso do limite, fatura da competência, transações da fatura e baixa de pagamento |
+| `/pages/saidas`     | Idem entradas + filtro por status (Pago/Pendente) e forma de pagamento; a fatura de cada cartão entra como uma saída só de leitura (editável na aba Cartões) |
+| `/pages/cartoes`    | Cartões cadastrados, uso do limite, fatura da competência, lançamento/edição/remoção de débitos do cartão e baixa de pagamento |
 
 O mês selecionado é global (store `periodo`) e se mantém ao navegar entre as páginas.
 

@@ -13,14 +13,25 @@ import CartaoForm from '@/components/features/CartaoForm.vue'
 import FaturaDetalhe from '@/components/features/FaturaDetalhe.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
+import TransactionForm from '@/components/features/TransactionForm.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
 import { notificar } from '@/composables/useNotify'
 import { useCartaoStore } from '@/stores/cartaoStore'
+import { useCategoriaStore } from '@/stores/categoriaStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
-import type { Cartao, CartaoComFatura, CartaoPayload } from '@/types/cartao'
+import type {
+  Cartao,
+  CartaoComFatura,
+  CartaoPayload,
+  TransacaoCartao,
+  TransacaoCartaoPayload,
+} from '@/types/cartao'
+import type { EntradaPayload } from '@/types/entrada'
+import type { SaidaPayload } from '@/types/saida'
 import { formatPeriodo } from '@/utils/dateFormatter'
 
 const periodoStore = usePeriodoStore()
+const categoriaStore = useCategoriaStore()
 const cartaoStore = useCartaoStore()
 
 const modalAberto = ref(false)
@@ -28,7 +39,14 @@ const confirmacaoAberta = ref(false)
 const emEdicao = ref<Cartao | null>(null)
 const paraExcluir = ref<Cartao | null>(null)
 
+const modalDebitoAberto = ref(false)
+const confirmacaoDebitoAberta = ref(false)
+const debitoEmEdicao = ref<TransacaoCartao | null>(null)
+const debitoParaExcluir = ref<TransacaoCartao | null>(null)
+
+const opcoesCategoria = computed(() => categoriaStore.opcoes('SAIDA'))
 const tituloModal = computed(() => (emEdicao.value ? 'Editar cartão' : 'Novo cartão'))
+const tituloModalDebito = computed(() => (debitoEmEdicao.value ? 'Editar débito' : 'Novo débito'))
 
 onMounted(() => void cartaoStore.carregar())
 watch(() => periodoStore.periodo, () => void cartaoStore.carregar(), { deep: true })
@@ -79,6 +97,50 @@ async function confirmarExclusao(): Promise<void> {
 
 async function pagarFatura(faturaId: string): Promise<void> {
   if (await cartaoStore.pagarFatura(faturaId)) notificar.sucesso('Fatura marcada como paga')
+}
+
+function abrirNovoDebito(): void {
+  debitoEmEdicao.value = null
+  modalDebitoAberto.value = true
+}
+
+function abrirEdicaoDebito(transacao: TransacaoCartao): void {
+  debitoEmEdicao.value = transacao
+  modalDebitoAberto.value = true
+}
+
+async function salvarDebito(payload: EntradaPayload | SaidaPayload | TransacaoCartaoPayload): Promise<void> {
+  const cartaoId = cartaoStore.selecionado?.cartao.id
+  if (!cartaoId) return
+
+  const debito = payload as TransacaoCartaoPayload
+  const editando = debitoEmEdicao.value
+
+  const sucesso = editando
+    ? await cartaoStore.atualizarTransacao(cartaoId, editando.id, debito)
+    : await cartaoStore.criarTransacao(cartaoId, debito)
+
+  if (!sucesso) return
+
+  notificar.sucesso(editando ? 'Débito atualizado' : 'Débito lançado', debito.descricao)
+  modalDebitoAberto.value = false
+  debitoEmEdicao.value = null
+}
+
+function pedirExclusaoDebito(transacao: TransacaoCartao): void {
+  debitoParaExcluir.value = transacao
+  confirmacaoDebitoAberta.value = true
+}
+
+async function confirmarExclusaoDebito(): Promise<void> {
+  const debito = debitoParaExcluir.value
+  if (!debito) return
+
+  if (await cartaoStore.removerTransacao(debito.cartaoId, debito.id)) {
+    notificar.sucesso('Débito excluído', debito.descricao)
+  }
+  confirmacaoDebitoAberta.value = false
+  debitoParaExcluir.value = null
 }
 </script>
 
@@ -175,6 +237,9 @@ async function pagarFatura(faturaId: string): Promise<void> {
         :item="cartaoStore.selecionado"
         :processando="cartaoStore.salvando"
         @pagar="pagarFatura"
+        @novo-debito="abrirNovoDebito"
+        @editar-debito="abrirEdicaoDebito"
+        @remover-debito="pedirExclusaoDebito"
       />
     </div>
 
@@ -186,6 +251,27 @@ async function pagarFatura(faturaId: string): Promise<void> {
         @cancelar="modalAberto = false"
       />
     </BaseModal>
+
+    <BaseModal v-model:aberto="modalDebitoAberto" :titulo="tituloModalDebito">
+      <TransactionForm
+        tipo="SAIDA"
+        contexto="CARTAO"
+        :transacao="debitoEmEdicao"
+        :categorias="opcoesCategoria"
+        :salvando="cartaoStore.salvando"
+        @salvar="salvarDebito"
+        @cancelar="modalDebitoAberto = false"
+      />
+    </BaseModal>
+
+    <ConfirmDialog
+      v-model:aberto="confirmacaoDebitoAberta"
+      titulo="Excluir débito"
+      :mensagem="`Excluir “${debitoParaExcluir?.descricao ?? ''}” também remove o valor da fatura. Deseja continuar?`"
+      texto-confirmar="Excluir"
+      :carregando="cartaoStore.salvando"
+      @confirmar="confirmarExclusaoDebito"
+    />
 
     <ConfirmDialog
       v-model:aberto="confirmacaoAberta"

@@ -12,7 +12,15 @@ import type { Categoria } from '@/types/categoria'
 import type { ID, Periodo } from '@/types/common'
 import type { Entrada } from '@/types/entrada'
 import type { FormaPagamento, Saida, SaidaTipo } from '@/types/saida'
-import { addMeses, diaDoPeriodo, periodoAtual, toCompetencia, toDate, toISODate } from '@/utils/dateFormatter'
+import {
+  addMeses,
+  diaDoPeriodo,
+  fromCompetencia,
+  periodoAtual,
+  toCompetencia,
+  toDate,
+  toISODate,
+} from '@/utils/dateFormatter'
 
 faker.seed(20260815)
 
@@ -208,12 +216,9 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
       'Educação',
     ])
     const dia = faker.number.int({ min: 1, max: 28 })
-    const formaPagamento = faker.helpers.arrayElement<FormaPagamento>([
-      'PIX',
-      'DEBITO',
-      'DINHEIRO',
-      'CARTAO_CREDITO',
-    ])
+    // Sem CARTAO_CREDITO: gasto no cartão é semeado em `transacoesCartao` e chega
+    // na aba Saídas pela fatura (ver `faturasComoSaidas`) — aqui seria contado duas vezes.
+    const formaPagamento = faker.helpers.arrayElement<FormaPagamento>(['PIX', 'DEBITO', 'DINHEIRO'])
 
     saidas.push({
       id: novoId('sai'),
@@ -224,7 +229,7 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
       tipo: TIPO_POR_GASTO_VARIAVEL[gasto],
       status: offset === 0 && dia > new Date().getDate() ? 'PENDENTE' : 'PAGO',
       formaPagamento,
-      cartaoId: formaPagamento === 'CARTAO_CREDITO' ? faker.helpers.arrayElement(cartoes).id : null,
+      cartaoId: null,
       recorrente: false,
       criadoEm: agora(),
       atualizadoEm: agora(),
@@ -286,9 +291,13 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
         valor,
         data: diaDoPeriodo(periodo, faker.number.int({ min: 1, max: 28 })),
         categoriaId: categoriaPorNome('Despesa Variável').id,
+        tipo: faker.helpers.arrayElement<SaidaTipo>(['ALIMENTACAO', 'TRANSPORTE', 'LAZER', 'OUTROS']),
         parcelaAtual: totalParcelas === 1 ? 1 : faker.number.int({ min: 1, max: totalParcelas }),
         totalParcelas,
         recorrente: false,
+        observacao: null,
+        criadoEm: agora(),
+        atualizadoEm: agora(),
       })
     }
 
@@ -330,6 +339,44 @@ function descricaoVariavel(categoria: string): string {
 }
 
 /**
+ * Fatura da competência do cartão, criada como ABERTA na primeira transação do mês —
+ * espelha `garantirFatura` do `SupabaseFaturaRepository`.
+ */
+export function garantirFatura(cartaoId: ID, competencia: string): Fatura {
+  const existente = faturas.find(
+    (fatura) => fatura.cartaoId === cartaoId && fatura.competencia === competencia,
+  )
+  if (existente) return existente
+
+  const cartao = cartoes.find((item) => item.id === cartaoId)
+  if (!cartao) throw new Error('Cartão não encontrado.')
+
+  const periodo = fromCompetencia(competencia)
+  const nova: Fatura = {
+    id: novoId('fat'),
+    cartaoId,
+    competencia,
+    fechamento: diaDoPeriodo(periodo, cartao.diaFechamento),
+    vencimento: diaDoPeriodo(periodo, cartao.diaVencimento),
+    total: 0,
+    status: 'ABERTA',
+    pagoEm: null,
+  }
+  faturas.push(nova)
+  return nova
+}
+
+/** O total da fatura é sempre a soma das transações — evita saldo torto por delta perdido. */
+export function recalcularTotalFatura(faturaId: ID): void {
+  const fatura = faturas.find((item) => item.id === faturaId)
+  if (!fatura) return
+
+  fatura.total = transacoesCartao
+    .filter((transacao) => transacao.faturaId === faturaId)
+    .reduce((soma, transacao) => soma + transacao.valor, 0)
+}
+
+/**
  * Cada cartão com fatura no período vira uma "saída" derivada, com o valor
  * sempre lido ao vivo da fatura — nunca duplicado/armazenado, então qualquer
  * mudança no total da fatura (hoje só via seed; futuramente via lançamentos
@@ -337,7 +384,7 @@ function descricaoVariavel(categoria: string): string {
  */
 function faturasComoSaidas(): Saida[] {
   const categoriaFatura = categoriaPorNome('Despesa Variável')
-  return faturas.map((fatura) => {
+  return faturas.filter((fatura) => fatura.total > 0).map((fatura) => {
     const cartao = cartoes.find((item) => item.id === fatura.cartaoId)
     return {
       id: `sai_fat_${fatura.id}`,

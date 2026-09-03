@@ -4,6 +4,8 @@ import type {
   CartaoPayload,
   FaturaDetalhada,
   FaturaFiltro,
+  TransacaoCartao,
+  TransacaoCartaoPayload,
 } from '@/types/cartao'
 import { toCompetencia } from '@/utils/dateFormatter'
 import { http, USE_MOCK } from './http'
@@ -124,6 +126,80 @@ export const cartaoService = {
     }
 
     await http.delete(`/cartoes/${id}`)
+  },
+
+  /**
+   * Débito lançado direto no cartão — a fatura da competência da data é criada
+   * como ABERTA se ainda não existir e passa a somar o débito.
+   */
+  async criarTransacao(cartaoId: string, payload: TransacaoCartaoPayload): Promise<TransacaoCartao> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      const fatura = db.garantirFatura(cartaoId, payload.data.slice(0, 7))
+
+      const transacao: TransacaoCartao = {
+        ...payload,
+        id: db.novoId('trc'),
+        cartaoId,
+        faturaId: fatura.id,
+        criadoEm: db.agora(),
+        atualizadoEm: db.agora(),
+      }
+      db.transacoesCartao.push(transacao)
+      db.recalcularTotalFatura(fatura.id)
+
+      return delay(db.clonar(transacao))
+    }
+
+    const { data } = await http.post<TransacaoCartao>(`/cartoes/${cartaoId}/transacoes`, payload)
+    return data
+  },
+
+  /** Mudar a data pode mover o débito para a fatura de outra competência. */
+  async atualizarTransacao(
+    cartaoId: string,
+    id: string,
+    payload: TransacaoCartaoPayload,
+  ): Promise<TransacaoCartao> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      const indice = db.transacoesCartao.findIndex((transacao) => transacao.id === id)
+      if (indice < 0) throw new Error('Transação não encontrada.')
+
+      const anterior = db.transacoesCartao[indice]!
+      const fatura = db.garantirFatura(cartaoId, payload.data.slice(0, 7))
+
+      const atualizada: TransacaoCartao = {
+        ...anterior,
+        ...payload,
+        faturaId: fatura.id,
+        atualizadoEm: db.agora(),
+      }
+      db.transacoesCartao[indice] = atualizada
+
+      db.recalcularTotalFatura(anterior.faturaId)
+      if (fatura.id !== anterior.faturaId) db.recalcularTotalFatura(fatura.id)
+
+      return delay(db.clonar(atualizada))
+    }
+
+    const { data } = await http.put<TransacaoCartao>(`/cartoes/${cartaoId}/transacoes/${id}`, payload)
+    return data
+  },
+
+  async removerTransacao(cartaoId: string, id: string): Promise<void> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      const indice = db.transacoesCartao.findIndex((transacao) => transacao.id === id)
+      if (indice < 0) throw new Error('Transação não encontrada.')
+
+      const [removida] = db.transacoesCartao.splice(indice, 1)
+      db.recalcularTotalFatura(removida!.faturaId)
+
+      return delay(undefined)
+    }
+
+    await http.delete(`/cartoes/${cartaoId}/transacoes/${id}`)
   },
 
   async pagarFatura(faturaId: string): Promise<void> {
