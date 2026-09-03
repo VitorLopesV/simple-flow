@@ -38,10 +38,12 @@ export const dashboardService = {
       const serieEntradas = serie(db.entradas, periodo)
       const serieSaidas = serie(todasSaidas, periodo)
 
-      const competencia = toCompetencia(periodo)
-      const totalFaturas = db.faturas
-        .filter((fatura) => fatura.competencia === competencia && fatura.status !== 'PAGA')
-        .reduce((soma, fatura) => soma + fatura.total, 0)
+      // Quanto das saídas do mês é fatura de cartão — sai do mesmo conjunto que alimenta
+      // totalSaidas (ver `faturasComoSaidas` em mock/db.ts), e não de uma busca própria
+      // por competência, que seria uma definição de mês diferente do resto do dashboard.
+      const totalFaturas = saidasDoMes
+        .filter((saida) => saida.automatica && saida.formaPagamento === 'CARTAO_CREDITO')
+        .reduce((soma, saida) => soma + saida.valor, 0)
 
       const agrupado = new Map<string, number>()
       for (const saida of saidasDoMes) {

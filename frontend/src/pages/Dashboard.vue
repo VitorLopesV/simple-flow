@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDownCircle, ArrowUpCircle, Download, Wallet } from '@lucide/vue'
+import { ArrowDownCircle, ArrowUpCircle, CreditCard, Download, Wallet } from '@lucide/vue'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
@@ -15,7 +15,7 @@ import { notificar } from '@/composables/useNotify'
 import { exportarRelatorioPdf } from '@/services/exportService'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
-import { formatCurrency } from '@/utils/currencyFormatter'
+import { formatCurrency, formatPercent } from '@/utils/currencyFormatter'
 import { formatDate, formatPeriodo } from '@/utils/dateFormatter'
 
 const periodoStore = usePeriodoStore()
@@ -49,6 +49,18 @@ const seriesHistorico = computed(() => [
   { nome: 'Saídas', dados: resumo.value?.serieSaidas.map((p) => p.valor) ?? [], cor: '#f43f5e' },
 ])
 
+/**
+ * `totalFaturas` é um recorte de `totalSaidas` (a fatura já está somada ali), não
+ * uma parcela a mais — o detalhe do card diz o peso dela pra não parecer que soma.
+ */
+const detalheFaturas = computed(() => {
+  const total = resumo.value?.totalSaidas ?? 0
+  const faturas = resumo.value?.totalFaturas ?? 0
+
+  if (!faturas) return 'nenhuma fatura vence neste mês'
+  return total > 0 ? `${formatPercent(faturas / total)} das saídas do mês` : 'incluído nas saídas do mês'
+})
+
 const gastos = computed(() => resumo.value?.gastosPorCategoria.slice(0, 6) ?? [])
 const labelsGastos = computed(() => gastos.value.map((g) => g.nome))
 const seriesGastos = computed(() => [
@@ -81,7 +93,7 @@ watch(
       </BaseButton>
     </template>
 
-    <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryCard
         rotulo="Entradas"
         :valor="resumo?.totalEntradas ?? 0"
@@ -97,6 +109,15 @@ watch(
         tom="perigo"
         :variacao="resumo?.variacaoSaidas ?? null"
         variacao-invertida
+        :carregando="carregandoInicial"
+      />
+      <SummaryCard
+        rotulo="Faturas de cartão"
+        :valor="resumo?.totalFaturas ?? 0"
+        :icone="CreditCard"
+        tom="aviso"
+        :variacao="null"
+        :detalhe="detalheFaturas"
         :carregando="carregandoInicial"
       />
       <SummaryCard
