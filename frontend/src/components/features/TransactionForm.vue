@@ -12,8 +12,8 @@ import DateInput from '@/components/common/DateInput.vue'
 import type { OpcaoSelect } from '@/types/common'
 import type { Movimento } from '@/types/categoria'
 import type { Entrada, EntradaPayload } from '@/types/entrada'
-import type { FormaPagamento, Saida, SaidaPayload, SaidaStatus } from '@/types/saida'
-import { FORMA_PAGAMENTO_OPCOES, SAIDA_STATUS_OPCOES } from '@/types/saida'
+import type { FormaPagamento, Saida, SaidaPayload, SaidaStatus, SaidaTipo } from '@/types/saida'
+import { FORMA_PAGAMENTO_OPCOES, SAIDA_STATUS_OPCOES, SAIDA_TIPO_OPCOES } from '@/types/saida'
 import { toISODate } from '@/utils/dateFormatter'
 import {
   compor,
@@ -34,6 +34,7 @@ interface Valores {
   status: SaidaStatus
   formaPagamento: FormaPagamento
   cartaoId: string | null
+  tipo: SaidaTipo
 }
 
 const props = withDefaults(
@@ -70,6 +71,7 @@ function valoresIniciais(): Valores {
     status: saida?.status ?? 'PAGO',
     formaPagamento: saida?.formaPagamento ?? 'PIX',
     cartaoId: saida?.cartaoId ?? null,
+    tipo: saida?.tipo ?? 'OUTROS',
   }
 }
 
@@ -101,6 +103,7 @@ const { value: observacao, errorMessage: erroObservacao } = useField<string>('ob
 const { value: status } = useField<SaidaStatus>('status')
 const { value: formaPagamento } = useField<FormaPagamento>('formaPagamento')
 const { value: cartaoId, errorMessage: erroCartao } = useField<string | null>('cartaoId')
+const { value: tipo } = useField<SaidaTipo>('tipo')
 
 const exigeCartao = computed(() => ehSaida.value && values.formaPagamento === 'CARTAO_CREDITO')
 
@@ -135,6 +138,7 @@ const aoSubmeter = handleSubmit((formulario) => {
 
   emit('salvar', {
     ...base,
+    tipo: formulario.tipo,
     status: formulario.status,
     formaPagamento: formulario.formaPagamento,
     cartaoId: formulario.formaPagamento === 'CARTAO_CREDITO' ? formulario.cartaoId : null,
@@ -172,14 +176,17 @@ const aoSubmeter = handleSubmit((formulario) => {
       />
     </div>
 
-    <BaseSelect
-      v-model="categoriaId"
-      label="Categoria"
-      placeholder="Selecione uma categoria"
-      :opcoes="categorias"
-      :erro="erroCategoria"
-      obrigatorio
-    />
+    <div class="grid gap-4" :class="ehSaida ? 'sm:grid-cols-2' : ''">
+      <BaseSelect
+        v-model="categoriaId"
+        label="Categoria"
+        placeholder="Selecione uma categoria"
+        :opcoes="categorias"
+        :erro="erroCategoria"
+        obrigatorio
+      />
+      <BaseSelect v-if="ehSaida" v-model="tipo" label="Tipo" :opcoes="SAIDA_TIPO_OPCOES" />
+    </div>
 
     <div v-if="ehSaida" class="grid gap-4 sm:grid-cols-2">
       <BaseSelect

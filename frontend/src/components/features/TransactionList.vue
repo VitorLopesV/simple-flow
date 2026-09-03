@@ -11,7 +11,7 @@ import { useCategoriaStore } from '@/stores/categoriaStore'
 import type { Movimento } from '@/types/categoria'
 import type { Entrada } from '@/types/entrada'
 import type { Saida } from '@/types/saida'
-import { FORMA_PAGAMENTO_LABEL, SAIDA_STATUS_LABEL } from '@/types/saida'
+import { FORMA_PAGAMENTO_LABEL, SAIDA_STATUS_LABEL, SAIDA_TIPO_LABEL } from '@/types/saida'
 import { formatCurrency } from '@/utils/currencyFormatter'
 import { formatDate } from '@/utils/dateFormatter'
 
@@ -90,6 +90,7 @@ function textoBloqueio(transacao: Transacao): string {
             <tr class="text-muted-foreground border-border border-b text-left">
               <th scope="col" class="px-5 py-3 font-medium">Descrição</th>
               <th scope="col" class="px-5 py-3 font-medium">Categoria</th>
+              <th v-if="ehSaida" scope="col" class="px-5 py-3 font-medium">Tipo</th>
               <th scope="col" class="px-5 py-3 font-medium">Data</th>
               <th v-if="ehSaida" scope="col" class="px-5 py-3 font-medium">Pagamento</th>
               <th v-if="ehSaida" scope="col" class="px-5 py-3 font-medium">Situação</th>
@@ -123,6 +124,10 @@ function textoBloqueio(transacao: Transacao): string {
                 <BaseBadge :cor="categoriaStore.cor(transacao.categoriaId)">
                   {{ categoriaStore.nome(transacao.categoriaId) }}
                 </BaseBadge>
+              </td>
+
+              <td v-if="ehSaida" class="text-muted-foreground px-5 py-3 whitespace-nowrap">
+                {{ SAIDA_TIPO_LABEL[comoSaida(transacao).tipo] }}
               </td>
 
               <td class="text-muted-foreground numero-tabular px-5 py-3 whitespace-nowrap">
@@ -201,6 +206,9 @@ function textoBloqueio(transacao: Transacao): string {
           <div class="flex flex-wrap items-center gap-2">
             <BaseBadge :cor="categoriaStore.cor(transacao.categoriaId)">
               {{ categoriaStore.nome(transacao.categoriaId) }}
+            </BaseBadge>
+            <BaseBadge v-if="ehSaida">
+              {{ SAIDA_TIPO_LABEL[comoSaida(transacao).tipo] }}
             </BaseBadge>
             <BaseBadge
               v-if="ehSaida"

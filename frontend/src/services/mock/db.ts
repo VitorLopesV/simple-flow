@@ -11,7 +11,7 @@ import type { Cartao, Fatura, TransacaoCartao } from '@/types/cartao'
 import type { Categoria } from '@/types/categoria'
 import type { ID, Periodo } from '@/types/common'
 import type { Entrada } from '@/types/entrada'
-import type { FormaPagamento, Saida } from '@/types/saida'
+import type { FormaPagamento, Saida, SaidaTipo } from '@/types/saida'
 import { addMeses, diaDoPeriodo, periodoAtual, toCompetencia, toDate, toISODate } from '@/utils/dateFormatter'
 
 faker.seed(20260815)
@@ -34,27 +34,15 @@ export function clonar<T>(valor: T): T {
 // ---------------------------------------------------------------- categorias
 
 const SEMENTE_CATEGORIAS: Omit<Categoria, 'id'>[] = [
-  // Conta Fixa
-  { nome: 'Aluguel', tipo: 'CONTA_FIXA', movimento: 'SAIDA', cor: '#6366f1' },
-  { nome: 'Energia', tipo: 'CONTA_FIXA', movimento: 'SAIDA', cor: '#f59e0b' },
-  { nome: 'Água', tipo: 'CONTA_FIXA', movimento: 'SAIDA', cor: '#0ea5e9' },
-  { nome: 'Internet', tipo: 'CONTA_FIXA', movimento: 'SAIDA', cor: '#8b5cf6' },
-  { nome: 'Plano de Saúde', tipo: 'CONTA_FIXA', movimento: 'SAIDA', cor: '#ec4899' },
-  // Conta Variável
-  { nome: 'Alimentação', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#22c55e' },
-  { nome: 'Transporte', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#14b8a6' },
-  { nome: 'Lazer', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#f43f5e' },
-  { nome: 'Compras', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#a855f7' },
-  { nome: 'Educação', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#3b82f6' },
-  { nome: 'Fatura de cartão', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#64748b' },
+  // Saída — apenas os 3 grandes grupos; a classificação específica vai no campo `tipo` da Saida.
+  { nome: 'Despesa Fixa', tipo: 'CONTA_FIXA', movimento: 'SAIDA', cor: '#6366f1' },
+  { nome: 'Despesa Variável', tipo: 'CONTA_VARIAVEL', movimento: 'SAIDA', cor: '#14b8a6' },
+  { nome: 'Investimento', tipo: 'INVESTIMENTO', movimento: 'SAIDA', cor: '#0891b2' },
   // Renda
   { nome: 'Salário', tipo: 'RENDA', movimento: 'ENTRADA', cor: '#10b981' },
   { nome: 'Freelance', tipo: 'RENDA', movimento: 'ENTRADA', cor: '#06b6d4' },
   { nome: 'Reembolso', tipo: 'RENDA', movimento: 'ENTRADA', cor: '#84cc16' },
   { nome: 'Outras receitas', tipo: 'OUTROS', movimento: 'ENTRADA', cor: '#94a3b8' },
-  // Investimentos
-  { nome: 'Poupança', tipo: 'INVESTIMENTO', movimento: 'SAIDA', cor: '#0891b2' },
-  { nome: 'Ações', tipo: 'INVESTIMENTO', movimento: 'SAIDA', cor: '#7c3aed' },
   { nome: 'Rendimentos', tipo: 'INVESTIMENTO', movimento: 'ENTRADA', cor: '#eab308' },
 ]
 
@@ -176,7 +164,7 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
     })
   }
 
-  // --- saídas fixas
+  // --- saídas fixas (categoria "Despesa Fixa"; tipo específico = "Conta")
   const fixas: [string, string, number, number, number][] = [
     ['Aluguel', 'Aluguel do apartamento', 1900, 1900, 10],
     ['Energia', 'Conta de energia', 130, 320, 15],
@@ -185,13 +173,14 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
     ['Plano de Saúde', 'Plano de saúde familiar', 640, 690, 12],
   ]
 
-  for (const [categoria, descricao, min, max, dia] of fixas) {
+  for (const [, descricao, min, max, dia] of fixas) {
     saidas.push({
       id: novoId('sai'),
       descricao,
       valor: faker.number.int({ min, max }),
       data: diaDoPeriodo(periodo, dia),
-      categoriaId: categoriaPorNome(categoria).id,
+      categoriaId: categoriaPorNome('Despesa Fixa').id,
+      tipo: 'CONTA',
       status: offset === 0 && dia > new Date().getDate() ? 'PENDENTE' : 'PAGO',
       formaPagamento: faker.helpers.arrayElement<FormaPagamento>(['PIX', 'BOLETO', 'DEBITO']),
       cartaoId: null,
@@ -201,10 +190,17 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
     })
   }
 
-  // --- saídas variáveis
+  // --- saídas variáveis (categoria "Despesa Variável"; tipo varia conforme o gasto sorteado)
+  const TIPO_POR_GASTO_VARIAVEL: Record<string, SaidaTipo> = {
+    Alimentação: 'ALIMENTACAO',
+    Transporte: 'TRANSPORTE',
+    Lazer: 'LAZER',
+    Compras: 'OUTROS',
+    Educação: 'OUTROS',
+  }
   const variaveis = faker.number.int({ min: 8, max: 14 })
   for (let i = 0; i < variaveis; i += 1) {
-    const categoria = faker.helpers.arrayElement([
+    const gasto = faker.helpers.arrayElement([
       'Alimentação',
       'Transporte',
       'Lazer',
@@ -221,10 +217,11 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
 
     saidas.push({
       id: novoId('sai'),
-      descricao: descricaoVariavel(categoria),
+      descricao: descricaoVariavel(gasto),
       valor: faker.number.int({ min: 25, max: 780 }),
       data: diaDoPeriodo(periodo, dia),
-      categoriaId: categoriaPorNome(categoria).id,
+      categoriaId: categoriaPorNome('Despesa Variável').id,
+      tipo: TIPO_POR_GASTO_VARIAVEL[gasto],
       status: offset === 0 && dia > new Date().getDate() ? 'PENDENTE' : 'PAGO',
       formaPagamento,
       cartaoId: formaPagamento === 'CARTAO_CREDITO' ? faker.helpers.arrayElement(cartoes).id : null,
@@ -234,14 +231,21 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
     })
   }
 
-  // --- aporte em investimento
+  // --- aporte em investimento (categoria "Investimento"; tipo = Poupança ou Ações)
   if (faker.datatype.boolean(0.7)) {
+    const aporte = faker.helpers.arrayElement([
+      { descricao: 'Aporte Tesouro Direto', tipo: 'ACOES' as const },
+      { descricao: 'Compra de ações', tipo: 'ACOES' as const },
+      { descricao: 'Aporte na poupança', tipo: 'POUPANCA' as const },
+    ])
+
     saidas.push({
       id: novoId('sai'),
-      descricao: faker.helpers.arrayElement(['Aporte Tesouro Direto', 'Compra de ações', 'Aporte na poupança']),
+      descricao: aporte.descricao,
       valor: faker.number.int({ min: 300, max: 2500 }),
       data: diaDoPeriodo(periodo, 6),
-      categoriaId: categoriaPorNome(faker.helpers.arrayElement(['Poupança', 'Ações'])).id,
+      categoriaId: categoriaPorNome('Investimento').id,
+      tipo: aporte.tipo,
       status: 'PAGO',
       formaPagamento: 'PIX',
       cartaoId: null,
@@ -281,9 +285,7 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
         ]),
         valor,
         data: diaDoPeriodo(periodo, faker.number.int({ min: 1, max: 28 })),
-        categoriaId: categoriaPorNome(
-          faker.helpers.arrayElement(['Alimentação', 'Transporte', 'Lazer', 'Compras', 'Educação']),
-        ).id,
+        categoriaId: categoriaPorNome('Despesa Variável').id,
         parcelaAtual: totalParcelas === 1 ? 1 : faker.number.int({ min: 1, max: totalParcelas }),
         totalParcelas,
         recorrente: false,
@@ -334,7 +336,7 @@ function descricaoVariavel(categoria: string): string {
  * no cartão) já aparece aqui sem sincronização manual.
  */
 function faturasComoSaidas(): Saida[] {
-  const categoriaFatura = categoriaPorNome('Fatura de cartão')
+  const categoriaFatura = categoriaPorNome('Despesa Variável')
   return faturas.map((fatura) => {
     const cartao = cartoes.find((item) => item.id === fatura.cartaoId)
     return {
@@ -343,6 +345,7 @@ function faturasComoSaidas(): Saida[] {
       valor: fatura.total,
       data: fatura.vencimento,
       categoriaId: categoriaFatura.id,
+      tipo: 'CONTA',
       status: fatura.status === 'PAGA' ? 'PAGO' : 'PENDENTE',
       formaPagamento: 'CARTAO_CREDITO',
       cartaoId: fatura.cartaoId,
