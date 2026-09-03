@@ -9,7 +9,16 @@ import type {
   CartaoPayload,
   TransacaoCartaoPayload,
 } from '@/types/cartao'
+import { addMeses, diaDoPeriodo, fromCompetencia, toDate } from '@/utils/dateFormatter'
 import { usePeriodoStore } from './periodoStore'
+
+/** Divide um valor em `n` parcelas (centavos inteiros), sobrando o resto para as primeiras. */
+function dividirEmParcelas(valor: number, n: number): number[] {
+  const totalCentavos = Math.round(valor * 100)
+  const base = Math.floor(totalCentavos / n)
+  const resto = totalCentavos - base * n
+  return Array.from({ length: n }, (_, i) => (base + (i < resto ? 1 : 0)) / 100)
+}
 
 export const useCartaoStore = defineStore('cartao', () => {
   const periodoStore = usePeriodoStore()
@@ -110,7 +119,28 @@ export const useCartaoStore = defineStore('cartao', () => {
   async function criarTransacao(cartaoId: string, payload: TransacaoCartaoPayload): Promise<boolean> {
     salvando.value = true
     try {
-      await cartaoService.criarTransacao(cartaoId, payload)
+      const totalParcelas = payload.totalParcelas
+
+      if (totalParcelas <= 1) {
+        await cartaoService.criarTransacao(cartaoId, payload)
+      } else {
+        // Compra parcelada: uma transação por competência futura, valor dividido
+        // (resto fica com as primeiras parcelas), mesmo dia do mês da compra.
+        const valores = dividirEmParcelas(payload.valor, totalParcelas)
+        const dia = toDate(payload.data).getDate()
+        const competenciaBase = fromCompetencia(payload.data.slice(0, 7))
+
+        for (let i = 0; i < totalParcelas; i += 1) {
+          await cartaoService.criarTransacao(cartaoId, {
+            ...payload,
+            valor: valores[i]!,
+            data: diaDoPeriodo(addMeses(competenciaBase, i), dia),
+            parcelaAtual: i + 1,
+            totalParcelas,
+          })
+        }
+      }
+
       await carregar()
       return true
     } catch (e) {

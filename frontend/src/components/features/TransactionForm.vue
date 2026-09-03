@@ -21,6 +21,7 @@ import {
   dataISO,
   maximoCaracteres,
   minimoCaracteres,
+  numeroEntre,
   obrigatorio,
   valorMonetarioPositivo,
 } from '@/utils/validators'
@@ -35,6 +36,7 @@ interface Valores {
   status: SaidaStatus
   formaPagamento: FormaPagamento
   tipo: SaidaTipo
+  quantidadeParcelas: number
 }
 
 const props = withDefaults(
@@ -76,6 +78,7 @@ function valoresIniciais(): Valores {
     status: saida?.status ?? 'PAGO',
     formaPagamento: saida?.formaPagamento ?? 'PIX',
     tipo: saida?.tipo ?? 'OUTROS',
+    quantidadeParcelas: 1,
   }
 }
 
@@ -91,6 +94,7 @@ const { handleSubmit, resetForm } = useForm<Valores>({
     data: compor(obrigatorio('Data'), dataISO('Data')),
     categoriaId: obrigatorio('Categoria'),
     observacao: maximoCaracteres(280, 'Observação'),
+    quantidadeParcelas: numeroEntre(1, 30, 'Parcelas'),
   },
 })
 
@@ -103,6 +107,15 @@ const { value: observacao, errorMessage: erroObservacao } = useField<string>('ob
 const { value: status } = useField<SaidaStatus>('status')
 const { value: formaPagamento } = useField<FormaPagamento>('formaPagamento')
 const { value: tipo } = useField<SaidaTipo>('tipo')
+const { value: quantidadeParcelas, errorMessage: erroParcelas } = useField<number>('quantidadeParcelas')
+
+// Compra parcelada e lançamento recorrente são conceitos diferentes (fim previsto x
+// repetição infinita) — não fazem sentido juntos, então desligamos um ao ligar o outro.
+const mostrarRecorrente = computed(() => !ehCartao.value || ehEdicao.value || Number(quantidadeParcelas.value) <= 1)
+
+watch(quantidadeParcelas, (valorAtual) => {
+  if (Number(valorAtual) > 1) recorrente.value = false
+})
 
 // Reabrir o modal com outra transação recarrega o formulário.
 watch(
@@ -127,13 +140,15 @@ const aoSubmeter = handleSubmit((formulario) => {
 
   if (ehCartao.value) {
     // Parcelamento não é editável por aqui: preserva o que a transação já tinha.
+    // Numa transação nova, a quantidade de parcelas escolhida vira totalParcelas —
+    // é quem chama (cartaoStore) que divide o valor e lança uma por fatura futura.
     const atual = props.transacao as TransacaoCartao | null
 
     emit('salvar', {
       ...base,
       tipo: formulario.tipo,
       parcelaAtual: atual?.parcelaAtual ?? 1,
-      totalParcelas: atual?.totalParcelas ?? 1,
+      totalParcelas: atual?.totalParcelas ?? Number(formulario.quantidadeParcelas),
     } satisfies TransacaoCartaoPayload)
     return
   }
@@ -201,7 +216,20 @@ const aoSubmeter = handleSubmit((formulario) => {
       <BaseSelect v-model="status" label="Situação" :opcoes="SAIDA_STATUS_OPCOES" />
     </div>
 
+    <BaseInput
+      v-if="ehCartao && !ehEdicao"
+      v-model="quantidadeParcelas"
+      label="Quantidade de parcelas"
+      type="number"
+      min="1"
+      max="30"
+      :erro="erroParcelas"
+      dica="Divide o valor em parcelas iguais, uma lançada em cada fatura."
+      obrigatorio
+    />
+
     <BaseSwitch
+      v-if="mostrarRecorrente"
       v-model="recorrente"
       label="Lançamento recorrente"
       :descricao="
