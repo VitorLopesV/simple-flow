@@ -160,8 +160,14 @@ const aoSubmeter = handleSubmit((formulario) => {
         v-model="data"
         label="Data"
         :erro="erroData"
-        :desabilitado="recorrente"
-        :dica="recorrente ? 'Data travada enquanto o lançamento for recorrente.' : ''"
+        :desabilitado="recorrente && !ehSaida"
+        :dica="
+          recorrente && !ehSaida
+            ? 'Data travada enquanto o lançamento for recorrente.'
+            : recorrente && ehSaida
+              ? 'Informe a data de pagamento desta conta.'
+              : ''
+        "
         obrigatorio
       />
     </div>
