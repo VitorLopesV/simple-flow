@@ -60,7 +60,7 @@ const { handleSubmit, resetForm } = useForm<Valores>({
     bandeira: obrigatorio('Bandeira'),
     ultimosDigitos: somenteDigitos(4, 'Últimos dígitos'),
     limite: valorMonetarioPositivo('Limite'),
-    diaFechamento: numeroEntre(1, 28, 'Dia de fechamento'),
+    diaFechamento: numeroEntre(1, 31, 'Dia de fechamento'),
     diaVencimento: numeroEntre(1, 28, 'Dia de vencimento'),
     cor: corHexadecimal('Cor'),
   },
@@ -131,7 +131,7 @@ const aoSubmeter = handleSubmit((formulario) => {
         label="Dia do fechamento"
         type="number"
         min="1"
-        max="28"
+        max="31"
         :erro="erroFechamento"
         obrigatorio
       />
