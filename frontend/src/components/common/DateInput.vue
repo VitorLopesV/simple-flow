@@ -48,6 +48,13 @@ watch(texto, (valor) => {
     texto.value = mascarada
     return
   }
+  // Campo apagado por completo: limpa o modelo também (relevante para campos
+  // opcionais como "Data de vencimento" — sem isso o valor anterior ficava
+  // "preso" no v-model mesmo com o texto visível vazio).
+  if (!mascarada) {
+    modelo.value = ''
+    return
+  }
   const iso = paraISODataBR(mascarada)
   if (iso) modelo.value = iso
 })

@@ -170,8 +170,11 @@ const aoSubmeter = handleSubmit((formulario) => {
     ...base,
     // Sem campo "Data" visível na saída: usa o vencimento como data de competência
     // quando houver (mesma regra da fatura de cartão, ver `paraSaidaDeFatura` no
-    // backend); sem vencimento, mantém a data que já tinha (edição) ou hoje (nova).
-    data: formulario.vencimento || formulario.data,
+    // backend); sem vencimento, usa a data em que a saída foi criada — não a
+    // competência anterior, que pode ter vindo de um vencimento já removido.
+    data:
+      formulario.vencimento ||
+      (props.transacao ? toISODate(new Date(props.transacao.criadoEm)) : toISODate(new Date())),
     tipo: formulario.tipo,
     status: formulario.status,
     vencimento: formulario.vencimento || null,
