@@ -90,8 +90,11 @@ export const saidaService = {
   async criar(payload: SaidaPayload): Promise<Saida> {
     if (USE_MOCK) {
       const db = await mockDb()
+      // `pagoEm` espelha a regra do backend: nunca vem do formulário, é definida
+      // aqui a partir da situação escolhida (ver CriarSaida no backend).
       const saida: Saida = {
         ...payload,
+        pagoEm: payload.status === 'PAGO' ? db.hojeISO : null,
         id: db.novoId('sai'),
         criadoEm: db.agora(),
         atualizadoEm: db.agora(),
@@ -110,7 +113,15 @@ export const saidaService = {
       const indice = db.saidas.findIndex((saida) => saida.id === id)
       if (indice < 0) throw new Error('Saída não encontrada.')
 
-      const atualizada: Saida = { ...db.saidas[indice]!, ...payload, atualizadoEm: db.agora() }
+      const atual = db.saidas[indice]!
+      // Mesma regra do backend (ver AtualizarSaida): mantém a data de pagamento
+      // original se já estava paga, carimba hoje ao virar paga, limpa ao pendenciar.
+      const pagoEm =
+        payload.status !== 'PAGO'
+          ? null
+          : (atual.status === 'PAGO' ? atual.pagoEm : null) ?? db.hojeISO
+
+      const atualizada: Saida = { ...atual, ...payload, pagoEm, atualizadoEm: db.agora() }
       db.saidas[indice] = atualizada
       return delay(db.clonar(atualizada))
     }

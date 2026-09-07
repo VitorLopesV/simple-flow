@@ -34,6 +34,7 @@ interface Valores {
   recorrente: boolean
   observacao: string
   status: SaidaStatus
+  vencimento: string
   formaPagamento: FormaPagamento
   tipo: SaidaTipo
   quantidadeParcelas: number
@@ -76,6 +77,7 @@ function valoresIniciais(): Valores {
     recorrente: transacao?.recorrente ?? false,
     observacao: transacao?.observacao ?? '',
     status: saida?.status ?? 'PAGO',
+    vencimento: saida?.vencimento ?? '',
     formaPagamento: saida?.formaPagamento ?? 'PIX',
     tipo: saida?.tipo ?? 'OUTROS',
     quantidadeParcelas: 1,
@@ -93,6 +95,8 @@ const { handleSubmit, resetForm } = useForm<Valores>({
     valor: valorMonetarioPositivo('Valor'),
     data: compor(obrigatorio('Data'), dataISO('Data')),
     categoriaId: obrigatorio('Categoria'),
+    // Vencimento é opcional: só valida o formato quando o usuário preenche algo.
+    vencimento: (valor: unknown) => (String(valor ?? '').trim() === '' ? true : dataISO('Vencimento')(valor)),
     observacao: maximoCaracteres(280, 'Observação'),
     quantidadeParcelas: numeroEntre(1, 30, 'Parcelas'),
   },
@@ -105,6 +109,7 @@ const { value: categoriaId, errorMessage: erroCategoria } = useField<string | nu
 const { value: recorrente } = useField<boolean>('recorrente')
 const { value: observacao, errorMessage: erroObservacao } = useField<string>('observacao')
 const { value: status } = useField<SaidaStatus>('status')
+const { value: vencimento, errorMessage: erroVencimento } = useField<string>('vencimento')
 const { value: formaPagamento } = useField<FormaPagamento>('formaPagamento')
 const { value: tipo } = useField<SaidaTipo>('tipo')
 const { value: quantidadeParcelas, errorMessage: erroParcelas } = useField<number>('quantidadeParcelas')
@@ -157,6 +162,7 @@ const aoSubmeter = handleSubmit((formulario) => {
     ...base,
     tipo: formulario.tipo,
     status: formulario.status,
+    vencimento: formulario.vencimento || null,
     formaPagamento: formulario.formaPagamento,
     cartaoId: null,
   } satisfies SaidaPayload)
@@ -184,13 +190,7 @@ const aoSubmeter = handleSubmit((formulario) => {
         label="Data"
         :erro="erroData"
         :desabilitado="recorrente && !ehSaida"
-        :dica="
-          recorrente && !ehSaida
-            ? 'Data travada enquanto o lançamento for recorrente.'
-            : recorrente && ehSaida
-              ? 'Informe a data de pagamento desta conta.'
-              : ''
-        "
+        :dica="recorrente && !ehSaida ? 'Data travada enquanto o lançamento for recorrente.' : ''"
         obrigatorio
       />
     </div>
@@ -215,6 +215,14 @@ const aoSubmeter = handleSubmit((formulario) => {
       />
       <BaseSelect v-model="status" label="Situação" :opcoes="SAIDA_STATUS_OPCOES" />
     </div>
+
+    <DateInput
+      v-if="ehSaida && !ehCartao"
+      v-model="vencimento"
+      label="Data de vencimento"
+      :erro="erroVencimento"
+      dica="Opcional. A data de pagamento é registrada automaticamente quando a situação muda para Pago."
+    />
 
     <BaseInput
       v-if="ehCartao && !ehEdicao"

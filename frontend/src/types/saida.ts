@@ -24,6 +24,13 @@ export interface Saida {
   categoriaId: ID
   tipo: SaidaTipo
   status: SaidaStatus
+  /** Data de vencimento da conta. Opcional: nem toda saída tem vencimento marcado. */
+  vencimento?: string | null
+  /**
+   * Data em que a conta foi de fato paga. Definida pelo backend quando `status`
+   * muda para 'PAGO' — não é um campo editável no formulário.
+   */
+  pagoEm?: string | null
   formaPagamento: FormaPagamento
   /** Preenchido quando `formaPagamento === 'CARTAO_CREDITO'`. */
   cartaoId?: ID | null

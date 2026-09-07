@@ -132,6 +132,9 @@ function textoBloqueio(transacao: Transacao): string {
 
               <td class="text-muted-foreground numero-tabular px-5 py-3 whitespace-nowrap">
                 {{ formatDate(transacao.data) }}
+                <p v-if="ehSaida && comoSaida(transacao).vencimento" class="text-xs">
+                  Vence {{ formatDate(comoSaida(transacao).vencimento!) }}
+                </p>
               </td>
 
               <td v-if="ehSaida" class="text-muted-foreground px-5 py-3 whitespace-nowrap">
@@ -157,6 +160,9 @@ function textoBloqueio(transacao: Transacao): string {
                 <BaseBadge v-else :tom="comoSaida(transacao).status === 'PAGO' ? 'sucesso' : 'aviso'">
                   {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
                 </BaseBadge>
+                <p v-if="comoSaida(transacao).status === 'PAGO' && comoSaida(transacao).pagoEm" class="text-muted-foreground text-xs">
+                  em {{ formatDate(comoSaida(transacao).pagoEm!) }}
+                </p>
               </td>
 
               <td class="numero-tabular px-5 py-3 text-right font-semibold" :class="corValor">
@@ -196,7 +202,12 @@ function textoBloqueio(transacao: Transacao): string {
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="truncate font-medium">{{ transacao.descricao }}</p>
-              <p class="text-muted-foreground text-xs">{{ formatDate(transacao.data) }}</p>
+              <p class="text-muted-foreground text-xs">
+                {{ formatDate(transacao.data) }}
+                <template v-if="ehSaida && comoSaida(transacao).vencimento">
+                  · vence {{ formatDate(comoSaida(transacao).vencimento!) }}
+                </template>
+              </p>
             </div>
             <p class="numero-tabular shrink-0 font-semibold" :class="corValor">
               {{ sinal }} {{ formatCurrency(transacao.valor) }}
@@ -216,6 +227,12 @@ function textoBloqueio(transacao: Transacao): string {
             >
               {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
             </BaseBadge>
+            <span
+              v-if="ehSaida && comoSaida(transacao).status === 'PAGO' && comoSaida(transacao).pagoEm"
+              class="text-muted-foreground text-xs"
+            >
+              em {{ formatDate(comoSaida(transacao).pagoEm!) }}
+            </span>
 
             <div v-if="!bloqueada(transacao)" class="ml-auto flex gap-1">
               <BaseButton

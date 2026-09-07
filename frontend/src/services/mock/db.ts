@@ -182,14 +182,19 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
   ]
 
   for (const [, descricao, min, max, dia] of fixas) {
+    const vencimento = diaDoPeriodo(periodo, dia)
+    const status = offset === 0 && dia > new Date().getDate() ? 'PENDENTE' : 'PAGO'
+
     saidas.push({
       id: novoId('sai'),
       descricao,
       valor: faker.number.int({ min, max }),
-      data: diaDoPeriodo(periodo, dia),
+      data: vencimento,
       categoriaId: categoriaPorNome('Despesa Fixa').id,
       tipo: 'CONTA',
-      status: offset === 0 && dia > new Date().getDate() ? 'PENDENTE' : 'PAGO',
+      status,
+      vencimento,
+      pagoEm: status === 'PAGO' ? vencimento : null,
       formaPagamento: faker.helpers.arrayElement<FormaPagamento>(['PIX', 'BOLETO', 'DEBITO']),
       cartaoId: null,
       recorrente: true,
@@ -219,15 +224,18 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
     // Sem CARTAO_CREDITO: gasto no cartão é semeado em `transacoesCartao` e chega
     // na aba Saídas pela fatura (ver `faturasComoSaidas`) — aqui seria contado duas vezes.
     const formaPagamento = faker.helpers.arrayElement<FormaPagamento>(['PIX', 'DEBITO', 'DINHEIRO'])
+    const data = diaDoPeriodo(periodo, dia)
+    const status = offset === 0 && dia > new Date().getDate() ? 'PENDENTE' : 'PAGO'
 
     saidas.push({
       id: novoId('sai'),
       descricao: descricaoVariavel(gasto),
       valor: faker.number.int({ min: 25, max: 780 }),
-      data: diaDoPeriodo(periodo, dia),
+      data,
       categoriaId: categoriaPorNome('Despesa Variável').id,
       tipo: TIPO_POR_GASTO_VARIAVEL[gasto],
-      status: offset === 0 && dia > new Date().getDate() ? 'PENDENTE' : 'PAGO',
+      status,
+      pagoEm: status === 'PAGO' ? data : null,
       formaPagamento,
       cartaoId: null,
       recorrente: false,
@@ -244,14 +252,17 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
       { descricao: 'Aporte na poupança', tipo: 'POUPANCA' as const },
     ])
 
+    const dataAporte = diaDoPeriodo(periodo, 6)
+
     saidas.push({
       id: novoId('sai'),
       descricao: aporte.descricao,
       valor: faker.number.int({ min: 300, max: 2500 }),
-      data: diaDoPeriodo(periodo, 6),
+      data: dataAporte,
       categoriaId: categoriaPorNome('Investimento').id,
       tipo: aporte.tipo,
       status: 'PAGO',
+      pagoEm: dataAporte,
       formaPagamento: 'PIX',
       cartaoId: null,
       recorrente: false,
@@ -394,6 +405,8 @@ function faturasComoSaidas(): Saida[] {
       categoriaId: categoriaFatura.id,
       tipo: 'CONTA',
       status: fatura.status === 'PAGA' ? 'PAGO' : 'PENDENTE',
+      vencimento: fatura.vencimento,
+      pagoEm: fatura.pagoEm,
       formaPagamento: 'CARTAO_CREDITO',
       cartaoId: fatura.cartaoId,
       recorrente: true,
