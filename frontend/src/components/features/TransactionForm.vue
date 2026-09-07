@@ -118,8 +118,16 @@ const { value: quantidadeParcelas, errorMessage: erroParcelas } = useField<numbe
 // repetição infinita) — não fazem sentido juntos, então desligamos um ao ligar o outro.
 const mostrarRecorrente = computed(() => !ehCartao.value || ehEdicao.value || Number(quantidadeParcelas.value) <= 1)
 
+// Lançamento recorrente não tem quantidade de parcelas: trava o campo em 1 e ignora
+// o que estiver nele ao salvar.
+const parcelasBloqueadas = computed(() => ehCartao.value && recorrente.value)
+
 watch(quantidadeParcelas, (valorAtual) => {
   if (Number(valorAtual) > 1) recorrente.value = false
+})
+
+watch(recorrente, (valorAtual) => {
+  if (ehCartao.value && valorAtual) quantidadeParcelas.value = 1
 })
 
 // Reabrir o modal com outra transação recarrega o formulário.
@@ -153,7 +161,7 @@ const aoSubmeter = handleSubmit((formulario) => {
       ...base,
       tipo: formulario.tipo,
       parcelaAtual: atual?.parcelaAtual ?? 1,
-      totalParcelas: atual?.totalParcelas ?? Number(formulario.quantidadeParcelas),
+      totalParcelas: atual?.totalParcelas ?? (formulario.recorrente ? 1 : Number(formulario.quantidadeParcelas)),
     } satisfies TransacaoCartaoPayload)
     return
   }
@@ -183,9 +191,10 @@ const aoSubmeter = handleSubmit((formulario) => {
       autocomplete="off"
     />
 
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-4" :class="ehCartao ? '' : 'sm:grid-cols-2'">
       <CurrencyInput v-model="valor" label="Valor" :erro="erroValor" obrigatorio />
       <DateInput
+        v-if="!ehCartao"
         v-model="data"
         label="Data"
         :erro="erroData"
@@ -232,7 +241,12 @@ const aoSubmeter = handleSubmit((formulario) => {
       min="1"
       max="30"
       :erro="erroParcelas"
-      dica="Divide o valor em parcelas iguais, uma lançada em cada fatura."
+      :desabilitado="parcelasBloqueadas"
+      :dica="
+        parcelasBloqueadas
+          ? 'Lançamento recorrente não tem parcelas.'
+          : 'Divide o valor em parcelas iguais, uma lançada em cada fatura.'
+      "
       obrigatorio
     />
 
