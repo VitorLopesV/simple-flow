@@ -168,6 +168,10 @@ const aoSubmeter = handleSubmit((formulario) => {
 
   emit('salvar', {
     ...base,
+    // Sem campo "Data" visível na saída: usa o vencimento como data de competência
+    // quando houver (mesma regra da fatura de cartão, ver `paraSaidaDeFatura` no
+    // backend); sem vencimento, mantém a data que já tinha (edição) ou hoje (nova).
+    data: formulario.vencimento || formulario.data,
     tipo: formulario.tipo,
     status: formulario.status,
     vencimento: formulario.vencimento || null,
@@ -191,15 +195,15 @@ const aoSubmeter = handleSubmit((formulario) => {
       autocomplete="off"
     />
 
-    <div class="grid gap-4" :class="ehCartao ? '' : 'sm:grid-cols-2'">
+    <div class="grid gap-4" :class="ehCartao || ehSaida ? '' : 'sm:grid-cols-2'">
       <CurrencyInput v-model="valor" label="Valor" :erro="erroValor" obrigatorio />
       <DateInput
-        v-if="!ehCartao"
+        v-if="!ehCartao && !ehSaida"
         v-model="data"
         label="Data"
         :erro="erroData"
-        :desabilitado="recorrente && !ehSaida"
-        :dica="recorrente && !ehSaida ? 'Data travada enquanto o lançamento for recorrente.' : ''"
+        :desabilitado="recorrente"
+        :dica="recorrente ? 'Data travada enquanto o lançamento for recorrente.' : ''"
         obrigatorio
       />
     </div>
