@@ -104,7 +104,6 @@ const { handleSubmit, resetForm } = useForm<Valores>({
 
 const { value: descricao, errorMessage: erroDescricao } = useField<string>('descricao')
 const { value: valor, errorMessage: erroValor } = useField<number>('valor')
-const { value: data, errorMessage: erroData } = useField<string>('data')
 const { value: categoriaId, errorMessage: erroCategoria } = useField<string | null>('categoriaId')
 const { value: recorrente } = useField<boolean>('recorrente')
 const { value: observacao, errorMessage: erroObservacao } = useField<string>('observacao')
@@ -147,7 +146,12 @@ const aoSubmeter = handleSubmit((formulario) => {
   }
 
   if (!ehSaida.value) {
-    emit('salvar', base satisfies EntradaPayload)
+    emit('salvar', {
+      ...base,
+      // Sem campo "Data" visível na entrada: usa a data em que o registro foi
+      // criado (mesma regra da saída sem vencimento, ver acima).
+      data: props.transacao ? toISODate(new Date(props.transacao.criadoEm)) : toISODate(new Date()),
+    } satisfies EntradaPayload)
     return
   }
 
@@ -198,18 +202,7 @@ const aoSubmeter = handleSubmit((formulario) => {
       autocomplete="off"
     />
 
-    <div class="grid gap-4" :class="ehCartao || ehSaida ? '' : 'sm:grid-cols-2'">
-      <CurrencyInput v-model="valor" label="Valor" :erro="erroValor" obrigatorio />
-      <DateInput
-        v-if="!ehCartao && !ehSaida"
-        v-model="data"
-        label="Data"
-        :erro="erroData"
-        :desabilitado="recorrente"
-        :dica="recorrente ? 'Data travada enquanto o lançamento for recorrente.' : ''"
-        obrigatorio
-      />
-    </div>
+    <CurrencyInput v-model="valor" label="Valor" :erro="erroValor" obrigatorio />
 
     <div class="grid gap-4" :class="ehSaida ? 'sm:grid-cols-2' : ''">
       <BaseSelect
