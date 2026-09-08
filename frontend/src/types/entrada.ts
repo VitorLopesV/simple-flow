@@ -16,7 +16,8 @@ export interface Entrada {
   /**
    * Preenchido só nas ocorrências futuras projetadas a partir de um lançamento
    * recorrente (ver `comRecorrencias` em `services/mock/db.ts`) — nunca persistidas,
-   * recalculadas a cada leitura. Editável apenas pelo lançamento original.
+   * recalculadas a cada leitura. Editar uma dessas ocorrências materializa uma linha
+   * própria para aquele mês, independente do original.
    */
   origemRecorrenciaId?: ID
 }

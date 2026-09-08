@@ -101,7 +101,19 @@ export const entradaService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const indice = db.entradas.findIndex((entrada) => entrada.id === id)
-      if (indice < 0) throw new Error('Entrada não encontrada.')
+
+      if (indice < 0) {
+        // Ocorrência projetada de uma recorrência (id sintético, nunca persistido —
+        // ver `comRecorrencias`): editá-la materializa uma linha própria para este
+        // mês, independente das demais, em vez de mudar o lançamento original.
+        const projetado = db.origemDoIdProjetado(id)
+        const origem = projetado && db.entradas.find((entrada) => entrada.id === projetado.origemId)
+        if (!origem?.recorrente) throw new Error('Entrada não encontrada.')
+
+        const nova: Entrada = { ...payload, id: db.novoId('ent'), criadoEm: db.agora(), atualizadoEm: db.agora() }
+        db.entradas.push(nova)
+        return delay(db.clonar(nova))
+      }
 
       const atualizada: Entrada = { ...db.entradas[indice]!, ...payload, atualizadoEm: db.agora() }
       db.entradas[indice] = atualizada

@@ -453,6 +453,8 @@ export function comRecorrencias<
     recorrente: boolean
     origemRecorrenciaId?: ID
     automatica?: boolean
+    /** Só existe em Saida — quando presente, precisa avançar mês a mês junto com `data`. */
+    vencimento?: string | null
   },
 >(itens: T[], periodoAlvo: Periodo): T[] {
   const alvo = ordinalDoPeriodo(periodoAlvo)
@@ -480,8 +482,26 @@ export function comRecorrencias<
       ...origem,
       id: `${origem.id}_${toCompetencia(periodoAlvo)}`,
       data: diaDoPeriodo(periodoAlvo, toDate(origem.data).getDate()),
+      // Some junto com `data`: sem isso, o formulário de saída (que usa o vencimento
+      // como competência quando ele existe — ver TransactionForm.vue) reenviaria a
+      // ocorrência para o mês do vencimento original ao editá-la, em vez do mês projetado.
+      ...(origem.vencimento
+        ? { vencimento: diaDoPeriodo(periodoAlvo, toDate(origem.vencimento).getDate()) }
+        : {}),
       origemRecorrenciaId: origem.id,
     }))
 
   return [...itens, ...projetadas]
+}
+
+const REGEX_ID_PROJETADO = /^(.+)_(\d{4}-\d{2})$/
+
+/**
+ * Reconhece o id sintético de uma ocorrência projetada (`${origemId}_${competencia}`,
+ * ver `comRecorrencias`) e extrai o id do lançamento original. Espelha
+ * `origemDoIdProjetado` do backend (`shared/utils/recorrencia.ts`).
+ */
+export function origemDoIdProjetado(id: ID): { origemId: ID; competencia: string } | null {
+  const encontrado = id.match(REGEX_ID_PROJETADO)
+  return encontrado ? { origemId: encontrado[1]!, competencia: encontrado[2]! } : null
 }

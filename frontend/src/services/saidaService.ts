@@ -111,7 +111,25 @@ export const saidaService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const indice = db.saidas.findIndex((saida) => saida.id === id)
-      if (indice < 0) throw new Error('Saída não encontrada.')
+
+      if (indice < 0) {
+        // Ocorrência projetada de uma recorrência (id sintético, nunca persistido —
+        // ver `comRecorrencias`): editá-la materializa uma linha própria para este
+        // mês, independente das demais, em vez de mudar o lançamento original.
+        const projetado = db.origemDoIdProjetado(id)
+        const origem = projetado && db.saidas.find((saida) => saida.id === projetado.origemId)
+        if (!origem?.recorrente) throw new Error('Saída não encontrada.')
+
+        const nova: Saida = {
+          ...payload,
+          pagoEm: payload.status === 'PAGO' ? db.hojeISO : null,
+          id: db.novoId('sai'),
+          criadoEm: db.agora(),
+          atualizadoEm: db.agora(),
+        }
+        db.saidas.push(nova)
+        return delay(db.clonar(nova))
+      }
 
       const atual = db.saidas[indice]!
       // Mesma regra do backend (ver AtualizarSaida): mantém a data de pagamento

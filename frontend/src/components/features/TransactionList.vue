@@ -53,17 +53,25 @@ function comoSaida(transacao: Transacao): Saida {
   return transacao as Saida
 }
 
-/** Ocorrência projetada de uma recorrência: só o lançamento original é editável/removível. */
+/** Ocorrência projetada de uma recorrência, ainda sem lançamento próprio no mês. */
 function ehProjecaoRecorrente(transacao: Transacao): boolean {
   return Boolean(transacao.origemRecorrenciaId)
 }
 
-function bloqueada(transacao: Transacao): boolean {
-  return ehProjecaoRecorrente(transacao) || (ehSaida.value && Boolean(comoSaida(transacao).automatica))
+function ehAutomatica(transacao: Transacao): boolean {
+  return ehSaida.value && Boolean(comoSaida(transacao).automatica)
 }
 
-function textoBloqueio(transacao: Transacao): string {
-  return ehSaida.value && comoSaida(transacao).automatica ? 'Ver em Cartões' : 'Editável no original'
+// Editar (ou alternar a situação de) uma ocorrência projetada materializa um
+// lançamento próprio daquele mês — independente do original em situação, data de
+// pagamento e valor. Só a fatura de cartão continua totalmente bloqueada aqui.
+function podeEditar(transacao: Transacao): boolean {
+  return !ehAutomatica(transacao)
+}
+
+// Remover só faz sentido depois que a ocorrência já existe como lançamento próprio.
+function podeExcluir(transacao: Transacao): boolean {
+  return !ehAutomatica(transacao) && !ehProjecaoRecorrente(transacao)
 }
 </script>
 
@@ -146,7 +154,7 @@ function textoBloqueio(transacao: Transacao): string {
 
               <td v-if="ehSaida" class="px-5 py-3">
                 <button
-                  v-if="!bloqueada(transacao)"
+                  v-if="podeEditar(transacao)"
                   type="button"
                   class="focus-visible:outline-ring rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
                   :title="
@@ -174,7 +182,7 @@ function textoBloqueio(transacao: Transacao): string {
               </td>
 
               <td class="px-5 py-3">
-                <div v-if="!bloqueada(transacao)" class="flex justify-end gap-1">
+                <div v-if="podeEditar(transacao)" class="flex justify-end gap-1">
                   <BaseButton
                     variante="ghost"
                     tamanho="icon"
@@ -184,6 +192,7 @@ function textoBloqueio(transacao: Transacao): string {
                     <Pencil class="size-4" aria-hidden="true" />
                   </BaseButton>
                   <BaseButton
+                    v-if="podeExcluir(transacao)"
                     variante="ghost"
                     tamanho="icon"
                     class="hover:text-danger"
@@ -193,7 +202,7 @@ function textoBloqueio(transacao: Transacao): string {
                     <Trash2 class="size-4" aria-hidden="true" />
                   </BaseButton>
                 </div>
-                <span v-else class="text-muted-foreground text-xs">{{ textoBloqueio(transacao) }}</span>
+                <span v-else class="text-muted-foreground text-xs">Ver em Cartões</span>
               </td>
             </tr>
           </tbody>
@@ -227,7 +236,7 @@ function textoBloqueio(transacao: Transacao): string {
               {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
             </BaseBadge>
 
-            <div v-if="!bloqueada(transacao)" class="ml-auto flex gap-1">
+            <div v-if="podeEditar(transacao)" class="ml-auto flex gap-1">
               <BaseButton
                 variante="ghost"
                 tamanho="icon"
@@ -237,6 +246,7 @@ function textoBloqueio(transacao: Transacao): string {
                 <Pencil class="size-4" aria-hidden="true" />
               </BaseButton>
               <BaseButton
+                v-if="podeExcluir(transacao)"
                 variante="ghost"
                 tamanho="icon"
                 class="hover:text-danger"
@@ -246,7 +256,7 @@ function textoBloqueio(transacao: Transacao): string {
                 <Trash2 class="size-4" aria-hidden="true" />
               </BaseButton>
             </div>
-            <span v-else class="text-muted-foreground ml-auto text-xs">{{ textoBloqueio(transacao) }}</span>
+            <span v-else class="text-muted-foreground ml-auto text-xs">Ver em Cartões</span>
           </div>
 
           <div v-if="ehSaida" class="text-muted-foreground flex flex-wrap gap-x-4 text-xs">
