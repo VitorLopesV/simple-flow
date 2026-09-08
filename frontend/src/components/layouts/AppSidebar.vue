@@ -68,7 +68,7 @@ const itens: ItemMenu[] = [
     </nav>
 
     <div class="border-border border-t p-3">
-      <p class="text-muted-foreground text-center text-xs">Versão atual: 0.1.0</p>
+      <p class="text-muted-foreground text-center text-xs">Versão atual: 0.2.0</p>
     </div>
   </aside>
 </template>
