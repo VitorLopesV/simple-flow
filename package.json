@@ -1,6 +1,6 @@
 {
   "name": "financial-control",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Sistema de Controle Financeiro - frontend Vue 3 (backend em repositório separado: simple-flow-backend)",
   "workspaces": [
