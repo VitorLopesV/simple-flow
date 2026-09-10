@@ -65,6 +65,11 @@ const ehCartao = computed(() => props.contexto === 'CARTAO')
 const ehSaida = computed(() => props.tipo === 'SAIDA')
 const ehEdicao = computed(() => Boolean(props.transacao))
 
+// Nome de um lançamento recorrente é o que liga suas ocorrências na mesma série
+// (backend casa por descrição + categoria) — travado na edição para não divergir
+// entre os meses.
+const nomeBloqueado = computed(() => ehEdicao.value && Boolean(props.transacao?.recorrente))
+
 function valoresIniciais(): Valores {
   const transacao = props.transacao
   const saida = transacao as Saida | null
@@ -76,7 +81,7 @@ function valoresIniciais(): Valores {
     categoriaId: transacao?.categoriaId ?? null,
     recorrente: transacao?.recorrente ?? false,
     observacao: transacao?.observacao ?? '',
-    status: saida?.status ?? 'PAGO',
+    status: saida?.status ?? 'PENDENTE',
     vencimento: saida?.vencimento ?? '',
     formaPagamento: saida?.formaPagamento ?? 'PIX',
     tipo: saida?.tipo ?? 'OUTROS',
@@ -135,6 +140,21 @@ watch(
   () => resetForm({ values: valoresIniciais() }),
 )
 
+/**
+ * Sem campo "Data" visível no formulário de entrada/saída: usa a data em que o
+ * registro foi criado, independente do vencimento (que é só informativo). Exceção:
+ * uma ocorrência projetada de recorrência (`origemRecorrenciaId` presente) já vem
+ * com `data` recalculada para o mês projetado (ver `projetarRecorrencias` no
+ * backend), enquanto `criadoEm` continua sendo o do lançamento original — usar
+ * `criadoEm` aqui materializaria a edição no mês do lançamento original em vez do
+ * mês projetado que o usuário está de fato editando.
+ */
+function dataDoLancamento(): string {
+  const transacao = props.transacao as (Entrada | Saida | TransacaoCartao) | null
+  if (!transacao) return toISODate(new Date())
+  return transacao.origemRecorrenciaId ? transacao.data : toISODate(new Date(transacao.criadoEm))
+}
+
 const aoSubmeter = handleSubmit((formulario) => {
   const base = {
     descricao: formulario.descricao.trim(),
@@ -148,9 +168,7 @@ const aoSubmeter = handleSubmit((formulario) => {
   if (!ehSaida.value) {
     emit('salvar', {
       ...base,
-      // Sem campo "Data" visível na entrada: usa a data em que o registro foi
-      // criado (mesma regra da saída sem vencimento, ver acima).
-      data: props.transacao ? toISODate(new Date(props.transacao.criadoEm)) : toISODate(new Date()),
+      data: dataDoLancamento(),
     } satisfies EntradaPayload)
     return
   }
@@ -172,9 +190,7 @@ const aoSubmeter = handleSubmit((formulario) => {
 
   emit('salvar', {
     ...base,
-    // Sem campo "Data" visível na saída: usa a data em que o registro foi criado
-    // (mesma regra da entrada), independente do vencimento — que é só informativo.
-    data: props.transacao ? toISODate(new Date(props.transacao.criadoEm)) : toISODate(new Date()),
+    data: dataDoLancamento(),
     tipo: formulario.tipo,
     status: formulario.status,
     vencimento: formulario.vencimento || null,
@@ -193,8 +209,10 @@ const aoSubmeter = handleSubmit((formulario) => {
         ehCartao ? 'Ex.: Supermercado' : ehSaida ? 'Ex.: Conta de energia' : 'Ex.: Salário mensal'
       "
       :erro="erroDescricao"
+      :dica="nomeBloqueado ? 'Lançamento recorrente: o nome é o mesmo em todas as ocorrências.' : ''"
       obrigatorio
       :maxlength="80"
+      :desabilitado="nomeBloqueado"
       autocomplete="off"
     />
 

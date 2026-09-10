@@ -110,12 +110,25 @@ export const entradaService = {
         const origem = projetado && db.entradas.find((entrada) => entrada.id === projetado.origemId)
         if (!origem?.recorrente) throw new Error('Entrada não encontrada.')
 
-        const nova: Entrada = { ...payload, id: db.novoId('ent'), criadoEm: db.agora(), atualizadoEm: db.agora() }
+        const nova: Entrada = {
+          ...payload,
+          // Nome vem sempre do lançamento original (ver AtualizarEntrada no
+          // backend): as ocorrências de uma série só continuam casando pela mesma chave.
+          descricao: origem.descricao,
+          id: db.novoId('ent'),
+          criadoEm: db.agora(),
+          atualizadoEm: db.agora(),
+        }
         db.entradas.push(nova)
         return delay(db.clonar(nova))
       }
 
-      const atualizada: Entrada = { ...db.entradas[indice]!, ...payload, atualizadoEm: db.agora() }
+      const atual = db.entradas[indice]!
+      // Nome de uma entrada recorrente é fixo entre suas ocorrências (ver acima) —
+      // só aceita mudança de descrição quando a entrada deixa de ser recorrente.
+      const descricao = atual.recorrente && payload.recorrente ? atual.descricao : payload.descricao
+
+      const atualizada: Entrada = { ...atual, ...payload, descricao, atualizadoEm: db.agora() }
       db.entradas[indice] = atualizada
       return delay(db.clonar(atualizada))
     }

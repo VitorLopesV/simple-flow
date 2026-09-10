@@ -122,6 +122,9 @@ export const saidaService = {
 
         const nova: Saida = {
           ...payload,
+          // Nome vem sempre do lançamento original (ver AtualizarSaida no backend):
+          // as ocorrências de uma série só continuam casando pela mesma chave.
+          descricao: origem.descricao,
           pagoEm: payload.status === 'PAGO' ? db.hojeISO : null,
           id: db.novoId('sai'),
           criadoEm: db.agora(),
@@ -139,7 +142,11 @@ export const saidaService = {
           ? null
           : (atual.status === 'PAGO' ? atual.pagoEm : null) ?? db.hojeISO
 
-      const atualizada: Saida = { ...atual, ...payload, pagoEm, atualizadoEm: db.agora() }
+      // Nome de uma saída recorrente é fixo entre suas ocorrências (ver acima) — só
+      // aceita mudança de descrição quando a saída deixa de ser recorrente.
+      const descricao = atual.recorrente && payload.recorrente ? atual.descricao : payload.descricao
+
+      const atualizada: Saida = { ...atual, ...payload, descricao, pagoEm, atualizadoEm: db.agora() }
       db.saidas[indice] = atualizada
       return delay(db.clonar(atualizada))
     }

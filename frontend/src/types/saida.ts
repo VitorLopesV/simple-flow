@@ -1,8 +1,8 @@
 import type { ID, OpcaoSelect, PageRequest, Periodo } from './common'
 
-export type SaidaStatus = 'PAGO' | 'PENDENTE'
+export type SaidaStatus = 'PENDENTE' | 'PAGO'
 
-export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'DEBITO' | 'BOLETO' | 'CARTAO_CREDITO'
+export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'DEBITO' | 'BOLETO'
 
 /** Classificação específica da despesa, independente da categoria (fixa/variável/investimento). */
 export type SaidaTipo =
@@ -12,6 +12,8 @@ export type SaidaTipo =
   | 'CONTA'
   | 'POUPANCA'
   | 'ACOES'
+  | 'EDUCACAO'
+  | 'COMPRAS'
   | 'OUTROS'
 
 export interface Saida {
@@ -70,8 +72,8 @@ export interface SaidaResumo {
 }
 
 export const SAIDA_STATUS_LABEL: Record<SaidaStatus, string> = {
-  PAGO: 'Pago',
   PENDENTE: 'Pendente',
+  PAGO: 'Pago',
 }
 
 export const FORMA_PAGAMENTO_LABEL: Record<FormaPagamento, string> = {
@@ -79,7 +81,6 @@ export const FORMA_PAGAMENTO_LABEL: Record<FormaPagamento, string> = {
   PIX: 'Pix',
   DEBITO: 'Débito',
   BOLETO: 'Boleto',
-  CARTAO_CREDITO: 'Cartão de crédito',
 }
 
 /**
@@ -104,6 +105,8 @@ export const SAIDA_TIPO_LABEL: Record<SaidaTipo, string> = {
   CONTA: 'Conta',
   POUPANCA: 'Poupança',
   ACOES: 'Ações',
+  EDUCACAO: 'Educação',
+  COMPRAS: 'Compras',
   OUTROS: 'Outros',
 }
 
