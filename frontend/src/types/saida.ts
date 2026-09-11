@@ -2,7 +2,7 @@ import type { ID, OpcaoSelect, PageRequest, Periodo } from './common'
 
 export type SaidaStatus = 'PENDENTE' | 'PAGO'
 
-export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'DEBITO' | 'BOLETO'
+export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'DEBITO' | 'BOLETO' | 'CARTAO_CREDITO'
 
 /** Classificação específica da despesa, independente da categoria (fixa/variável/investimento). */
 export type SaidaTipo =
@@ -81,6 +81,7 @@ export const FORMA_PAGAMENTO_LABEL: Record<FormaPagamento, string> = {
   PIX: 'Pix',
   DEBITO: 'Débito',
   BOLETO: 'Boleto',
+  CARTAO_CREDITO: 'Cartão de crédito',
 }
 
 /**
