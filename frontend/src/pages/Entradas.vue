@@ -5,9 +5,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import CategoryFilter from '@/components/features/CategoryFilter.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
+import StatisticsChart from '@/components/features/StatisticsChart.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import TransactionForm from '@/components/features/TransactionForm.vue'
 import TransactionList from '@/components/features/TransactionList.vue'
@@ -17,7 +20,7 @@ import { useCategoriaStore } from '@/stores/categoriaStore'
 import { useEntradaStore } from '@/stores/entradaStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
 import type { TransacaoCartaoPayload } from '@/types/cartao'
-import type { Entrada, EntradaPayload } from '@/types/entrada'
+import type { Entrada, EntradaPayload, EntradaResumo } from '@/types/entrada'
 import type { SaidaPayload } from '@/types/saida'
 import { formatPeriodo } from '@/utils/dateFormatter'
 
@@ -32,6 +35,18 @@ const paraExcluir = ref<Entrada | null>(null)
 
 const opcoesCategoria = computed(() => categoriaStore.opcoes('ENTRADA'))
 const tituloModal = computed(() => (emEdicao.value ? 'Editar entrada' : 'Nova entrada'))
+
+// Cobre qualquer categoria de entrada (salário, benefício, dinheiro avulso...) sem
+// depender de nenhuma categoria específica existir — reforça visualmente a
+// composição das receitas do período, hoje só disponível como número em `resumo`.
+const porCategoria = computed<EntradaResumo['porCategoria']>(
+  () => entradaStore.resumo?.porCategoria ?? [],
+)
+const labelsCategoria = computed(() => porCategoria.value.map((item) => item.nome))
+const seriesCategoria = computed(() => [
+  { nome: 'Entradas', dados: porCategoria.value.map((item) => item.total), cor: '#10b981' },
+])
+const coresCategoria = computed(() => porCategoria.value.map((item) => item.cor))
 
 onMounted(() => void entradaStore.carregar())
 watch(() => periodoStore.periodo, () => void entradaStore.carregar(), { deep: true })
@@ -128,6 +143,23 @@ async function confirmarExclusao(): Promise<void> {
         <p class="text-muted-foreground mt-2 text-xs">no período selecionado</p>
       </div>
     </div>
+
+    <BaseCard titulo="Entradas por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
+      <BaseSkeleton v-if="entradaStore.loading && !entradaStore.resumo" altura="h-64" />
+      <EmptyState
+        v-else-if="!porCategoria.length"
+        titulo="Sem entradas no período"
+        descricao="Registre um salário, benefício ou outra receita para ver a composição aqui."
+      />
+      <StatisticsChart
+        v-else
+        tipo="rosca"
+        :labels="labelsCategoria"
+        :series="seriesCategoria"
+        :cores="coresCategoria"
+        :altura="280"
+      />
+    </BaseCard>
 
     <BaseCard sem-padding>
       <template #cabecalho>
