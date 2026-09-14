@@ -4,6 +4,18 @@ import { addMeses, dentroDoPeriodo, toCompetencia } from '@/utils/dateFormatter'
 import { http, USE_MOCK } from './http'
 import { contemBusca, delay, mockDb, paginar } from './mock'
 
+/**
+ * Ordena saídas por vencimento primeiro: as que têm data de vencimento vêm
+ * antes, da mais próxima para a mais distante; as sem vencimento vêm depois,
+ * ordenadas pela data de lançamento mais recente primeiro.
+ */
+export function compararSaidasPorVencimento(a: Saida, b: Saida): number {
+  if (a.vencimento && b.vencimento) return a.vencimento.localeCompare(b.vencimento)
+  if (a.vencimento) return -1
+  if (b.vencimento) return 1
+  return b.data.localeCompare(a.data)
+}
+
 export const saidaService = {
   async listar(filtro: SaidaFiltro): Promise<Paginated<Saida>> {
     if (USE_MOCK) {
@@ -14,7 +26,7 @@ export const saidaService = {
         .filter((saida) => !filtro.categoriaId || saida.categoriaId === filtro.categoriaId)
         .filter((saida) => !filtro.status || saida.status === filtro.status)
         .filter((saida) => contemBusca(`${saida.descricao} ${saida.observacao ?? ''}`, filtro.busca))
-        .sort((a, b) => b.data.localeCompare(a.data))
+        .sort(compararSaidasPorVencimento)
 
       return delay(paginar(db.clonar(encontradas), filtro))
     }

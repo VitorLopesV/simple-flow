@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { mensagemDeErro } from '@/services/http'
-import { saidaService } from '@/services/saidaService'
+import { compararSaidasPorVencimento, saidaService } from '@/services/saidaService'
 import type { Saida, SaidaPayload, SaidaResumo, SaidaStatus } from '@/types/saida'
 import { calcularVariacao } from '@/utils/currencyFormatter'
 import { usePeriodoStore } from './periodoStore'
@@ -36,6 +36,13 @@ export const useSaidaStore = defineStore('saida', () => {
     () => Boolean(categoriaId.value) || Boolean(status.value) || busca.value.trim() !== '',
   )
   const vazio = computed(() => !loading.value && itens.value.length === 0)
+  /**
+   * Reordena a página atual: vencimento primeiro (mais próximo primeiro) e,
+   * para quem não tem vencimento, pela data de lançamento mais recente
+   * primeiro. Aplicado aqui (e não no template) para valer tanto pro mock
+   * quanto pra API real, sem depender da ordem em que os dados chegaram.
+   */
+  const itensOrdenados = computed(() => [...itens.value].sort(compararSaidasPorVencimento))
 
   async function carregar(): Promise<void> {
     loading.value = true
@@ -166,6 +173,7 @@ export const useSaidaStore = defineStore('saida', () => {
     variacao,
     temFiltroAtivo,
     vazio,
+    itensOrdenados,
     carregar,
     criar,
     atualizar,
