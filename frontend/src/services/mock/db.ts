@@ -50,6 +50,7 @@ const SEMENTE_CATEGORIAS: Omit<Categoria, 'id'>[] = [
   { nome: 'Salário', tipo: 'RENDA', movimento: 'ENTRADA', cor: '#10b981' },
   { nome: 'Freelance', tipo: 'RENDA', movimento: 'ENTRADA', cor: '#06b6d4' },
   { nome: 'Reembolso', tipo: 'RENDA', movimento: 'ENTRADA', cor: '#84cc16' },
+  { nome: 'Benefício', tipo: 'RENDA', movimento: 'ENTRADA', cor: '#f97316' },
   { nome: 'Outras receitas', tipo: 'OUTROS', movimento: 'ENTRADA', cor: '#94a3b8' },
   { nome: 'Rendimentos', tipo: 'INVESTIMENTO', movimento: 'ENTRADA', cor: '#eab308' },
 ]
