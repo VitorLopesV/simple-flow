@@ -166,7 +166,7 @@ async function alternarStatus(saida: Saida): Promise<void> {
 
       <TransactionList
         tipo="SAIDA"
-        :itens="saidaStore.itens"
+        :itens="saidaStore.itensOrdenados"
         :carregando="saidaStore.loading"
         :pagina="saidaStore.page"
         :total-paginas="saidaStore.totalPages"
