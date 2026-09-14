@@ -28,6 +28,7 @@ import type {
 } from '@/types/cartao'
 import type { EntradaPayload } from '@/types/entrada'
 import type { SaidaPayload } from '@/types/saida'
+import { formatCurrency } from '@/utils/currencyFormatter'
 import { formatPeriodo } from '@/utils/dateFormatter'
 
 const periodoStore = usePeriodoStore()
@@ -43,6 +44,9 @@ const modalDebitoAberto = ref(false)
 const confirmacaoDebitoAberta = ref(false)
 const debitoEmEdicao = ref<TransacaoCartao | null>(null)
 const debitoParaExcluir = ref<TransacaoCartao | null>(null)
+
+const confirmacaoPagamentoAberta = ref(false)
+const faturaIdParaPagar = ref<string | null>(null)
 
 const opcoesCategoria = computed(() => categoriaStore.opcoes('SAIDA'))
 const tituloModal = computed(() => (emEdicao.value ? 'Editar cartão' : 'Novo cartão'))
@@ -95,8 +99,18 @@ async function confirmarExclusao(): Promise<void> {
   paraExcluir.value = null
 }
 
-async function pagarFatura(faturaId: string): Promise<void> {
+function pedirConfirmacaoPagamento(faturaId: string): void {
+  faturaIdParaPagar.value = faturaId
+  confirmacaoPagamentoAberta.value = true
+}
+
+async function confirmarPagamentoFatura(): Promise<void> {
+  const faturaId = faturaIdParaPagar.value
+  if (!faturaId) return
+
   if (await cartaoStore.pagarFatura(faturaId)) notificar.sucesso('Fatura marcada como paga')
+  confirmacaoPagamentoAberta.value = false
+  faturaIdParaPagar.value = null
 }
 
 function abrirNovoDebito(): void {
@@ -236,7 +250,7 @@ async function confirmarExclusaoDebito(): Promise<void> {
         v-if="cartaoStore.selecionado"
         :item="cartaoStore.selecionado"
         :processando="cartaoStore.salvando"
-        @pagar="pagarFatura"
+        @pagar="pedirConfirmacaoPagamento"
         @novo-debito="abrirNovoDebito"
         @editar-debito="abrirEdicaoDebito"
         @remover-debito="pedirExclusaoDebito"
@@ -280,6 +294,16 @@ async function confirmarExclusaoDebito(): Promise<void> {
       texto-confirmar="Excluir"
       :carregando="cartaoStore.salvando"
       @confirmar="confirmarExclusao"
+    />
+
+    <ConfirmDialog
+      v-model:aberto="confirmacaoPagamentoAberta"
+      titulo="Confirmar pagamento"
+      :mensagem="`Confirmar pagamento da fatura de “${cartaoStore.selecionado?.cartao.nome ?? ''}” no valor de ${formatCurrency(cartaoStore.selecionado?.fatura?.total ?? 0)}?`"
+      texto-confirmar="Confirmar"
+      :destrutivo="false"
+      :carregando="cartaoStore.salvando"
+      @confirmar="confirmarPagamentoFatura"
     />
   </PageLayout>
 </template>
