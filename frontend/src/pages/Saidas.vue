@@ -28,8 +28,10 @@ const saidaStore = useSaidaStore()
 
 const modalAberto = ref(false)
 const confirmacaoAberta = ref(false)
+const confirmacaoPagamentoAberta = ref(false)
 const emEdicao = ref<Saida | null>(null)
 const paraExcluir = ref<Saida | null>(null)
+const paraMarcarPago = ref<Saida | null>(null)
 
 const opcoesCategoria = computed(() => categoriaStore.opcoes('SAIDA'))
 const opcoesStatus = computed(() =>
@@ -86,13 +88,33 @@ async function confirmarExclusao(): Promise<void> {
   paraExcluir.value = null
 }
 
-async function alternarStatus(saida: Saida): Promise<void> {
+// Só pede confirmação ao marcar como paga — reverter para pendente é uma correção
+// de baixo risco e não precisa de fricção extra.
+function alternarStatus(saida: Saida): void {
+  if (saida.status === 'PAGO') {
+    void efetivarAlternarStatus(saida)
+    return
+  }
+  paraMarcarPago.value = saida
+  confirmacaoPagamentoAberta.value = true
+}
+
+async function efetivarAlternarStatus(saida: Saida): Promise<void> {
   if (await saidaStore.alternarStatus(saida)) {
     notificar.sucesso(
       saida.status === 'PAGO' ? 'Marcada como pendente' : 'Marcada como paga',
       saida.descricao,
     )
   }
+}
+
+async function confirmarPagamento(): Promise<void> {
+  const saida = paraMarcarPago.value
+  if (!saida) return
+
+  await efetivarAlternarStatus(saida)
+  confirmacaoPagamentoAberta.value = false
+  paraMarcarPago.value = null
 }
 </script>
 
@@ -206,6 +228,16 @@ async function alternarStatus(saida: Saida): Promise<void> {
       texto-confirmar="Excluir"
       :carregando="saidaStore.salvando"
       @confirmar="confirmarExclusao"
+    />
+
+    <ConfirmDialog
+      v-model:aberto="confirmacaoPagamentoAberta"
+      titulo="Confirmar pagamento"
+      :mensagem="`Confirmar pagamento de “${paraMarcarPago?.descricao ?? ''}”?`"
+      texto-confirmar="Confirmar"
+      :destrutivo="false"
+      :carregando="saidaStore.salvando"
+      @confirmar="confirmarPagamento"
     />
   </PageLayout>
 </template>
