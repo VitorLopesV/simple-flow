@@ -208,8 +208,8 @@ for (let offset = MESES_DE_HISTORICO - 1; offset >= 0; offset -= 1) {
     Alimentação: 'ALIMENTACAO',
     Transporte: 'TRANSPORTE',
     Lazer: 'LAZER',
-    Compras: 'OUTROS',
-    Educação: 'OUTROS',
+    Compras: 'COMPRAS',
+    Educação: 'EDUCACAO',
   }
   const variaveis = faker.number.int({ min: 8, max: 14 })
   for (let i = 0; i < variaveis; i += 1) {
