@@ -3,12 +3,15 @@ import { computed, ref } from 'vue'
 
 import { cartaoService } from '@/services/cartaoService'
 import { mensagemDeErro } from '@/services/http'
+import { contemBusca } from '@/services/mock'
 import type {
   Cartao,
   CartaoComFatura,
   CartaoPayload,
+  TransacaoCartao,
   TransacaoCartaoPayload,
 } from '@/types/cartao'
+import type { SaidaTipo } from '@/types/saida'
 import { addMeses, diaDoPeriodo, fromCompetencia, toDate } from '@/utils/dateFormatter'
 import { usePeriodoStore } from './periodoStore'
 
@@ -29,6 +32,10 @@ export const useCartaoStore = defineStore('cartao', () => {
   const loading = ref(false)
   const salvando = ref(false)
   const erro = ref<string | null>(null)
+
+  const categoriaId = ref<string | null>(null)
+  const tipo = ref<SaidaTipo | null>(null)
+  const busca = ref('')
 
   const selecionado = computed<CartaoComFatura | null>(() => {
     if (!cartoes.value.length) return null
@@ -53,6 +60,25 @@ export const useCartaoStore = defineStore('cartao', () => {
 
   const vazio = computed(() => !loading.value && cartoes.value.length === 0)
 
+  const temFiltroAtivo = computed(
+    () => Boolean(categoriaId.value) || Boolean(tipo.value) || busca.value.trim() !== '',
+  )
+
+  /**
+   * Transações da fatura selecionada após aplicar busca/categoria/tipo. Filtragem
+   * client-side: diferente de saídas/entradas, a fatura já vem inteira do backend
+   * para o período (sem paginação), então não há necessidade de recarregar.
+   */
+  const transacoesFiltradas = computed<TransacaoCartao[]>(() => {
+    const transacoes = selecionado.value?.fatura?.transacoes ?? []
+    return transacoes.filter(
+      (transacao) =>
+        contemBusca(`${transacao.descricao} ${transacao.observacao ?? ''}`, busca.value) &&
+        (!categoriaId.value || transacao.categoriaId === categoriaId.value) &&
+        (!tipo.value || transacao.tipo === tipo.value),
+    )
+  })
+
   async function carregar(): Promise<void> {
     loading.value = true
     erro.value = null
@@ -71,6 +97,24 @@ export const useCartaoStore = defineStore('cartao', () => {
 
   function selecionar(id: string): void {
     cartaoSelecionadoId.value = id
+  }
+
+  function filtrarPorCategoria(id: string | null): void {
+    categoriaId.value = id
+  }
+
+  function filtrarPorTipo(novoTipo: SaidaTipo | null): void {
+    tipo.value = novoTipo
+  }
+
+  function buscar(texto: string): void {
+    busca.value = texto
+  }
+
+  function limparFiltros(): void {
+    categoriaId.value = null
+    tipo.value = null
+    busca.value = ''
   }
 
   async function criar(payload: CartaoPayload): Promise<boolean> {
@@ -218,11 +262,16 @@ export const useCartaoStore = defineStore('cartao', () => {
     loading,
     salvando,
     erro,
+    categoriaId,
+    tipo,
+    busca,
     selecionado,
     totalFaturas,
     limiteTotal,
     faturasEmAberto,
     vazio,
+    temFiltroAtivo,
+    transacoesFiltradas,
     opcoesDeCartao,
     carregar,
     selecionar,
@@ -234,5 +283,9 @@ export const useCartaoStore = defineStore('cartao', () => {
     removerTransacao,
     pagarFatura,
     porId,
+    filtrarPorCategoria,
+    filtrarPorTipo,
+    buscar,
+    limparFiltros,
   }
 })

@@ -27,7 +27,7 @@ import type {
   TransacaoCartaoPayload,
 } from '@/types/cartao'
 import type { EntradaPayload } from '@/types/entrada'
-import type { SaidaPayload } from '@/types/saida'
+import type { SaidaPayload, SaidaTipo } from '@/types/saida'
 import { formatPeriodo } from '@/utils/dateFormatter'
 
 const periodoStore = usePeriodoStore()
@@ -236,10 +236,20 @@ async function confirmarExclusaoDebito(): Promise<void> {
         v-if="cartaoStore.selecionado"
         :item="cartaoStore.selecionado"
         :processando="cartaoStore.salvando"
+        :transacoes-filtradas="cartaoStore.transacoesFiltradas"
+        :categorias="opcoesCategoria"
+        :categoria-id="cartaoStore.categoriaId"
+        :tipo="cartaoStore.tipo"
+        :busca="cartaoStore.busca"
+        :tem-filtro-ativo="cartaoStore.temFiltroAtivo"
         @pagar="pagarFatura"
         @novo-debito="abrirNovoDebito"
         @editar-debito="abrirEdicaoDebito"
         @remover-debito="pedirExclusaoDebito"
+        @update:categoria-id="cartaoStore.filtrarPorCategoria($event)"
+        @update:tipo="cartaoStore.filtrarPorTipo($event as SaidaTipo | null)"
+        @update:busca="cartaoStore.buscar($event)"
+        @limpar="cartaoStore.limparFiltros()"
       />
     </div>
 

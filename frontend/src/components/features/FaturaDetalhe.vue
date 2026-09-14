@@ -6,19 +6,35 @@ import BaseBadge from '@/components/common/BaseBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import CategoryFilter from '@/components/features/CategoryFilter.vue'
 import { useCategoriaStore } from '@/stores/categoriaStore'
 import type { CartaoComFatura, TransacaoCartao } from '@/types/cartao'
 import { FATURA_STATUS_LABEL } from '@/types/cartao'
-import { SAIDA_TIPO_LABEL } from '@/types/saida'
+import type { OpcaoSelect } from '@/types/common'
+import type { SaidaTipo } from '@/types/saida'
+import { SAIDA_TIPO_LABEL, SAIDA_TIPO_OPCOES } from '@/types/saida'
 import { formatCurrency } from '@/utils/currencyFormatter'
 import { diasAte, formatDate } from '@/utils/dateFormatter'
 
-const props = defineProps<{ item: CartaoComFatura | null; processando?: boolean }>()
+const props = defineProps<{
+  item: CartaoComFatura | null
+  processando?: boolean
+  transacoesFiltradas: TransacaoCartao[]
+  categorias: OpcaoSelect<string>[]
+  categoriaId: string | null
+  tipo: SaidaTipo | null
+  busca: string
+  temFiltroAtivo: boolean
+}>()
 const emit = defineEmits<{
   pagar: [faturaId: string]
   novoDebito: []
   editarDebito: [transacao: TransacaoCartao]
   removerDebito: [transacao: TransacaoCartao]
+  'update:categoriaId': [valor: string | null]
+  'update:tipo': [valor: SaidaTipo | null]
+  'update:busca': [valor: string]
+  limpar: []
 }>()
 
 const categoriaStore = useCategoriaStore()
@@ -134,7 +150,33 @@ function ehProjecao(transacao: TransacaoCartao): boolean {
         </div>
       </div>
 
-      <div class="scroll-suave max-h-[28rem] overflow-y-auto">
+      <div class="border-border border-b p-5">
+        <CategoryFilter
+          :categorias="categorias"
+          :categoria-id="categoriaId"
+          :busca="busca"
+          :opcoes-extra="SAIDA_TIPO_OPCOES"
+          :valor-extra="tipo"
+          rotulo-extra="Tipo"
+          :tem-filtro-ativo="temFiltroAtivo"
+          @update:categoria-id="emit('update:categoriaId', $event)"
+          @update:busca="emit('update:busca', $event)"
+          @update:valor-extra="emit('update:tipo', $event as SaidaTipo | null)"
+          @limpar="emit('limpar')"
+        />
+      </div>
+
+      <EmptyState
+        v-if="!transacoesFiltradas.length"
+        titulo="Nenhuma transação encontrada"
+        descricao="Ajuste os filtros para encontrar o débito que procura."
+      >
+        <template #icone>
+          <Receipt class="size-6" aria-hidden="true" />
+        </template>
+      </EmptyState>
+
+      <div v-else class="scroll-suave max-h-[28rem] overflow-y-auto">
         <table class="w-full text-sm">
           <caption class="sr-only">
             Transações da fatura selecionada
@@ -153,7 +195,7 @@ function ehProjecao(transacao: TransacaoCartao): boolean {
           </thead>
           <tbody>
             <tr
-              v-for="transacao in transacoes"
+              v-for="transacao in transacoesFiltradas"
               :key="transacao.id"
               class="border-border hover:bg-muted/50 border-b transition-colors last:border-0"
             >
