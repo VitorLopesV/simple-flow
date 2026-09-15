@@ -123,6 +123,41 @@
   }
 }
 
+/*
+ * Barra de rolagem lateral com efeito "flutuante": sem trilho/barreira visível,
+ * polegar fino, arredondado e em cinza claro, com um respiro transparente
+ * (via border + background-clip) para não colar na borda.
+ */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-foreground) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
+  opacity: 0.8;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 @layer utilities {
   .numero-tabular {
     font-variant-numeric: tabular-nums;
