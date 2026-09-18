@@ -13,6 +13,7 @@ import SummaryCard from '@/components/features/SummaryCard.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
 import { notificar } from '@/composables/useNotify'
 import { exportarRelatorioPdf } from '@/services/exportService'
+import { mensagemDeErro } from '@/services/http'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
 import { formatCurrency, formatPercent } from '@/utils/currencyFormatter'
@@ -28,8 +29,8 @@ async function exportarDados(): Promise<void> {
   try {
     await exportarRelatorioPdf(periodoStore.periodo)
     notificar.sucesso('Relatório exportado', formatPeriodo(periodoStore.periodo))
-  } catch {
-    notificar.erro('Não foi possível gerar o PDF do relatório.')
+  } catch (erro) {
+    notificar.erro(mensagemDeErro(erro, 'Não foi possível gerar o PDF do relatório.'))
   } finally {
     exportando.value = false
   }

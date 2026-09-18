@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-import type { Periodo } from '@/types/common'
+import type { PageRequest, Paginated, Periodo } from '@/types/common'
 import { FATURA_STATUS_LABEL } from '@/types/cartao'
 import { FORMA_PAGAMENTO_LABEL, SAIDA_STATUS_LABEL } from '@/types/saida'
 import { cartaoService } from './cartaoService'
@@ -12,18 +12,36 @@ import { formatDate, formatPeriodo, toCompetencia } from '@/utils/dateFormatter'
 import { saidaService } from './saidaService'
 
 const MARGEM = 40
-const LIMITE_ITENS = 1000
+/** Maior `pageSize` aceito pela API (`max(100)` nos schemas de listagem do backend). */
+const TAMANHO_PAGINA = 100
 
 /** jspdf-autotable amplia `doc` em tempo de execução, mas não expõe o tipo. */
 function finalY(doc: jsPDF): number {
   return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
 }
 
+/**
+ * Percorre todas as páginas de uma listagem paginada. O relatório precisa do período
+ * inteiro, mas a API rejeita (400) `pageSize` acima de 100 — pedir tudo de uma vez
+ * fazia a exportação falhar com o backend real.
+ */
+async function listarTodas<T>(
+  listar: (pagina: PageRequest) => Promise<Paginated<T>>,
+): Promise<T[]> {
+  const primeira = await listar({ page: 1, pageSize: TAMANHO_PAGINA })
+  const restantes = await Promise.all(
+    Array.from({ length: Math.max(0, primeira.totalPages - 1) }, (_, i) =>
+      listar({ page: i + 2, pageSize: TAMANHO_PAGINA }),
+    ),
+  )
+  return [primeira, ...restantes].flatMap((pagina) => pagina.items)
+}
+
 /** Gera e baixa um PDF com entradas, saídas e cartões do período informado. */
 export async function exportarRelatorioPdf(periodo: Periodo): Promise<void> {
   const [entradas, saidas, cartoes, categorias] = await Promise.all([
-    entradaService.listar({ periodo, page: 1, pageSize: LIMITE_ITENS }),
-    saidaService.listar({ periodo, page: 1, pageSize: LIMITE_ITENS }),
+    listarTodas((pagina) => entradaService.listar({ periodo, ...pagina })),
+    listarTodas((pagina) => saidaService.listar({ periodo, ...pagina })),
     cartaoService.listarComFaturas({ periodo }),
     categoriaService.listar(),
   ])
@@ -31,8 +49,8 @@ export async function exportarRelatorioPdf(periodo: Periodo): Promise<void> {
   const nomeCategoria = (id: string): string =>
     categorias.find((categoria) => categoria.id === id)?.nome ?? 'Sem categoria'
 
-  const totalEntradas = entradas.items.reduce((soma, item) => soma + item.valor, 0)
-  const totalSaidas = saidas.items.reduce((soma, item) => soma + item.valor, 0)
+  const totalEntradas = entradas.reduce((soma, item) => soma + item.valor, 0)
+  const totalSaidas = saidas.reduce((soma, item) => soma + item.valor, 0)
 
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const alturaPagina = doc.internal.pageSize.getHeight()
@@ -82,12 +100,12 @@ export async function exportarRelatorioPdf(periodo: Periodo): Promise<void> {
   y = finalY(doc) + 26
 
   tituloSecao('Entradas')
-  if (entradas.items.length) {
+  if (entradas.length) {
     autoTable(doc, {
       startY: y,
       margin: { left: MARGEM, right: MARGEM },
       head: [['Data', 'Descrição', 'Categoria', 'Valor']],
-      body: entradas.items.map((item) => [
+      body: entradas.map((item) => [
         formatDate(item.data),
         item.descricao,
         nomeCategoria(item.categoriaId),
@@ -107,12 +125,12 @@ export async function exportarRelatorioPdf(periodo: Periodo): Promise<void> {
   }
 
   tituloSecao('Saídas')
-  if (saidas.items.length) {
+  if (saidas.length) {
     autoTable(doc, {
       startY: y,
       margin: { left: MARGEM, right: MARGEM },
       head: [['Data', 'Descrição', 'Categoria', 'Pagamento', 'Situação', 'Valor']],
-      body: saidas.items.map((item) => [
+      body: saidas.map((item) => [
         formatDate(item.data),
         item.descricao,
         nomeCategoria(item.categoriaId),
