@@ -30,6 +30,8 @@ const modalAberto = ref(false)
 const confirmacaoAberta = ref(false)
 const emEdicao = ref<Saida | null>(null)
 const paraExcluir = ref<Saida | null>(null)
+const pendenciaAberta = ref(false)
+const paraPendente = ref<Saida | null>(null)
 
 const opcoesCategoria = computed(() => categoriaStore.opcoes('SAIDA'))
 const opcoesStatus = computed(() =>
@@ -84,6 +86,24 @@ async function confirmarExclusao(): Promise<void> {
   if (await saidaStore.remover(saida.id)) notificar.sucesso('Saída excluída', saida.descricao)
   confirmacaoAberta.value = false
   paraExcluir.value = null
+}
+
+/** Pago -> pendente exige confirmação; pendente -> pago aplica direto. */
+function pedirAlternarStatus(saida: Saida): void {
+  if (saida.status === 'PAGO') {
+    paraPendente.value = saida
+    pendenciaAberta.value = true
+    return
+  }
+  void alternarStatus(saida)
+}
+
+async function confirmarPendente(): Promise<void> {
+  const saida = paraPendente.value
+  if (!saida) return
+  await alternarStatus(saida)
+  pendenciaAberta.value = false
+  paraPendente.value = null
 }
 
 async function alternarStatus(saida: Saida): Promise<void> {
@@ -176,7 +196,7 @@ async function alternarStatus(saida: Saida): Promise<void> {
         descricao-vazio="Cadastre suas despesas para acompanhar o quanto já foi gasto no mês."
         @editar="abrirEdicao($event as Saida)"
         @remover="pedirExclusao($event as Saida)"
-        @alternar-status="alternarStatus"
+        @alternar-status="pedirAlternarStatus"
         @mudar-pagina="saidaStore.irParaPagina($event)"
       >
         <template #acaoVazio>
@@ -206,6 +226,16 @@ async function alternarStatus(saida: Saida): Promise<void> {
       texto-confirmar="Excluir"
       :carregando="saidaStore.salvando"
       @confirmar="confirmarExclusao"
+    />
+
+    <ConfirmDialog
+      v-model:aberto="pendenciaAberta"
+      titulo="Alterar para pendente"
+      :mensagem="`Deseja realmente alterar “${paraPendente?.descricao ?? ''}” de pago para pendente?`"
+      texto-confirmar="Alterar para pendente"
+      :destrutivo="false"
+      :carregando="saidaStore.salvando"
+      @confirmar="confirmarPendente"
     />
   </PageLayout>
 </template>
