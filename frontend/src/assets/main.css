@@ -113,6 +113,50 @@
   ::selection {
     @apply bg-primary/25;
   }
+
+  /*
+   * Cursor de texto (I-beam) só onde há digitação real. Demais elementos
+   * (cards, gráficos, labels, selects) usam o cursor padrão; a seleção de
+   * texto continua funcionando, apenas o ponteiro não sugere edição.
+   */
+  body {
+    cursor: default;
+  }
+
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'], [type='file']):not(:read-only),
+  textarea:not(:read-only) {
+    cursor: text;
+  }
+
+  input:read-only,
+  textarea:read-only {
+    cursor: default;
+    caret-color: transparent;
+  }
+
+  button:not(:disabled),
+  select:not(:disabled),
+  summary,
+  label[for],
+  [role='button']:not([aria-disabled='true']),
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled),
+  input[type='color']:not(:disabled),
+  input[type='file']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
+  canvas,
+  svg {
+    cursor: default;
+  }
 }
 
 @layer components {
