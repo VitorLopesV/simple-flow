@@ -80,7 +80,8 @@ function valoresIniciais(): Valores {
     vencimento: saida?.vencimento ?? '',
     formaPagamento: saida?.formaPagamento ?? 'PIX',
     tipo: saida?.tipo ?? 'OUTROS',
-    quantidadeParcelas: 1,
+    // No cartão, a edição mostra o parcelamento já existente (somente leitura).
+    quantidadeParcelas: (transacao as TransacaoCartao | null)?.totalParcelas ?? 1,
   }
 }
 
@@ -119,14 +120,15 @@ const mostrarRecorrente = computed(() => !ehCartao.value || ehEdicao.value || Nu
 
 // Lançamento recorrente não tem quantidade de parcelas: trava o campo em 1 e ignora
 // o que estiver nele ao salvar.
-const parcelasBloqueadas = computed(() => ehCartao.value && recorrente.value)
+// Na edição o parcelamento é fixo (não recria parcelas), então o campo fica travado.
+const parcelasBloqueadas = computed(() => ehCartao.value && (ehEdicao.value || recorrente.value))
 
 watch(quantidadeParcelas, (valorAtual) => {
-  if (Number(valorAtual) > 1) recorrente.value = false
+  if (!ehEdicao.value && Number(valorAtual) > 1) recorrente.value = false
 })
 
 watch(recorrente, (valorAtual) => {
-  if (ehCartao.value && valorAtual) quantidadeParcelas.value = 1
+  if (ehCartao.value && !ehEdicao.value && valorAtual) quantidadeParcelas.value = 1
 })
 
 // Reabrir o modal com outra transação recarrega o formulário.
@@ -230,7 +232,7 @@ const aoSubmeter = handleSubmit((formulario) => {
     />
 
     <BaseInput
-      v-if="ehCartao && !ehEdicao"
+      v-if="ehCartao"
       v-model="quantidadeParcelas"
       label="Quantidade de parcelas"
       type="number"
@@ -239,7 +241,9 @@ const aoSubmeter = handleSubmit((formulario) => {
       :erro="erroParcelas"
       :desabilitado="parcelasBloqueadas"
       :dica="
-        parcelasBloqueadas
+        ehEdicao
+          ? 'O parcelamento não pode ser alterado depois de lançado.'
+          : parcelasBloqueadas
           ? 'Lançamento recorrente não tem parcelas.'
           : 'Divide o valor em parcelas iguais, uma lançada em cada fatura.'
       "
