@@ -130,15 +130,19 @@ export const useCartaoStore = defineStore('cartao', () => {
         const dia = toDate(payload.data).getDate()
         const competenciaBase = fromCompetencia(payload.data.slice(0, 7))
 
-        for (let i = 0; i < totalParcelas; i += 1) {
-          await cartaoService.criarTransacao(cartaoId, {
-            ...payload,
-            valor: valores[i]!,
-            data: diaDoPeriodo(addMeses(competenciaBase, i), dia),
-            parcelaAtual: i + 1,
-            totalParcelas,
-          })
-        }
+        // Cada parcela cai numa competência distinta (fatura própria), então as
+        // requisições são independentes e disparadas em paralelo, não em série.
+        await Promise.all(
+          valores.map((valor, i) =>
+            cartaoService.criarTransacao(cartaoId, {
+              ...payload,
+              valor,
+              data: diaDoPeriodo(addMeses(competenciaBase, i), dia),
+              parcelaAtual: i + 1,
+              totalParcelas,
+            }),
+          ),
+        )
       }
 
       await carregar()
