@@ -12,6 +12,7 @@ export type SaidaTipo =
   | 'CONTA'
   | 'POUPANCA'
   | 'ACOES'
+  | 'FARMACIA'
   | 'OUTROS'
 
 export interface Saida {
@@ -104,6 +105,7 @@ export const SAIDA_TIPO_LABEL: Record<SaidaTipo, string> = {
   CONTA: 'Conta',
   POUPANCA: 'Poupança',
   ACOES: 'Ações',
+  FARMACIA: 'Farmácia',
   OUTROS: 'Outros',
 }
 
