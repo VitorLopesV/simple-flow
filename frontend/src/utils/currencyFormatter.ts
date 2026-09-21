@@ -44,6 +44,7 @@ export function calcularVariacao(atual: number, anterior: number): number {
 /**
  * Converte o texto digitado pelo usuário em número.
  * Aceita `1.234,56`, `1234,56`, `1234.56` e `R$ 1.234,56`.
+ * Ponto sem vírgula em grupos de 3 dígitos é milhar (`1.234` -> `1234`).
  */
 export function parseCurrency(texto: string | number | null | undefined): number {
   if (typeof texto === 'number') return texto
@@ -59,6 +60,9 @@ export function parseCurrency(texto: string | number | null | undefined): number
   if (ultimaVirgula > ultimoPonto) {
     // Formato pt-BR: ponto é separador de milhar, vírgula é decimal.
     normalizado = limpo.replace(/\./g, '').replace(',', '.')
+  } else if (ultimaVirgula === -1 && /^-?\d{1,3}(\.\d{3})+$/.test(limpo)) {
+    // Só pontos em grupos de 3 dígitos (`1.234`, `1.234.567`): milhar, não decimal.
+    normalizado = limpo.replace(/\./g, '')
   } else {
     normalizado = limpo.replace(/,/g, '')
   }
