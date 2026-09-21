@@ -489,6 +489,9 @@ export function comRecorrencias<
       ...(origem.vencimento
         ? { vencimento: diaDoPeriodo(periodoAlvo, toDate(origem.vencimento).getDate()) }
         : {}),
+      // Projeção nunca herda a situação de pagamento do original (só existe em Saida):
+      // cada mês começa pendente, senão pagar um mês marcaria todos os seguintes.
+      ...('status' in origem ? { status: 'PENDENTE', pagoEm: null } : {}),
       origemRecorrenciaId: origem.id,
     }))
 
