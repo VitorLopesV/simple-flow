@@ -7,7 +7,8 @@
 - TypeScript 5.7 strict (`verbatimModuleSyntax: true` — usar sempre `import type { ... }` para tipos).
 - `vue-router` 4, `pinia` 4 (setup stores), Tailwind CSS v4 (config 100% em CSS, sem `tailwind.config.js`).
 - `vee-validate` para formulários (parcialmente adotado — ver seção Formulários), `axios`, `chart.js`/`vue-chartjs`, `vue-sonner` (toasts), `jspdf` (export PDF), `@lucide/vue` (ícones).
-- **Sem ESLint/Prettier e sem framework de testes configurados.** Consistência é só por convenção — siga o código existente à risca. Não há suíte de testes para rodar; valide manualmente via `npm run dev`.
+- **Sem ESLint/Prettier configurados.** Consistência é só por convenção — siga o código existente à risca.
+- **Testes com Vitest** (`@vue/test-utils` + `happy-dom`): rode `npm run test` (raiz ou `frontend`). Arquivos `*.spec.ts` ficam ao lado do código testado; sem pasta `__tests__`, sem helpers globais, sem snapshots. Valide também manualmente via `npm run dev` quando a mudança for visual.
 
 ## Estrutura
 
