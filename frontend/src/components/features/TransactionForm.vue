@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useField, useForm } from 'vee-validate'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import BaseTextarea from '@/components/common/BaseTextarea.vue'
@@ -155,7 +156,36 @@ function dataDoLancamento(): string {
   return transacao.origemRecorrenciaId ? transacao.data : toISODate(new Date(transacao.criadoEm))
 }
 
+const confirmacaoPendenteAberta = ref(false)
+const formularioAguardando = ref<Valores | null>(null)
+
+/** Editar uma saída paga para pendente exige confirmação, para evitar alteração acidental. */
+function voltariaParaPendente(formulario: Valores): boolean {
+  const original = props.transacao as Saida | null
+  return ehSaida.value && !ehCartao.value && original?.status === 'PAGO' && formulario.status === 'PENDENTE'
+}
+
 const aoSubmeter = handleSubmit((formulario) => {
+  if (voltariaParaPendente(formulario)) {
+    formularioAguardando.value = { ...formulario }
+    confirmacaoPendenteAberta.value = true
+    return
+  }
+  emitirSalvar(formulario)
+})
+
+function confirmarPendente(): void {
+  const formulario = formularioAguardando.value
+  confirmacaoPendenteAberta.value = false
+  formularioAguardando.value = null
+  if (formulario) emitirSalvar(formulario)
+}
+
+function cancelarPendente(): void {
+  formularioAguardando.value = null
+}
+
+function emitirSalvar(formulario: Valores): void {
   const base = {
     descricao: formulario.descricao.trim(),
     valor: Number(formulario.valor),
@@ -197,7 +227,7 @@ const aoSubmeter = handleSubmit((formulario) => {
     formaPagamento: formulario.formaPagamento,
     cartaoId: null,
   } satisfies SaidaPayload)
-})
+}
 </script>
 
 <template>
@@ -292,5 +322,15 @@ const aoSubmeter = handleSubmit((formulario) => {
         {{ ehEdicao ? 'Salvar alterações' : 'Adicionar' }}
       </BaseButton>
     </div>
+
+    <ConfirmDialog
+      v-model:aberto="confirmacaoPendenteAberta"
+      titulo="Alterar para pendente"
+      :mensagem="`Deseja realmente alterar “${transacao?.descricao ?? ''}” de pago para pendente?`"
+      texto-confirmar="Alterar para pendente"
+      :destrutivo="false"
+      @confirmar="confirmarPendente"
+      @cancelar="cancelarPendente"
+    />
   </form>
 </template>
