@@ -121,11 +121,17 @@
    */
   body {
     cursor: default;
+    caret-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'], [type='file']):not(:read-only),
   textarea:not(:read-only) {
     cursor: text;
+    caret-color: auto;
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   input:read-only,
