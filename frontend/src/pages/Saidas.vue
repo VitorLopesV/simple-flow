@@ -32,6 +32,8 @@ const emEdicao = ref<Saida | null>(null)
 const paraExcluir = ref<Saida | null>(null)
 const pendenciaAberta = ref(false)
 const paraPendente = ref<Saida | null>(null)
+const pagamentoAberto = ref(false)
+const paraPago = ref<Saida | null>(null)
 
 const opcoesCategoria = computed(() => categoriaStore.opcoes('SAIDA'))
 const opcoesStatus = computed(() =>
@@ -88,14 +90,15 @@ async function confirmarExclusao(): Promise<void> {
   paraExcluir.value = null
 }
 
-/** Pago -> pendente exige confirmação; pendente -> pago aplica direto. */
+/** Ambas as transições exigem confirmação. */
 function pedirAlternarStatus(saida: Saida): void {
   if (saida.status === 'PAGO') {
     paraPendente.value = saida
     pendenciaAberta.value = true
     return
   }
-  void alternarStatus(saida)
+  paraPago.value = saida
+  pagamentoAberto.value = true
 }
 
 async function confirmarPendente(): Promise<void> {
@@ -104,6 +107,14 @@ async function confirmarPendente(): Promise<void> {
   await alternarStatus(saida)
   pendenciaAberta.value = false
   paraPendente.value = null
+}
+
+async function confirmarPago(): Promise<void> {
+  const saida = paraPago.value
+  if (!saida) return
+  await alternarStatus(saida)
+  pagamentoAberto.value = false
+  paraPago.value = null
 }
 
 async function alternarStatus(saida: Saida): Promise<void> {
@@ -236,6 +247,16 @@ async function alternarStatus(saida: Saida): Promise<void> {
       :destrutivo="false"
       :carregando="saidaStore.salvando"
       @confirmar="confirmarPendente"
+    />
+
+    <ConfirmDialog
+      v-model:aberto="pagamentoAberto"
+      titulo="Alterar para pago"
+      :mensagem="`Deseja realmente alterar “${paraPago?.descricao ?? ''}” de pendente para pago?`"
+      texto-confirmar="Alterar para pago"
+      :destrutivo="false"
+      :carregando="saidaStore.salvando"
+      @confirmar="confirmarPago"
     />
   </PageLayout>
 </template>
