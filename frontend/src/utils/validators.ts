@@ -6,6 +6,7 @@
  * simples como os desta aplicação.
  */
 import { parseCurrency } from './currencyFormatter'
+import { toDate, toISODate } from './dateFormatter'
 
 export type Regra<T = unknown> = (valor: T) => true | string
 
@@ -58,8 +59,8 @@ export const dataISO =
   (valor) => {
     const texto = String(valor ?? '')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return `${campo} inválida.`
-    const data = new Date(`${texto}T12:00:00`)
-    return Number.isNaN(data.getTime()) ? `${campo} inválida.` : true
+    // `Date` normaliza dias inexistentes (30/02 vira 02/03); o round-trip os detecta.
+    return toISODate(toDate(texto)) === texto ? true : `${campo} inválida.`
   }
 
 export const numeroEntre =
