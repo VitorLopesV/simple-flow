@@ -37,7 +37,7 @@ const itens: ItemMenu[] = [
     :class="aberto ? 'translate-x-0' : '-translate-x-full'"
     :aria-hidden="!aberto ? 'true' : undefined"
   >
-    <div class="border-border relative flex h-28 items-center justify-center border-b">
+    <div class="relative flex h-28 items-center justify-center">
       <RouterLink :to="{ name: 'dashboard' }" @click="emit('fechar')">
         <img :src="logoSimpleFlow" alt="SimpleFlow" class="mx-auto w-[160px]" />
       </RouterLink>
@@ -67,7 +67,7 @@ const itens: ItemMenu[] = [
       </RouterLink>
     </nav>
 
-    <div class="border-border border-t p-3">
+    <div class="p-3">
       <p class="text-muted-foreground text-center text-xs">Versão atual: 0.2.0</p>
     </div>
   </aside>

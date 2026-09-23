@@ -15,7 +15,7 @@ const periodoStore = usePeriodoStore()
 
 <template>
   <header
-    class="bg-background/85 border-border sticky top-0 z-20 flex h-16 items-center gap-3 border-b px-4 backdrop-blur sm:px-6"
+    class="bg-background/85 sticky top-0 z-20 flex h-16 items-center gap-3 px-4 backdrop-blur sm:px-6"
   >
     <BaseButton
       variante="ghost"
