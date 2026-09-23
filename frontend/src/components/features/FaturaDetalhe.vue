@@ -197,7 +197,7 @@ function ehProjecao(transacao: TransacaoCartao): boolean {
             <tr
               v-for="transacao in transacoesFiltradas"
               :key="transacao.id"
-              class="border-border hover:bg-muted/50 border-b transition-colors last:border-0"
+              class="border-border hover:bg-success/10 border-b transition-colors last:border-0"
             >
               <td class="px-5 py-3">
                 <div class="flex items-center gap-2">
