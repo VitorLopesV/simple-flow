@@ -58,8 +58,8 @@ const itens: ItemMenu[] = [
         v-for="item in itens"
         :key="item.rota"
         :to="{ name: item.rota }"
-        class="text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-        active-class="bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+        class="text-muted-foreground hover:bg-success hover:text-success-foreground focus-visible:bg-success focus-visible:text-success-foreground flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors"
+        active-class="bg-success text-success-foreground"
         @click="emit('fechar')"
       >
         <component :is="item.icone" class="size-4 shrink-0" aria-hidden="true" />
