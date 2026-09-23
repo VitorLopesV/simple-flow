@@ -7,7 +7,7 @@ import type { Saida, SaidaPayload, SaidaResumo, SaidaStatus } from '@/types/said
 import { calcularVariacao } from '@/utils/currencyFormatter'
 import { usePeriodoStore } from './periodoStore'
 
-const PAGE_SIZE_PADRAO = 8
+const PAGE_SIZE_PADRAO = 20
 
 export const useSaidaStore = defineStore('saida', () => {
   const periodoStore = usePeriodoStore()

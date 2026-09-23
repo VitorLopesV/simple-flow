@@ -7,7 +7,7 @@ import type { Entrada, EntradaPayload, EntradaResumo } from '@/types/entrada'
 import { calcularVariacao } from '@/utils/currencyFormatter'
 import { usePeriodoStore } from './periodoStore'
 
-const PAGE_SIZE_PADRAO = 8
+const PAGE_SIZE_PADRAO = 20
 
 export const useEntradaStore = defineStore('entrada', () => {
   const periodoStore = usePeriodoStore()

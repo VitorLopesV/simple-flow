@@ -100,7 +100,7 @@ describe('estado inicial', () => {
     expect(store.itens).toEqual([])
     expect(store.resumo).toBeNull()
     expect(store.page).toBe(1)
-    expect(store.pageSize).toBe(8)
+    expect(store.pageSize).toBe(20)
     expect(store.totalPages).toBe(1)
     expect(store.categoriaId).toBeNull()
     expect(store.status).toBeNull()
@@ -125,7 +125,7 @@ describe('carregar', () => {
       status: 'PAGO',
       busca: 'aluguel',
       page: 2,
-      pageSize: 8,
+      pageSize: 20,
     })
     expect(servico.resumo).toHaveBeenCalledWith({ mes: 3, ano: 2025 })
   })
@@ -436,7 +436,7 @@ describe('itensOrdenados', () => {
         saida('cedo', { vencimento: '2026-08-03' }),
       ],
       page: 1,
-      pageSize: 8,
+      pageSize: 20,
       total: 4,
       totalPages: 1,
     })
