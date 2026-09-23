@@ -12,6 +12,11 @@ import { formatDate, formatPeriodo, toCompetencia } from '@/utils/dateFormatter'
 import { saidaService } from './saidaService'
 
 const MARGEM = 40
+/*
+ * Decisão (issue #81): o PDF mantém a Helvetica embutida do jsPDF em vez de Montserrat.
+ * Usar Montserrat exigiria embutir os arquivos TTF convertidos em base64 (addFileToVFS/addFont),
+ * aumentando o bundle em centenas de KB por peso, por ganho apenas estético num relatório.
+ */
 /** Maior `pageSize` aceito pela API (`max(100)` nos schemas de listagem do backend). */
 const TAMANHO_PAGINA = 100
 

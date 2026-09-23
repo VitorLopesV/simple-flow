@@ -32,6 +32,11 @@ ChartJS.register(
   Legend,
 )
 
+// O canvas não herda a fonte do CSS: define a família global do Chart.js
+// (legendas, eixos e tooltips), com o mesmo fallback de `--font-sans`.
+ChartJS.defaults.font.family =
+  "'Montserrat', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+
 export interface SerieGrafico {
   nome: string
   dados: number[]
