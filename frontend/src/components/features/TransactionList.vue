@@ -7,6 +7,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BasePagination from '@/components/common/BasePagination.vue'
 import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { useCartaoStore } from '@/stores/cartaoStore'
 import { useCategoriaStore } from '@/stores/categoriaStore'
 import type { Movimento } from '@/types/categoria'
 import type { Entrada } from '@/types/entrada'
@@ -44,6 +45,7 @@ const emit = defineEmits<{
 }>()
 
 const categoriaStore = useCategoriaStore()
+const cartaoStore = useCartaoStore()
 
 const ehSaida = computed(() => props.tipo === 'SAIDA')
 const corValor = computed(() => (ehSaida.value ? 'text-danger' : 'text-success'))
@@ -56,6 +58,14 @@ function comoSaida(transacao: Transacao): Saida {
 /** Ocorrência projetada de uma recorrência, ainda sem lançamento próprio no mês. */
 function ehProjecaoRecorrente(transacao: Transacao): boolean {
   return Boolean(transacao.origemRecorrenciaId)
+}
+
+/** Realça a linha da fatura com a cor definida ao cartão na aba Cartões. */
+function estiloLinha(transacao: Transacao) {
+  if (!ehSaida.value) return undefined
+  const saida = comoSaida(transacao)
+  const cor = saida.automatica && saida.cartaoId ? cartaoStore.porId(saida.cartaoId)?.cor : null
+  return cor ? { backgroundColor: `color-mix(in srgb, ${cor} 18%, transparent)` } : undefined
 }
 
 function ehAutomatica(transacao: Transacao): boolean {
@@ -135,6 +145,7 @@ function podeExcluir(transacao: Transacao): boolean {
             <tr
               v-for="transacao in itens"
               :key="transacao.id"
+              :style="estiloLinha(transacao)"
               class="border-border hover:bg-success/10 border-b transition-colors last:border-0"
             >
               <td class="px-2 py-3 lg:px-3 xl:px-5">
@@ -232,7 +243,12 @@ function podeExcluir(transacao: Transacao): boolean {
 
       <!-- Cartões (mobile) -->
       <ul class="divide-border divide-y md:hidden">
-        <li v-for="transacao in itens" :key="transacao.id" class="flex flex-col gap-2 px-4 py-3">
+        <li
+          v-for="transacao in itens"
+          :key="transacao.id"
+          :style="estiloLinha(transacao)"
+          class="flex flex-col gap-2 px-4 py-3"
+        >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="truncate font-medium">{{ transacao.descricao }}</p>

@@ -13,6 +13,7 @@ import TransactionForm from '@/components/features/TransactionForm.vue'
 import TransactionList from '@/components/features/TransactionList.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
 import { notificar } from '@/composables/useNotify'
+import { useCartaoStore } from '@/stores/cartaoStore'
 import { useCategoriaStore } from '@/stores/categoriaStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
 import { useSaidaStore } from '@/stores/saidaStore'
@@ -25,6 +26,7 @@ import { formatPeriodo } from '@/utils/dateFormatter'
 const periodoStore = usePeriodoStore()
 const categoriaStore = useCategoriaStore()
 const saidaStore = useSaidaStore()
+const cartaoStore = useCartaoStore()
 
 const modalAberto = ref(false)
 const confirmacaoAberta = ref(false)
@@ -41,7 +43,11 @@ const opcoesStatus = computed(() =>
 )
 const tituloModal = computed(() => (emEdicao.value ? 'Editar saída' : 'Nova saída'))
 
-onMounted(() => void saidaStore.carregar())
+onMounted(() => {
+  void saidaStore.carregar()
+  // As cores dos cartões realçam as linhas de fatura na tabela.
+  if (!cartaoStore.cartoes.length) void cartaoStore.carregar()
+})
 
 watch(() => periodoStore.periodo, () => void saidaStore.carregar(), { deep: true })
 watch(
