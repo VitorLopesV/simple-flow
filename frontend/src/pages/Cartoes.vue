@@ -208,7 +208,7 @@ async function confirmarExclusaoDebito(): Promise<void> {
       </div>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[22rem_1fr]">
+    <div class="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
       <section class="flex flex-col gap-4" aria-label="Cartões cadastrados">
         <template v-if="cartaoStore.loading && !cartaoStore.cartoes.length">
           <div v-for="i in 2" :key="i" class="bg-card border-border rounded-card border p-4">

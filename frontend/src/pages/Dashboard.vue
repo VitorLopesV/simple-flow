@@ -132,7 +132,7 @@ watch(
       />
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <BaseCard titulo="Entradas x Saídas" descricao="Evolução dos últimos 6 meses">
         <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
         <StatisticsChart
@@ -162,7 +162,7 @@ watch(
       </BaseCard>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <BaseCard sem-padding>
         <template #cabecalho>
           <h2 class="text-base font-semibold">Últimas transações</h2>

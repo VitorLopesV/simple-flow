@@ -176,7 +176,7 @@ function ehProjecao(transacao: TransacaoCartao): boolean {
         </template>
       </EmptyState>
 
-      <div v-else class="scroll-suave max-h-[28rem] overflow-y-auto">
+      <div v-else class="scroll-suave max-h-[28rem] overflow-auto">
         <table class="w-full text-sm">
           <caption class="sr-only">
             Transações da fatura selecionada
