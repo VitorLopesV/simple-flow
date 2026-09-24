@@ -89,23 +89,44 @@ function podeExcluir(transacao: Transacao): boolean {
 
     <template v-else>
       <!-- Tabela (telas médias em diante) -->
-      <div class="scroll-suave hidden overflow-x-auto md:block">
-        <table class="w-full text-sm">
+      <div class="hidden md:block">
+        <table class="w-full table-fixed text-xs wrap-anywhere lg:text-sm">
           <caption class="sr-only">
             Lista de {{ ehSaida ? 'saídas' : 'entradas' }} do período selecionado
           </caption>
+          <colgroup>
+            <template v-if="ehSaida">
+              <col class="w-[17%]" />
+              <col class="w-[14%]" />
+              <col class="w-[6%]" />
+              <col class="w-[9%]" />
+              <col class="w-[9%]" />
+              <col class="w-[9%]" />
+              <col class="w-[8%]" />
+              <col class="w-[9%]" />
+              <col class="w-[10%]" />
+              <col class="w-[9%]" />
+            </template>
+            <template v-else>
+              <col class="w-[30%]" />
+              <col class="w-[25%]" />
+              <col class="w-[15%]" />
+              <col class="w-[18%]" />
+              <col class="w-[12%]" />
+            </template>
+          </colgroup>
           <thead>
             <tr class="text-muted-foreground border-border border-b text-left">
-              <th scope="col" class="px-5 py-3 font-medium">Descrição</th>
-              <th scope="col" class="px-5 py-3 font-medium">Categoria</th>
-              <th v-if="ehSaida" scope="col" class="px-5 py-3 font-medium">Tipo</th>
-              <th scope="col" class="px-5 py-3 font-medium">Data</th>
-              <th v-if="ehSaida" scope="col" class="px-5 py-3 font-medium">Vencimento</th>
-              <th v-if="ehSaida" scope="col" class="px-5 py-3 font-medium">Pagamento</th>
-              <th v-if="ehSaida" scope="col" class="px-5 py-3 font-medium">Situação</th>
-              <th v-if="ehSaida" scope="col" class="px-5 py-3 font-medium">Pago em</th>
-              <th scope="col" class="px-5 py-3 text-right font-medium">Valor</th>
-              <th scope="col" class="px-5 py-3 text-right font-medium">
+              <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Descrição</th>
+              <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Categoria</th>
+              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Tipo</th>
+              <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Data</th>
+              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Vencimento</th>
+              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Pagamento</th>
+              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Situação</th>
+              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Pago em</th>
+              <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 text-right font-medium">Valor</th>
+              <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 text-right font-medium">
                 <span class="sr-only">Ações</span>
               </th>
             </tr>
@@ -116,7 +137,7 @@ function podeExcluir(transacao: Transacao): boolean {
               :key="transacao.id"
               class="border-border hover:bg-success/10 border-b transition-colors last:border-0"
             >
-              <td class="px-5 py-3">
+              <td class="px-2 py-3 lg:px-3 xl:px-5">
                 <div class="flex items-center gap-2">
                   <span class="font-medium">{{ transacao.descricao }}</span>
                   <Repeat
@@ -130,29 +151,29 @@ function podeExcluir(transacao: Transacao): boolean {
                 </p>
               </td>
 
-              <td class="px-5 py-3">
+              <td class="px-2 py-3 lg:px-3 xl:px-5 [&>span]:whitespace-normal">
                 <BaseBadge :cor="categoriaStore.cor(transacao.categoriaId)">
                   {{ categoriaStore.nome(transacao.categoriaId) }}
                 </BaseBadge>
               </td>
 
-              <td v-if="ehSaida" class="text-muted-foreground px-5 py-3 whitespace-nowrap">
+              <td v-if="ehSaida" class="text-muted-foreground px-2 py-3 lg:px-3 xl:px-5">
                 {{ SAIDA_TIPO_LABEL[comoSaida(transacao).tipo] }}
               </td>
 
-              <td class="text-muted-foreground numero-tabular px-5 py-3 whitespace-nowrap">
+              <td class="text-muted-foreground numero-tabular px-2 py-3 lg:px-3 xl:px-5">
                 {{ formatDate(transacao.data) }}
               </td>
 
-              <td v-if="ehSaida" class="text-muted-foreground numero-tabular px-5 py-3 whitespace-nowrap">
+              <td v-if="ehSaida" class="text-muted-foreground numero-tabular px-2 py-3 lg:px-3 xl:px-5">
                 {{ comoSaida(transacao).vencimento ? formatDate(comoSaida(transacao).vencimento!) : '—' }}
               </td>
 
-              <td v-if="ehSaida" class="text-muted-foreground px-5 py-3 whitespace-nowrap">
+              <td v-if="ehSaida" class="text-muted-foreground px-2 py-3 lg:px-3 xl:px-5">
                 {{ FORMA_PAGAMENTO_LABEL[comoSaida(transacao).formaPagamento] }}
               </td>
 
-              <td v-if="ehSaida" class="px-5 py-3">
+              <td v-if="ehSaida" class="px-2 py-3 lg:px-3 xl:px-5">
                 <button
                   v-if="podeEditar(transacao)"
                   type="button"
@@ -173,16 +194,16 @@ function podeExcluir(transacao: Transacao): boolean {
                 </BaseBadge>
               </td>
 
-              <td v-if="ehSaida" class="text-muted-foreground numero-tabular px-5 py-3 whitespace-nowrap">
+              <td v-if="ehSaida" class="text-muted-foreground numero-tabular px-2 py-3 lg:px-3 xl:px-5">
                 {{ comoSaida(transacao).pagoEm ? formatDate(comoSaida(transacao).pagoEm!) : '—' }}
               </td>
 
-              <td class="numero-tabular px-5 py-3 text-right font-semibold" :class="corValor">
+              <td class="numero-tabular px-2 py-3 lg:px-3 xl:px-5 text-right font-semibold" :class="corValor">
                 {{ sinal }} {{ formatCurrency(transacao.valor) }}
               </td>
 
-              <td class="px-5 py-3">
-                <div v-if="podeEditar(transacao)" class="flex justify-end gap-1">
+              <td class="px-2 py-3 lg:px-3 xl:px-5">
+                <div v-if="podeEditar(transacao)" class="flex flex-wrap justify-end gap-1">
                   <BaseButton
                     variante="ghost"
                     tamanho="icon"
