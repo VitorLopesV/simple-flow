@@ -61,10 +61,10 @@ const corVariacao = computed(() => {
       {{ formatCurrency(valor) }}
     </p>
 
-    <div v-if="!carregando" class="mt-2 flex items-center gap-2 text-xs">
+    <div v-if="!carregando" class="mt-2 flex items-center gap-2 text-sm">
       <span v-if="variacao !== null" class="inline-flex items-center gap-1 font-medium" :class="corVariacao">
-        <TrendingUp v-if="subiu" class="size-3.5" aria-hidden="true" />
-        <TrendingDown v-else class="size-3.5" aria-hidden="true" />
+        <TrendingUp v-if="subiu" class="size-4" aria-hidden="true" />
+        <TrendingDown v-else class="size-4" aria-hidden="true" />
         {{ formatPercent(Math.abs(variacao)) }}
       </span>
       <span class="text-muted-foreground">{{ detalhe || 'vs. mês anterior' }}</span>

@@ -142,6 +142,20 @@ const detalheFaturas = computed(() => {
   return total > 0 ? `${formatPercent(faturas / total)} das saídas do mês` : 'incluído nas saídas do mês'
 })
 
+/**
+ * Quanto do que entrou no mês já foi consumido pelas saídas (mesmo cálculo do store,
+ * limitado a 100%). Sem entradas não há base de comparação, então o texto explica o caso.
+ */
+const detalheSaldo = computed(() => {
+  const entradas = resumo.value?.totalEntradas ?? 0
+  const saidas = resumo.value?.totalSaidas ?? 0
+
+  if (!entradas) return saidas > 0 ? '100% consumido, sem entradas no mês' : 'sem movimentações no mês'
+  if (!saidas) return '0% consumido'
+
+  return `${Math.round(dashboardStore.comprometimento)}% consumido`
+})
+
 const gastos = computed(() => resumo.value?.gastosPorCategoria.slice(0, 6) ?? [])
 const labelsGastos = computed(() => gastos.value.map((g) => g.nome))
 const seriesGastos = computed(() => [
@@ -259,7 +273,7 @@ watch(
           :icone="Wallet"
           :tom="dashboardStore.saldoPositivo ? 'sucesso' : 'perigo'"
           :variacao="null"
-          :detalhe="dashboardStore.saldoPositivo ? 'sobrou no período' : 'déficit no período'"
+          :detalhe="detalheSaldo"
           :carregando="carregandoInicial"
         />
       </div>
@@ -329,59 +343,6 @@ watch(
             :cores="coresEntradas"
             :altura="280"
           />
-        </BaseCard>
-      </div>
-
-      <div class="grid grid-cols-1 gap-6">
-        <BaseCard titulo="Comprometimento da renda" descricao="Quanto das entradas já foi gasto">
-          <BaseSkeleton v-if="carregandoInicial" :linhas="3" />
-          <template v-else>
-            <p class="numero-tabular text-3xl font-semibold">
-              {{ Math.round(dashboardStore.comprometimento) }}%
-            </p>
-            <div class="bg-muted mt-3 h-2 w-full overflow-hidden rounded-full">
-              <div
-                class="h-full rounded-full transition-all"
-                :class="
-                  dashboardStore.comprometimento >= 90
-                    ? 'bg-danger'
-                    : dashboardStore.comprometimento >= 70
-                      ? 'bg-warning'
-                      : 'bg-success'
-                "
-                :style="{ width: `${dashboardStore.comprometimento}%` }"
-                role="progressbar"
-                :aria-valuenow="Math.round(dashboardStore.comprometimento)"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                aria-label="Percentual da renda comprometido"
-              />
-            </div>
-
-            <dl class="mt-5 space-y-3 text-sm">
-              <div class="flex items-center justify-between">
-                <dt class="text-muted-foreground">Entradas</dt>
-                <dd class="numero-tabular text-success font-medium">
-                  {{ formatCurrency(resumo?.totalEntradas ?? 0) }}
-                </dd>
-              </div>
-              <div class="flex items-center justify-between">
-                <dt class="text-muted-foreground">Saídas</dt>
-                <dd class="numero-tabular text-danger font-medium">
-                  {{ formatCurrency(resumo?.totalSaidas ?? 0) }}
-                </dd>
-              </div>
-              <div class="border-border flex items-center justify-between border-t pt-3">
-                <dt class="font-medium">Saldo</dt>
-                <dd
-                  class="numero-tabular font-semibold"
-                  :class="dashboardStore.saldoPositivo ? 'text-success' : 'text-danger'"
-                >
-                  {{ formatCurrency(resumo?.saldo ?? 0) }}
-                </dd>
-              </div>
-            </dl>
-          </template>
         </BaseCard>
       </div>
       </div>
