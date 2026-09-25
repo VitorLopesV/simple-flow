@@ -6,6 +6,7 @@ import { toast } from 'vue-sonner'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
+import AuthMarca from '@/components/features/AuthMarca.vue'
 import { authService } from '@/services/authService'
 import { mensagemDeErro } from '@/services/http'
 import { useAuthStore } from '@/stores/authStore'
@@ -107,16 +108,14 @@ const handlePhoneInput = (event: Event) => {
 
 <template>
   <div class="w-full max-w-md">
+    <!-- No mobile o painel da marca some (ver AuthLayout): a marca fica acima do card. -->
+    <AuthMarca class="mb-6 lg:hidden" />
+
     <BaseCard class="border shadow-lg">
       <div class="space-y-6">
-        <!-- Logo -->
-        <div class="flex justify-center mb-2">
-          <img src="@/img/simple-flow-logo.svg" alt="SimpleFlow" class="h-50 w-auto" />
-        </div>
-
         <!-- Header -->
-        <div class="text-center">
-          <h1 class="text-2xl font-bold">Criar uma conta</h1>
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">Criar uma conta</h1>
           <p class="text-muted-foreground mt-2 text-sm">Preencha os dados abaixo para se registrar</p>
         </div>
 
@@ -171,6 +170,8 @@ const handlePhoneInput = (event: Event) => {
 
           <BaseButton
             tipo="submit"
+            variante="success"
+            tamanho="lg"
             :carregando="carregando"
             :desabilitado="carregando"
             blocoCompleto
@@ -180,14 +181,13 @@ const handlePhoneInput = (event: Event) => {
         </form>
 
         <!-- Footer -->
-        <div class="space-y-3 text-center text-sm">
+        <div class="border-border border-t pt-5 text-center text-sm">
           <p class="text-muted-foreground">
             Já tem uma conta?
-            <RouterLink :to="{ name: 'login' }" class="text-primary hover:underline font-medium">
+            <RouterLink :to="{ name: 'login' }" class="text-success hover:underline font-semibold">
               Faça login
             </RouterLink>
           </p>
-
         </div>
       </div>
     </BaseCard>
