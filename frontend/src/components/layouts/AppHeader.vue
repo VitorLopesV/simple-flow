@@ -9,7 +9,7 @@ const emit = defineEmits<{ abrirMenu: [] }>()
 
 <template>
   <header
-    class="bg-background/85 sticky top-0 z-20 flex h-16 items-center gap-3 px-4 backdrop-blur sm:px-[50px] lg:h-auto lg:items-start lg:pt-[35px] lg:pb-4"
+    class="bg-background/85 sticky top-0 z-20 lg:static flex h-16 items-center gap-3 px-4 backdrop-blur sm:px-[50px] lg:h-auto lg:items-start lg:pt-[35px] lg:pb-4"
   >
     <BaseButton
       variante="ghost"
