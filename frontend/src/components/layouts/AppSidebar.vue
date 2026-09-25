@@ -3,7 +3,7 @@ import { ArrowDownCircle, ArrowUpCircle, CreditCard, LayoutDashboard, X } from '
 import type { Component } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
-import logoSimpleFlow from '@/img/simple-flow-logo.png'
+import logoSimpleFlow from '@/img/simple-flow-logo.svg'
 
 defineProps<{ aberto: boolean }>()
 const emit = defineEmits<{ fechar: [] }>()
@@ -37,9 +37,9 @@ const itens: ItemMenu[] = [
     :class="aberto ? 'translate-x-0' : '-translate-x-full'"
     :aria-hidden="!aberto ? 'true' : undefined"
   >
-    <div class="relative flex justify-center pt-[5px] pb-[5px]">
+    <div class="relative flex justify-center pt-6 pb-[43px]">
       <RouterLink :to="{ name: 'dashboard' }" @click="emit('fechar')">
-        <img :src="logoSimpleFlow" alt="SimpleFlow" class="mx-auto -mt-[40px] -mb-[32px] block w-[240px] max-w-full" />
+        <img :src="logoSimpleFlow" alt="SimpleFlow" class="mx-auto -mt-[38px] -mb-[9px] block w-[160px] max-w-full" />
       </RouterLink>
 
       <BaseButton

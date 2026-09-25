@@ -94,7 +94,6 @@ Todas com prefixo `VITE_*` (exigido pelo Vite), tipadas em `env.d.ts`.
 
 ## Gotchas conhecidos
 
-- **Favicon possivelmente quebrado**: `index.html` referencia `/logo-favicon.png` (esperado em `public/`), mas `public/` está vazia e o arquivo real está em `src/img/logo-favicon.png`. Ao mexer em favicon/branding, mover o arquivo para `public/logo-favicon.png` ou ajustar o `href`.
 - `UsuarioPopover` (troca de tema) e `ConfiguracoesModal` (troca de tema) são dois pontos de UI para a mesma ação — intencional, ambos usam `useTheme()` como fonte única de verdade, sem risco de dessincronia.
 
 ## Scripts

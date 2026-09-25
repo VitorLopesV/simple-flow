@@ -111,7 +111,7 @@ const handlePhoneInput = (event: Event) => {
       <div class="space-y-6">
         <!-- Logo -->
         <div class="flex justify-center mb-2">
-          <img src="@/img/simple-flow-logo.png" alt="SimpleFlow" class="h-32 w-auto" />
+          <img src="@/img/simple-flow-logo.svg" alt="SimpleFlow" class="h-50 w-auto" />
         </div>
 
         <!-- Header -->

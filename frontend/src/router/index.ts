@@ -84,9 +84,8 @@ router.beforeEach((to) => {
   if (ehRotaDeAuth && autenticado) return { name: 'dashboard' }
 })
 
-router.afterEach((to) => {
-  const titulo = to.meta.titulo as string | undefined
-  document.title = titulo ? `SimpleFlow · ${titulo}` : 'SimpleFlow'
+router.afterEach(() => {
+  document.title = 'SimpleFlow'
 })
 
 export default router

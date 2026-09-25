@@ -122,53 +122,28 @@ describe('rota inexistente', () => {
 })
 
 describe('título da página', () => {
-  it('usa "SimpleFlow · Dashboard" para rota com meta.titulo', async () => {
-    autenticar()
+  it.each(['/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes'])(
+    '%s mantém apenas "SimpleFlow"',
+    async (rota) => {
+      autenticar()
 
-    await ir('/app/dashboard')
+      await ir(rota)
 
-    expect(document.title).toBe('SimpleFlow · Dashboard')
-  })
+      expect(document.title).toBe('SimpleFlow')
+    },
+  )
 
-  it.each([
-    ['/app/entradas', 'SimpleFlow · Entradas'],
-    ['/app/saidas', 'SimpleFlow · Saídas'],
-    ['/app/cartoes', 'SimpleFlow · Cartões de Crédito'],
-  ])('%s → "%s"', async (rota, titulo) => {
-    autenticar()
-
-    await ir(rota)
-
-    expect(document.title).toBe(titulo)
-  })
-
-  it('rotas de autenticação também têm título', async () => {
+  it('rotas de autenticação também usam apenas "SimpleFlow"', async () => {
     await ir('/auth/registro')
 
-    expect(document.title).toBe('SimpleFlow · Registro')
+    expect(document.title).toBe('SimpleFlow')
   })
 
-  it('usa apenas "SimpleFlow" quando a rota não tem título (404)', async () => {
+  it('usa "SimpleFlow" também na 404', async () => {
     document.title = 'qualquer coisa'
 
     await ir('/uma/rota/qualquer')
 
     expect(document.title).toBe('SimpleFlow')
-  })
-
-  it('volta a "SimpleFlow" ao sair de uma rota com título para a 404', async () => {
-    autenticar()
-    await ir('/app/dashboard')
-    expect(document.title).toBe('SimpleFlow · Dashboard')
-
-    await ir('/uma/rota/qualquer')
-
-    expect(document.title).toBe('SimpleFlow')
-  })
-
-  it('reflete o destino final de um redirect do guard', async () => {
-    await ir('/app/dashboard')
-
-    expect(document.title).toBe('SimpleFlow · Login')
   })
 })
