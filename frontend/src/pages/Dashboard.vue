@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowDownCircle, ArrowUpCircle, CreditCard, Download, Wallet } from '@lucide/vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -25,10 +25,56 @@ const authStore = useAuthStore()
 const periodoStore = usePeriodoStore()
 const dashboardStore = useDashboardStore()
 
-/** Nome pode ser nulo: cai para o e-mail e, sem sessão, a saudação fica sem nome. */
-const nomeUsuario = computed(
-  () => authStore.usuario?.nome?.trim() || authStore.usuario?.email || '',
+/**
+ * Nome do cadastro; se não houver (login em modo mock ou conta antiga), usa o trecho do
+ * e-mail antes do `@`, capitalizado — o endereço completo nunca aparece na saudação.
+ */
+const nomeUsuario = computed(() => {
+  const nome = authStore.usuario?.nome?.trim()
+  if (nome) return nome
+
+  const local = authStore.usuario?.email?.split('@')[0]?.split(/[._\-+\d]/)[0] ?? ''
+  return local ? local.charAt(0).toUpperCase() + local.slice(1) : ''
+})
+
+const SAUDACAO = 'Olá, seja bem-vindo'
+const INTERVALO_DIGITACAO_MS = 45
+
+/** Quantos caracteres de "saudação + espaço + nome" já foram "digitados". */
+const digitados = ref(0)
+let timerDigitacao: ReturnType<typeof setInterval> | undefined
+
+const textoCompleto = computed(() =>
+  nomeUsuario.value ? `${SAUDACAO} ${nomeUsuario.value}` : SAUDACAO,
 )
+const saudacaoVisivel = computed(() => textoCompleto.value.slice(0, digitados.value).slice(0, SAUDACAO.length))
+// O espaço separador fica no início do trecho do nome, fora do texto da saudação.
+const nomeVisivel = computed(() => textoCompleto.value.slice(SAUDACAO.length, digitados.value))
+const digitando = computed(() => digitados.value < textoCompleto.value.length)
+
+function pararDigitacao(): void {
+  clearInterval(timerDigitacao)
+  timerDigitacao = undefined
+}
+
+/** Efeito de máquina de escrever a cada abertura do painel; sem animação se o usuário pediu menos movimento. */
+function iniciarDigitacao(): void {
+  pararDigitacao()
+
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    digitados.value = textoCompleto.value.length
+    return
+  }
+
+  digitados.value = 0
+  timerDigitacao = setInterval(() => {
+    digitados.value += 1
+    if (!digitando.value) pararDigitacao()
+  }, INTERVALO_DIGITACAO_MS)
+}
+
+watch(nomeUsuario, iniciarDigitacao)
+onBeforeUnmount(pararDigitacao)
 
 const exportando = ref(false)
 
@@ -93,7 +139,10 @@ const seriesEntradas = computed(() => [
 ])
 const coresEntradas = computed(() => entradas.value.map((e) => e.cor))
 
-onMounted(() => void dashboardStore.carregar())
+onMounted(() => {
+  iniciarDigitacao()
+  void dashboardStore.carregar()
+})
 watch(() => periodoStore.periodo, () => void dashboardStore.carregar(), { deep: true })
 watch(
   () => dashboardStore.erro,
@@ -102,6 +151,21 @@ watch(
 </script>
 
 <template>
+  <div class="flex w-full flex-col gap-10">
+  <h2
+    data-testid="saudacao"
+    :aria-label="textoCompleto"
+    class="text-foreground text-2xl font-extralight tracking-tight wrap-break-word whitespace-pre-wrap sm:text-4xl"
+  >
+    <span aria-hidden="true">{{ saudacaoVisivel }}</span>
+    <span aria-hidden="true" class="text-primary font-semibold">{{ nomeVisivel }}</span>
+    <span
+      v-if="digitando"
+      aria-hidden="true"
+      class="bg-primary ml-1 inline-block h-[0.9em] w-0.5 translate-y-[0.1em] animate-pulse"
+    />
+  </h2>
+
   <PageLayout
     titulo="Visão geral"
     :descricao="`Resumo financeiro de ${formatPeriodo(periodoStore.periodo)}`"
@@ -117,10 +181,6 @@ watch(
         Exportar dados
       </BaseButton>
     </template>
-
-    <p data-testid="saudacao" class="text-foreground text-lg font-semibold wrap-break-word sm:text-xl">
-      Olá, Seja bem vindo<template v-if="nomeUsuario"> {{ nomeUsuario }}</template>
-    </p>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryCard
@@ -339,4 +399,5 @@ watch(
       </BaseCard>
     </div>
   </PageLayout>
+  </div>
 </template>
