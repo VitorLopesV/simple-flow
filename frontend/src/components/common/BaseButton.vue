@@ -27,12 +27,12 @@ const props = withDefaults(
 )
 
 const VARIANTES: Record<Variante, string> = {
-  primary: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm',
-  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-  outline: 'border border-border bg-card text-foreground hover:bg-muted',
-  ghost: 'text-muted-foreground hover:bg-muted hover:text-foreground',
-  danger: 'bg-danger text-danger-foreground hover:bg-danger/90 shadow-sm',
-  success: 'bg-success text-success-foreground hover:bg-success/90 shadow-sm',
+  primary: 'bg-primary text-primary-foreground hover:bg-success/25 hover:text-foreground shadow-sm',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-success/25 hover:text-foreground',
+  outline: 'border border-border bg-card text-foreground hover:bg-success/25',
+  ghost: 'text-muted-foreground hover:bg-success/25 hover:text-foreground',
+  danger: 'bg-danger text-danger-foreground hover:bg-success/25 hover:text-foreground shadow-sm',
+  success: 'bg-success text-success-foreground hover:bg-success/25 hover:text-foreground shadow-sm',
 }
 
 const TAMANHOS: Record<Tamanho, string> = {

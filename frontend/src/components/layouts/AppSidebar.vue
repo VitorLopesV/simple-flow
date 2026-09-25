@@ -38,7 +38,7 @@ const itens: ItemMenu[] = [
     :aria-hidden="!aberto ? 'true' : undefined"
   >
     <div class="relative flex justify-center pt-6 pb-[43px]">
-      <RouterLink :to="{ name: 'dashboard' }" @click="emit('fechar')">
+      <RouterLink :to="{ name: 'dashboard' }" class="cursor-default" @click="emit('fechar')">
         <img :src="logoSimpleFlow" alt="SimpleFlow" class="mx-auto -mt-[38px] -mb-[9px] block w-[160px] max-w-full" />
       </RouterLink>
 

@@ -129,7 +129,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', aoClicarFora))
       <template #sufixo>
         <button
           type="button"
-          class="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-ring flex size-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2"
+          class="text-muted-foreground hover:bg-success/25 hover:text-foreground focus-visible:outline-ring flex size-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2"
           :disabled="desabilitado"
           aria-haspopup="dialog"
           :aria-expanded="aberto"
@@ -175,7 +175,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', aoClicarFora))
               celula.foraDoMes ? 'text-muted-foreground/40' : 'text-foreground',
               celula.iso === modelo
                 ? 'bg-primary text-primary-foreground font-medium'
-                : 'hover:bg-muted',
+                : 'hover:bg-success/25',
               celula.iso === hojeISO && celula.iso !== modelo && 'ring-ring ring-1',
             )
           "
