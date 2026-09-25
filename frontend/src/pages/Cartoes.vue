@@ -168,7 +168,7 @@ async function confirmarExclusaoDebito(): Promise<void> {
         v-model="periodoStore.periodo"
         @hoje="periodoStore.irParaHoje()"
       />
-      <BaseButton class="!h-11" @click="abrirNovo">
+      <BaseButton variante="success" class="!h-11" @click="abrirNovo">
         <Plus class="size-4" aria-hidden="true" />
         Novo cartão
       </BaseButton>

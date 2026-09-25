@@ -91,7 +91,7 @@ async function confirmarExclusao(): Promise<void> {
         v-model="periodoStore.periodo"
         @hoje="periodoStore.irParaHoje()"
       />
-      <BaseButton class="!h-11" @click="abrirNova">
+      <BaseButton variante="success" class="!h-11" @click="abrirNova">
         <Plus class="size-4" aria-hidden="true" />
         Nova entrada
       </BaseButton>
