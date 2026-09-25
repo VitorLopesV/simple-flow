@@ -45,20 +45,25 @@ export const dashboardService = {
         .filter((saida) => saida.automatica && saida.formaPagamento === 'CARTAO_CREDITO')
         .reduce((soma, saida) => soma + saida.valor, 0)
 
-      const agrupado = new Map<string, number>()
-      for (const saida of saidasDoMes) {
-        agrupado.set(saida.categoriaId, (agrupado.get(saida.categoriaId) ?? 0) + saida.valor)
-      }
-
       const categoria = (id: string) => db.categorias.find((item) => item.id === id)
 
-      const gastosPorCategoria = [...agrupado.entries()]
-        .map(([categoriaId, total]) => ({
-          nome: categoria(categoriaId)?.nome ?? 'Outros',
-          cor: categoria(categoriaId)?.cor ?? '#94a3b8',
-          total,
-        }))
-        .sort((a, b) => b.total - a.total)
+      const porCategoria = (registros: { categoriaId: string; valor: number }[]) => {
+        const agrupado = new Map<string, number>()
+        for (const registro of registros) {
+          agrupado.set(registro.categoriaId, (agrupado.get(registro.categoriaId) ?? 0) + registro.valor)
+        }
+
+        return [...agrupado.entries()]
+          .map(([categoriaId, total]) => ({
+            nome: categoria(categoriaId)?.nome ?? 'Outros',
+            cor: categoria(categoriaId)?.cor ?? '#94a3b8',
+            total,
+          }))
+          .sort((a, b) => b.total - a.total)
+      }
+
+      const gastosPorCategoria = porCategoria(saidasDoMes)
+      const entradasPorCategoria = porCategoria(entradasDoMes)
 
       const transacoesRecentes: TransacaoRecente[] = [
         ...entradasDoMes.map<TransacaoRecente>((entrada) => ({
@@ -93,6 +98,7 @@ export const dashboardService = {
         serieEntradas,
         serieSaidas,
         gastosPorCategoria,
+        entradasPorCategoria,
         transacoesRecentes,
       })
     }

@@ -220,6 +220,29 @@ describe('totalFaturas', () => {
   })
 })
 
+describe('entradasPorCategoria', () => {
+  it('agrupa entradas do período por categoria, ordena por total e ignora outros meses', async () => {
+    db.entradas.push(
+      entrada({ valor: 300, categoriaId: catA.id }),
+      entrada({ valor: 200, categoriaId: catA.id }),
+      entrada({ valor: 700, categoriaId: catB.id }),
+      entrada({ valor: 999, categoriaId: catB.id, data: '2026-07-10' }),
+    )
+
+    const { entradasPorCategoria } = await dashboardService.resumo(AGOSTO)
+
+    expect(entradasPorCategoria).toEqual([
+      { nome: catB.nome, cor: catB.cor, total: 700 },
+      { nome: catA.nome, cor: catA.cor, total: 500 },
+    ])
+  })
+
+  it('devolve lista vazia sem entradas no período', async () => {
+    const { entradasPorCategoria } = await dashboardService.resumo(AGOSTO)
+    expect(entradasPorCategoria).toEqual([])
+  })
+})
+
 describe('gastosPorCategoria', () => {
   it('agrupa por categoria, ordena do maior para o menor e cai em "Outros" para categoria desconhecida', async () => {
     db.saidas.push(
@@ -320,6 +343,7 @@ describe('período sem dados', () => {
       variacaoEntradas: 0,
       variacaoSaidas: 0,
       gastosPorCategoria: [],
+      entradasPorCategoria: [],
       transacoesRecentes: [],
     })
     expect(resumo.serieEntradas).toHaveLength(6)

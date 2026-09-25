@@ -23,6 +23,7 @@ function resumo(sobrescritas: Partial<DashboardResumo> = {}): DashboardResumo {
     serieEntradas: [],
     serieSaidas: [],
     gastosPorCategoria: [],
+    entradasPorCategoria: [],
     transacoesRecentes: [],
     ...sobrescritas,
   }

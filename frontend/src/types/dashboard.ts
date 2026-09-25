@@ -26,5 +26,7 @@ export interface DashboardResumo {
   serieSaidas: SeriePonto[]
   /** Distribuição das saídas por categoria no período. */
   gastosPorCategoria: { nome: string; cor: string; total: number }[]
+  /** Distribuição das entradas por categoria no período. */
+  entradasPorCategoria: { nome: string; cor: string; total: number }[]
   transacoesRecentes: TransacaoRecente[]
 }

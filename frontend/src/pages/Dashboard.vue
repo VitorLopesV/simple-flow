@@ -76,6 +76,14 @@ const seriesGastos = computed(() => [
 ])
 const coresGastos = computed(() => gastos.value.map((g) => g.cor))
 
+// `?? []` cobre um backend que ainda não devolva `entradasPorCategoria`.
+const entradas = computed(() => resumo.value?.entradasPorCategoria?.slice(0, 6) ?? [])
+const labelsEntradas = computed(() => entradas.value.map((e) => e.nome))
+const seriesEntradas = computed(() => [
+  { nome: 'Entradas', dados: entradas.value.map((e) => e.total), cor: '#10b981' },
+])
+const coresEntradas = computed(() => entradas.value.map((e) => e.cor))
+
 onMounted(() => void dashboardStore.carregar())
 watch(() => periodoStore.periodo, () => void dashboardStore.carregar(), { deep: true })
 watch(
@@ -143,7 +151,7 @@ watch(
       />
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+    <div class="grid gap-6">
       <BaseCard titulo="Entradas x Saídas" descricao="Evolução dos últimos 6 meses">
         <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
         <StatisticsChart
@@ -154,7 +162,9 @@ watch(
           :altura="280"
         />
       </BaseCard>
+    </div>
 
+    <div class="grid gap-6 md:grid-cols-2">
       <BaseCard titulo="Gastos por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
         <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
         <EmptyState
@@ -168,6 +178,22 @@ watch(
           :labels="labelsGastos"
           :series="seriesGastos"
           :cores="coresGastos"
+          :altura="280"
+        />
+      </BaseCard>
+      <BaseCard titulo="Entradas por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
+        <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
+        <EmptyState
+          v-else-if="!entradas.length"
+          titulo="Sem entradas no período"
+          descricao="Nenhuma entrada registrada para este mês."
+        />
+        <StatisticsChart
+          v-else
+          tipo="rosca"
+          :labels="labelsEntradas"
+          :series="seriesEntradas"
+          :cores="coresEntradas"
           :altura="280"
         />
       </BaseCard>
