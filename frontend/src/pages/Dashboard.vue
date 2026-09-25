@@ -173,10 +173,9 @@ watch(
     <template #acoes>
       <MonthPicker
         v-model="periodoStore.periodo"
-        class="sm:hidden"
         @hoje="periodoStore.irParaHoje()"
       />
-      <BaseButton variante="outline" :carregando="exportando" @click="exportarDados">
+      <BaseButton variante="outline" class="!h-11" :carregando="exportando" @click="exportarDados">
         <Download class="size-4" aria-hidden="true" />
         Exportar dados
       </BaseButton>

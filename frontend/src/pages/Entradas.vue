@@ -89,10 +89,9 @@ async function confirmarExclusao(): Promise<void> {
     <template #acoes>
       <MonthPicker
         v-model="periodoStore.periodo"
-        class="sm:hidden"
         @hoje="periodoStore.irParaHoje()"
       />
-      <BaseButton @click="abrirNova">
+      <BaseButton class="!h-11" @click="abrirNova">
         <Plus class="size-4" aria-hidden="true" />
         Nova entrada
       </BaseButton>

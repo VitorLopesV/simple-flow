@@ -26,10 +26,11 @@ async function handleDeslogar() {
     <BaseButton
       variante="ghost"
       tamanho="icon"
+      class="border-border !size-11 rounded-full border-2"
       aria-label="Menu de usuário"
       @click="abrirPopover = !abrirPopover"
     >
-      <User class="size-5" aria-hidden="true" />
+      <User class="size-6" aria-hidden="true" />
     </BaseButton>
 
     <!-- Popover -->

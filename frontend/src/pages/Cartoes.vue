@@ -166,10 +166,9 @@ async function confirmarExclusaoDebito(): Promise<void> {
     <template #acoes>
       <MonthPicker
         v-model="periodoStore.periodo"
-        class="sm:hidden"
         @hoje="periodoStore.irParaHoje()"
       />
-      <BaseButton @click="abrirNovo">
+      <BaseButton class="!h-11" @click="abrirNovo">
         <Plus class="size-4" aria-hidden="true" />
         Novo cartão
       </BaseButton>

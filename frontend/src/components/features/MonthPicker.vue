@@ -35,7 +35,7 @@ function definirAno(evento: Event): void {
 
 <template>
   <div
-    class="bg-card border-border flex items-center gap-1 rounded-lg border p-1"
+    class="bg-card border-border flex h-11 items-center gap-1 rounded-lg border p-0.5"
     role="group"
     aria-label="Selecionar período"
   >

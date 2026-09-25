@@ -2,18 +2,14 @@
 import { Menu } from '@lucide/vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
-import MonthPicker from '@/components/features/MonthPicker.vue'
 import UsuarioPopover from '@/components/features/UsuarioPopover.vue'
-import { usePeriodoStore } from '@/stores/periodoStore'
 
 const emit = defineEmits<{ abrirMenu: [] }>()
-
-const periodoStore = usePeriodoStore()
 </script>
 
 <template>
   <header
-    class="bg-background/85 sticky top-0 z-20 flex h-16 items-center gap-3 px-4 backdrop-blur sm:px-6 lg:h-auto lg:items-start lg:pt-[35px] lg:pb-4"
+    class="bg-background/85 sticky top-0 z-20 flex h-16 items-center gap-3 px-4 backdrop-blur sm:px-[50px] lg:h-auto lg:items-start lg:pt-[35px] lg:pb-4"
   >
     <BaseButton
       variante="ghost"
@@ -27,11 +23,6 @@ const periodoStore = usePeriodoStore()
     </BaseButton>
 
     <div class="ml-auto flex items-center gap-2">
-      <MonthPicker
-        v-model="periodoStore.periodo"
-        class="hidden sm:flex"
-        @hoje="periodoStore.irParaHoje()"
-      />
       <UsuarioPopover />
     </div>
   </header>
