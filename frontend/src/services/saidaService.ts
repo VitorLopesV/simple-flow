@@ -1,5 +1,5 @@
 import type { Paginated, Periodo } from '@/types/common'
-import type { Saida, SaidaFiltro, SaidaPayload, SaidaResumo } from '@/types/saida'
+import type { Saida, SaidaFiltro, SaidaPayload, SaidaResumo, SaidaTipo } from '@/types/saida'
 import { addMeses, dentroDoPeriodo, toCompetencia } from '@/utils/dateFormatter'
 import { http, USE_MOCK } from './http'
 import { contemBusca, delay, mockDb, paginar } from './mock'
@@ -78,6 +78,15 @@ export const saidaService = {
         })
         .sort((a, b) => b.total - a.total)
 
+      const agrupadoPorTipo = new Map<SaidaTipo, number>()
+      for (const saida of doPeriodo) {
+        agrupadoPorTipo.set(saida.tipo, (agrupadoPorTipo.get(saida.tipo) ?? 0) + saida.valor)
+      }
+
+      const porTipo = [...agrupadoPorTipo.entries()]
+        .map(([tipo, valor]) => ({ tipo, total: valor }))
+        .sort((a, b) => b.total - a.total)
+
       return delay({
         total,
         quantidade: doPeriodo.length,
@@ -90,6 +99,7 @@ export const saidaService = {
           .reduce((soma, saida) => soma + saida.valor, 0),
         totalMesAnterior: totalDoPeriodo(addMeses(periodo, -1)),
         porCategoria,
+        porTipo,
       })
     }
 

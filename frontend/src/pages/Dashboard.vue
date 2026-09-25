@@ -17,6 +17,7 @@ import { mensagemDeErro } from '@/services/http'
 import { useAuthStore } from '@/stores/authStore'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
+import { SAIDA_TIPO_COR, SAIDA_TIPO_LABEL } from '@/types/saida'
 import { formatCurrency, formatPercent } from '@/utils/currencyFormatter'
 import { formatDate, formatPeriodo } from '@/utils/dateFormatter'
 
@@ -75,6 +76,14 @@ const seriesGastos = computed(() => [
   { nome: 'Gastos', dados: gastos.value.map((g) => g.total), cor: '#6366f1' },
 ])
 const coresGastos = computed(() => gastos.value.map((g) => g.cor))
+
+// `porTipo` vem do resumo de saídas (`/saidas/resumo`) via dashboardStore.
+const tipos = computed(() => dashboardStore.gastosPorTipo.slice(0, 6))
+const labelsTipos = computed(() => tipos.value.map((t) => SAIDA_TIPO_LABEL[t.tipo]))
+const seriesTipos = computed(() => [
+  { nome: 'Gastos', dados: tipos.value.map((t) => t.total), cor: '#6366f1' },
+])
+const coresTipos = computed(() => tipos.value.map((t) => SAIDA_TIPO_COR[t.tipo]))
 
 // `?? []` cobre um backend que ainda não devolva `entradasPorCategoria`.
 const entradas = computed(() => resumo.value?.entradasPorCategoria?.slice(0, 6) ?? [])
@@ -164,7 +173,7 @@ watch(
       </BaseCard>
     </div>
 
-    <div class="grid gap-6 md:grid-cols-2">
+    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       <BaseCard titulo="Gastos por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
         <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
         <EmptyState
@@ -181,7 +190,27 @@ watch(
           :altura="280"
         />
       </BaseCard>
-      <BaseCard titulo="Entradas por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
+      <BaseCard titulo="Gastos por tipo" :descricao="formatPeriodo(periodoStore.periodo)">
+        <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
+        <EmptyState
+          v-else-if="!tipos.length"
+          titulo="Sem gastos no período"
+          descricao="Nenhuma saída registrada para este mês."
+        />
+        <StatisticsChart
+          v-else
+          tipo="rosca"
+          :labels="labelsTipos"
+          :series="seriesTipos"
+          :cores="coresTipos"
+          :altura="280"
+        />
+      </BaseCard>
+      <BaseCard
+        titulo="Entradas por categoria"
+        :descricao="formatPeriodo(periodoStore.periodo)"
+        class="md:col-span-2 xl:col-span-1"
+      >
         <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
         <EmptyState
           v-else-if="!entradas.length"

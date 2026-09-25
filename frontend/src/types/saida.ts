@@ -70,6 +70,8 @@ export interface SaidaResumo {
   totalPendente: number
   totalMesAnterior: number
   porCategoria: { categoriaId: ID; nome: string; cor: string; total: number }[]
+  /** Distribuição das saídas do período por `SaidaTipo`. */
+  porTipo: { tipo: SaidaTipo; total: number }[]
 }
 
 export const SAIDA_STATUS_LABEL: Record<SaidaStatus, string> = {
@@ -116,3 +118,17 @@ export const SAIDA_TIPO_LABEL: Record<SaidaTipo, string> = {
 export const SAIDA_TIPO_OPCOES: OpcaoSelect<SaidaTipo>[] = (
   Object.keys(SAIDA_TIPO_LABEL) as SaidaTipo[]
 ).map((value) => ({ label: SAIDA_TIPO_LABEL[value], value }))
+
+/** Cor de cada tipo nos gráficos (Chart.js não lê CSS custom properties). */
+export const SAIDA_TIPO_COR: Record<SaidaTipo, string> = {
+  TRANSPORTE: '#0ea5e9',
+  ALIMENTACAO: '#f97316',
+  LAZER: '#a855f7',
+  CONTA: '#6366f1',
+  POUPANCA: '#10b981',
+  ACOES: '#0891b2',
+  EDUCACAO: '#eab308',
+  COMPRAS: '#ec4899',
+  FARMACIA: '#ef4444',
+  OUTROS: '#94a3b8',
+}

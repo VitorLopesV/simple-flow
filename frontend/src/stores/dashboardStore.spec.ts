@@ -2,15 +2,36 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { dashboardService } from '@/services/dashboardService'
+import { saidaService } from '@/services/saidaService'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
 import type { DashboardResumo } from '@/types/dashboard'
+import type { SaidaResumo } from '@/types/saida'
 
 vi.mock('@/services/dashboardService', () => ({
   dashboardService: { resumo: vi.fn() },
 }))
 
+vi.mock('@/services/saidaService', () => ({
+  saidaService: { resumo: vi.fn() },
+}))
+
 const resumoMock = vi.mocked(dashboardService.resumo)
+const saidaResumoMock = vi.mocked(saidaService.resumo)
+
+function saidaResumo(sobrescritas: Partial<SaidaResumo> = {}): SaidaResumo {
+  return {
+    total: 0,
+    quantidade: 0,
+    media: 0,
+    totalPago: 0,
+    totalPendente: 0,
+    totalMesAnterior: 0,
+    porCategoria: [],
+    porTipo: [],
+    ...sobrescritas,
+  }
+}
 
 function resumo(sobrescritas: Partial<DashboardResumo> = {}): DashboardResumo {
   return {
@@ -41,9 +62,33 @@ beforeEach(() => {
   setActivePinia(createPinia())
   resumoMock.mockReset()
   resumoMock.mockResolvedValue(resumo())
+  saidaResumoMock.mockReset()
+  saidaResumoMock.mockResolvedValue(saidaResumo())
 })
 
 describe('carregar', () => {
+  it('preenche gastosPorTipo com o porTipo do resumo de saídas do mesmo período', async () => {
+    usePeriodoStore().definir({ mes: 3, ano: 2025 })
+    saidaResumoMock.mockResolvedValue(
+      saidaResumo({ porTipo: [{ tipo: 'LAZER', total: 50 }] }),
+    )
+    const store = useDashboardStore()
+
+    await store.carregar()
+
+    expect(saidaResumoMock).toHaveBeenCalledWith({ mes: 3, ano: 2025 })
+    expect(store.gastosPorTipo).toEqual([{ tipo: 'LAZER', total: 50 }])
+  })
+
+  it('trata ausência de porTipo (backend antigo) como lista vazia', async () => {
+    saidaResumoMock.mockResolvedValue({ ...saidaResumo(), porTipo: undefined } as never)
+    const store = useDashboardStore()
+
+    await store.carregar()
+
+    expect(store.gastosPorTipo).toEqual([])
+  })
+
   it('chama o service com o período do periodoStore e preenche o resumo', async () => {
     usePeriodoStore().definir({ mes: 3, ano: 2025 })
     const esperado = resumo({ totalEntradas: 123 })

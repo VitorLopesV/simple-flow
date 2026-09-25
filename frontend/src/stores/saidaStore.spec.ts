@@ -53,6 +53,7 @@ function resumo(sobrescritas: Partial<SaidaResumo> = {}): SaidaResumo {
     totalPendente: 400,
     totalMesAnterior: 800,
     porCategoria: [],
+    porTipo: [],
     ...sobrescritas,
   }
 }

@@ -272,6 +272,22 @@ describe('resumo', () => {
     ])
   })
 
+  it('agrupa por tipo, ordena por total e ignora outros meses', async () => {
+    db.saidas.push(
+      saida({ valor: 30, tipo: 'LAZER' }),
+      saida({ valor: 20, tipo: 'LAZER' }),
+      saida({ valor: 90, tipo: 'TRANSPORTE' }),
+      saida({ valor: 500, tipo: 'CONTA', data: '2026-07-10' }),
+    )
+
+    const resumo = await saidaService.resumo({ mes: 8, ano: 2026 })
+
+    expect(resumo.porTipo).toEqual([
+      { tipo: 'TRANSPORTE', total: 90 },
+      { tipo: 'LAZER', total: 50 },
+    ])
+  })
+
   it('devolve zeros e média 0 sem itens', async () => {
     const resumo = await saidaService.resumo({ mes: 8, ano: 2026 })
 
@@ -283,6 +299,7 @@ describe('resumo', () => {
       totalPendente: 0,
       totalMesAnterior: 0,
       porCategoria: [],
+      porTipo: [],
     })
   })
 })
