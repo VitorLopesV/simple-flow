@@ -14,13 +14,20 @@ import PageLayout from '@/components/layouts/PageLayout.vue'
 import { notificar } from '@/composables/useNotify'
 import { exportarRelatorioPdf } from '@/services/exportService'
 import { mensagemDeErro } from '@/services/http'
+import { useAuthStore } from '@/stores/authStore'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { usePeriodoStore } from '@/stores/periodoStore'
 import { formatCurrency, formatPercent } from '@/utils/currencyFormatter'
 import { formatDate, formatPeriodo } from '@/utils/dateFormatter'
 
+const authStore = useAuthStore()
 const periodoStore = usePeriodoStore()
 const dashboardStore = useDashboardStore()
+
+/** Nome pode ser nulo: cai para o e-mail e, sem sessão, a saudação fica sem nome. */
+const nomeUsuario = computed(
+  () => authStore.usuario?.nome?.trim() || authStore.usuario?.email || '',
+)
 
 const exportando = ref(false)
 
@@ -93,6 +100,10 @@ watch(
         Exportar dados
       </BaseButton>
     </template>
+
+    <p data-testid="saudacao" class="text-foreground text-lg font-semibold wrap-break-word sm:text-xl">
+      Olá, Seja bem vindo<template v-if="nomeUsuario"> {{ nomeUsuario }}</template>
+    </p>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryCard
