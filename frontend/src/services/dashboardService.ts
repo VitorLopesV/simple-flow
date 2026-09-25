@@ -23,6 +23,10 @@ function serie(registros: { data: string; valor: number }[], periodo: Periodo): 
   }))
 }
 
+function ehFatura(saida: { automatica?: boolean; formaPagamento?: string }): boolean {
+  return Boolean(saida.automatica) && saida.formaPagamento === 'CARTAO_CREDITO'
+}
+
 export const dashboardService = {
   async resumo(periodo: Periodo): Promise<DashboardResumo> {
     if (USE_MOCK) {
@@ -37,12 +41,13 @@ export const dashboardService = {
 
       const serieEntradas = serie(db.entradas, periodo)
       const serieSaidas = serie(todasSaidas, periodo)
+      const serieFaturas = serie(todasSaidas.filter(ehFatura), periodo)
 
       // Quanto das saídas do mês é fatura de cartão — sai do mesmo conjunto que alimenta
       // totalSaidas (ver `faturasComoSaidas` em mock/db.ts), e não de uma busca própria
       // por competência, que seria uma definição de mês diferente do resto do dashboard.
       const totalFaturas = saidasDoMes
-        .filter((saida) => saida.automatica && saida.formaPagamento === 'CARTAO_CREDITO')
+        .filter(ehFatura)
         .reduce((soma, saida) => soma + saida.valor, 0)
 
       const categoria = (id: string) => db.categorias.find((item) => item.id === id)
@@ -97,6 +102,7 @@ export const dashboardService = {
         variacaoSaidas: calcularVariacao(totalSaidas, serieSaidas.at(-2)?.valor ?? 0),
         serieEntradas,
         serieSaidas,
+        serieFaturas,
         gastosPorCategoria,
         entradasPorCategoria,
         transacoesRecentes,

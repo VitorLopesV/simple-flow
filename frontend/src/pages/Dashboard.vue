@@ -131,6 +131,26 @@ const seriesHistorico = computed(() => [
 ])
 
 /**
+ * O gráfico de barras separa as saídas em "sem cartão" e "cartões": a fatura já está
+ * somada em `serieSaidas`, então é subtraída para não aparecer duas vezes.
+ */
+const seriesBarras = computed(() => {
+  const saidas = resumo.value?.serieSaidas ?? []
+  const faturas = resumo.value?.serieFaturas ?? []
+  const faturaDoMes = (indice: number) => faturas[indice]?.valor ?? 0
+
+  return [
+    { nome: 'Entradas', dados: resumo.value?.serieEntradas.map((p) => p.valor) ?? [], cor: '#10b981' },
+    {
+      nome: 'Saídas',
+      dados: saidas.map((p, indice) => Math.max(0, p.valor - faturaDoMes(indice))),
+      cor: '#f43f5e',
+    },
+    { nome: 'Cartões', dados: saidas.map((_, indice) => faturaDoMes(indice)), cor: '#f59e0b' },
+  ]
+})
+
+/**
  * `totalFaturas` é um recorte de `totalSaidas` (a fatura já está somada ali), não
  * uma parcela a mais — o detalhe do card diz o peso dela pra não parecer que soma.
  */
@@ -192,7 +212,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex w-full flex-col gap-10">
+  <div class="flex w-full flex-col gap-10 md:h-full md:min-h-0 md:gap-6">
   <h2
     data-testid="saudacao"
     :aria-label="textoCompleto"
@@ -208,6 +228,7 @@ watch(
   </h2>
 
   <PageLayout
+    class="md:min-h-0 md:flex-1"
     titulo="Visão geral"
     :descricao="`Resumo financeiro de ${formatPeriodo(periodoStore.periodo)}`"
   >
@@ -238,131 +259,150 @@ watch(
       </BaseButton>
     </template>
 
-    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-0">
-      <div class="flex min-w-0 flex-1 flex-col gap-6">
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
-        <SummaryCard
-          rotulo="Entradas"
-          :valor="resumo?.totalEntradas ?? 0"
-          :icone="ArrowUpCircle"
-          tom="sucesso"
-          :variacao="resumo?.variacaoEntradas ?? null"
-          :carregando="carregandoInicial"
-        />
-        <SummaryCard
-          rotulo="Saídas"
-          :valor="resumo?.totalSaidas ?? 0"
-          :icone="ArrowDownCircle"
-          tom="perigo"
-          :variacao="resumo?.variacaoSaidas ?? null"
-          variacao-invertida
-          :carregando="carregandoInicial"
-        />
-        <SummaryCard
-          rotulo="Faturas de cartão"
-          :valor="resumo?.totalFaturas ?? 0"
-          :icone="CreditCard"
-          tom="aviso"
-          :variacao="null"
-          :detalhe="detalheFaturas"
-          :carregando="carregandoInicial"
-        />
-        <SummaryCard
-          rotulo="Saldo do mês"
-          :valor="resumo?.saldo ?? 0"
-          :icone="Wallet"
-          :tom="dashboardStore.saldoPositivo ? 'sucesso' : 'perigo'"
-          :variacao="null"
-          :detalhe="detalheSaldo"
-          :carregando="carregandoInicial"
-        />
-      </div>
+    <div class="flex flex-col gap-6 md:min-h-0 md:flex-1 md:flex-row md:items-stretch md:gap-0">
+      <div class="@container flex min-w-0 flex-1 flex-col gap-4 md:min-h-0">
+        <div class="grid shrink-0 grid-cols-1 gap-4 @lg:grid-cols-2 @3xl:grid-cols-4">
+          <SummaryCard
+            rotulo="Entradas"
+            :valor="resumo?.totalEntradas ?? 0"
+            :icone="ArrowUpCircle"
+            tom="sucesso"
+            :variacao="resumo?.variacaoEntradas ?? null"
+            :carregando="carregandoInicial"
+          />
+          <SummaryCard
+            rotulo="Saídas"
+            :valor="resumo?.totalSaidas ?? 0"
+            :icone="ArrowDownCircle"
+            tom="perigo"
+            :variacao="resumo?.variacaoSaidas ?? null"
+            variacao-invertida
+            :carregando="carregandoInicial"
+          />
+          <SummaryCard
+            rotulo="Faturas de cartão"
+            :valor="resumo?.totalFaturas ?? 0"
+            :icone="CreditCard"
+            tom="aviso"
+            :variacao="null"
+            :detalhe="detalheFaturas"
+            :carregando="carregandoInicial"
+          />
+          <SummaryCard
+            rotulo="Saldo do mês"
+            :valor="resumo?.saldo ?? 0"
+            :icone="Wallet"
+            :tom="dashboardStore.saldoPositivo ? 'sucesso' : 'perigo'"
+            :variacao="null"
+            :detalhe="detalheSaldo"
+            :carregando="carregandoInicial"
+          />
+        </div>
 
-      <div class="grid grid-cols-1 gap-6">
-        <BaseCard titulo="Entradas x Saídas" descricao="Evolução dos últimos 6 meses">
-          <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
-          <StatisticsChart
-            v-else
-            tipo="barra"
-            :labels="labelsHistorico"
-            :series="seriesHistorico"
-            :altura="280"
-          />
-        </BaseCard>
-      </div>
+        <div class="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:grid-rows-2">
+          <div class="grid grid-cols-1 gap-4 md:min-h-0 md:grid-cols-2">
+            <BaseCard preencher titulo="Entradas x Saídas" descricao="Evolução dos últimos 6 meses">
+              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+              <StatisticsChart
+                v-else
+                preencher
+                tipo="barra"
+                :labels="labelsHistorico"
+                :series="seriesBarras"
+                :altura="240"
+              />
+            </BaseCard>
 
-      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 2xl:grid-cols-3">
-        <BaseCard titulo="Gastos por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
-          <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
-          <EmptyState
-            v-else-if="!gastos.length"
-            titulo="Sem gastos no período"
-            descricao="Nenhuma saída registrada para este mês."
-          />
-          <StatisticsChart
-            v-else
-            tipo="rosca"
-            :labels="labelsGastos"
-            :series="seriesGastos"
-            :cores="coresGastos"
-            :altura="280"
-          />
-        </BaseCard>
-        <BaseCard titulo="Gastos por tipo" :descricao="formatPeriodo(periodoStore.periodo)">
-          <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
-          <EmptyState
-            v-else-if="!tipos.length"
-            titulo="Sem gastos no período"
-            descricao="Nenhuma saída registrada para este mês."
-          />
-          <StatisticsChart
-            v-else
-            tipo="rosca"
-            :labels="labelsTipos"
-            :series="seriesTipos"
-            :cores="coresTipos"
-            :altura="280"
-          />
-        </BaseCard>
-        <BaseCard
-          titulo="Entradas por categoria"
-          :descricao="formatPeriodo(periodoStore.periodo)"
-          class="md:col-span-2 2xl:col-span-1"
-        >
-          <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
-          <EmptyState
-            v-else-if="!entradas.length"
-            titulo="Sem entradas no período"
-            descricao="Nenhuma entrada registrada para este mês."
-          />
-          <StatisticsChart
-            v-else
-            tipo="rosca"
-            :labels="labelsEntradas"
-            :series="seriesEntradas"
-            :cores="coresEntradas"
-            :altura="280"
-          />
-        </BaseCard>
-      </div>
+            <BaseCard preencher titulo="Acompanhamento mensal" descricao="Entradas e saídas nos últimos 6 meses">
+              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+              <StatisticsChart
+                v-else
+                preencher
+                tipo="linha"
+                :labels="labelsHistorico"
+                :series="seriesHistorico"
+                :altura="240"
+              />
+            </BaseCard>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 md:min-h-0 md:grid-cols-3">
+            <BaseCard preencher titulo="Gastos por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
+              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+              <EmptyState
+                compacto
+                v-else-if="!gastos.length"
+                titulo="Sem gastos no período"
+                descricao="Nenhuma saída registrada para este mês."
+              />
+              <StatisticsChart
+                v-else
+                preencher
+                tipo="rosca"
+                :labels="labelsGastos"
+                :series="seriesGastos"
+                :cores="coresGastos"
+                :altura="240"
+              />
+            </BaseCard>
+
+            <BaseCard preencher titulo="Gastos por tipo" :descricao="formatPeriodo(periodoStore.periodo)">
+              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+              <EmptyState
+                compacto
+                v-else-if="!tipos.length"
+                titulo="Sem gastos no período"
+                descricao="Nenhuma saída registrada para este mês."
+              />
+              <StatisticsChart
+                v-else
+                preencher
+                tipo="rosca"
+                :labels="labelsTipos"
+                :series="seriesTipos"
+                :cores="coresTipos"
+                :altura="240"
+              />
+            </BaseCard>
+
+            <BaseCard preencher titulo="Entradas por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
+              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+              <EmptyState
+                compacto
+                v-else-if="!entradas.length"
+                titulo="Sem entradas no período"
+                descricao="Nenhuma entrada registrada para este mês."
+              />
+              <StatisticsChart
+                v-else
+                preencher
+                tipo="rosca"
+                :labels="labelsEntradas"
+                :series="seriesEntradas"
+                :cores="coresEntradas"
+                :altura="240"
+              />
+            </BaseCard>
+          </div>
+        </div>
       </div>
 
       <div
         :inert="!transacoesAbertas"
         :aria-hidden="!transacoesAbertas"
-        class="shrink-0 overflow-hidden transition-[width,opacity,margin] duration-300 ease-out motion-reduce:transition-none lg:sticky lg:top-4"
+        class="shrink-0 overflow-hidden transition-[width,opacity,margin] duration-300 ease-out motion-reduce:transition-none md:min-h-0"
         :class="
           transacoesAbertas
-            ? 'w-full opacity-100 lg:ml-6 lg:w-96'
-            : 'hidden w-0 opacity-0 lg:ml-0 lg:block'
+            ? 'w-full opacity-100 md:ml-6 md:w-80 lg:w-96'
+            : 'hidden w-0 opacity-0 md:ml-0 md:block'
         "
       >
         <aside
           id="painel-ultimas-transacoes"
           data-testid="painel-ultimas-transacoes"
           aria-label="Últimas transações"
-          class="bg-card border-border flex max-h-[calc(100vh-2rem)] w-full flex-col rounded-xl border shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none lg:w-96"
-          :class="transacoesAbertas ? 'translate-x-0' : 'lg:translate-x-8'"
+          class="bg-card border-border flex max-h-[70vh] w-full flex-col rounded-xl border shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none md:h-full md:max-h-none md:w-80 lg:w-96"
+          :class="transacoesAbertas ? 'translate-x-0' : 'md:translate-x-8'"
         >
           <div class="border-border flex items-center justify-between border-b px-5 py-4">
             <div>

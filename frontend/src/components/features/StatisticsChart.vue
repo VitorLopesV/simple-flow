@@ -54,8 +54,10 @@ const props = withDefaults(
     /** Altura em pixels; a largura sempre acompanha o container. */
     altura?: number
     exibirLegenda?: boolean
+    /** Em `md`+ ignora `altura` e ocupa 100% do pai (que precisa ter altura definida). */
+    preencher?: boolean
   }>(),
-  { cores: () => [], altura: 260, exibirLegenda: true },
+  { cores: () => [], altura: 260, exibirLegenda: true, preencher: false },
 )
 
 const { tema } = useTheme()
@@ -123,8 +125,8 @@ const legenda = computed(() => ({
     usePointStyle: true,
     pointStyle: 'circle' as const,
     boxWidth: 8,
-    padding: 16,
-    font: { size: 12 },
+    padding: props.preencher ? 10 : 16,
+    font: { size: props.preencher ? 11 : 12 },
   },
 }))
 
@@ -173,7 +175,11 @@ const opcoesRosca = computed<ChartOptions<'doughnut'>>(() => ({
 </script>
 
 <template>
-  <div :style="{ height: `${altura}px` }" class="relative w-full min-w-0">
+  <div
+    :style="{ '--altura-grafico': `${altura}px` }"
+    class="relative h-(--altura-grafico) w-full min-w-0"
+    :class="preencher && 'md:h-full'"
+  >
     <Line
       v-if="tipo === 'linha'"
       :data="(dadosCartesianos as ChartData<'line'>)"

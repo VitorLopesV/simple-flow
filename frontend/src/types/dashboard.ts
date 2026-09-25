@@ -24,6 +24,11 @@ export interface DashboardResumo {
   /** Últimos 6 meses de entradas e saídas. */
   serieEntradas: SeriePonto[]
   serieSaidas: SeriePonto[]
+  /**
+   * Últimos 6 meses só de faturas de cartão — recorte de `serieSaidas`, não soma a mais.
+   * Opcional: um backend que ainda não devolva a série é tratado como "sem cartão".
+   */
+  serieFaturas?: SeriePonto[]
   /** Distribuição das saídas por categoria no período. */
   gastosPorCategoria: { nome: string; cor: string; total: number }[]
   /** Distribuição das entradas por categoria no período. */

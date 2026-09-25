@@ -22,7 +22,7 @@ const routes: RouteRecordRaw[] = [
         path: 'dashboard',
         name: 'dashboard',
         component: () => import('@/pages/Dashboard.vue'),
-        meta: { titulo: 'Dashboard', descricao: 'Visão geral das suas finanças' },
+        meta: { titulo: 'Dashboard', descricao: 'Visão geral das suas finanças', semScroll: true },
       },
       {
         path: 'entradas',

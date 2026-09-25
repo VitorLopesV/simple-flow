@@ -220,6 +220,33 @@ describe('totalFaturas', () => {
   })
 })
 
+describe('serieFaturas', () => {
+  it('traz só as faturas de cada mês, como recorte de serieSaidas', async () => {
+    db.garantirFatura('car_a', '2026-08').total = 450
+    db.garantirFatura('car_a', '2026-07').total = 300
+    db.saidas.push(
+      saida({ valor: 200 }),
+      saida({ valor: 100, data: '2026-07-20' }),
+      // Cartão de crédito, mas não é fatura derivada: fica só nas saídas.
+      saida({ valor: 80, formaPagamento: 'CARTAO_CREDITO' }),
+    )
+
+    const { serieFaturas, serieSaidas } = await dashboardService.resumo(AGOSTO)
+
+    expect(serieFaturas?.map((p) => p.label)).toEqual(serieSaidas.map((p) => p.label))
+    expect(serieFaturas?.map((p) => p.valor)).toEqual([0, 0, 0, 0, 300, 450])
+    expect(serieSaidas.at(-1)?.valor).toBe(200 + 80 + 450)
+  })
+
+  it('é zerada sem faturas', async () => {
+    db.saidas.push(saida({ valor: 200 }))
+
+    const { serieFaturas } = await dashboardService.resumo(AGOSTO)
+
+    expect(serieFaturas?.every((p) => p.valor === 0)).toBe(true)
+  })
+})
+
 describe('entradasPorCategoria', () => {
   it('agrupa entradas do período por categoria, ordena por total e ignora outros meses', async () => {
     db.entradas.push(

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Toaster } from 'vue-sonner'
 
@@ -13,6 +13,9 @@ const categoriaStore = useCategoriaStore()
 const { tema } = useTheme()
 
 const menuAberto = ref(false)
+
+/** Páginas que cabem na viewport (md+): a coluna assume a altura da tela e o conteúdo se ajusta. */
+const semScroll = computed(() => route.meta.semScroll === true)
 
 // As categorias alimentam filtros e formulários de todas as páginas.
 onMounted(() => void categoriaStore.carregar())
@@ -32,10 +35,17 @@ watch(() => route.fullPath, () => (menuAberto.value = false))
 
     <AppSidebar :aberto="menuAberto" @fechar="menuAberto = false" />
 
-    <div class="flex min-h-full min-w-0 flex-col lg:pl-(--sidebar-width)">
+    <div
+      class="flex min-h-full min-w-0 flex-col lg:pl-(--sidebar-width)"
+      :class="semScroll && 'md:h-dvh md:overflow-hidden'"
+    >
       <AppHeader @abrir-menu="menuAberto = true" />
 
-      <main id="conteudo-principal" class="min-w-0 flex-1 px-4 py-6 sm:px-[50px]">
+      <main
+        id="conteudo-principal"
+        class="min-w-0 flex-1 px-4 py-6 sm:px-[50px]"
+        :class="semScroll && 'md:flex md:min-h-0 md:flex-col md:pb-6'"
+      >
         <RouterView v-slot="{ Component }">
           <Transition
             mode="out-in"
