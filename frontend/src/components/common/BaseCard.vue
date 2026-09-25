@@ -11,7 +11,7 @@ withDefaults(
 </script>
 
 <template>
-  <section class="bg-card text-card-foreground border-border rounded-card border shadow-sm">
+  <section class="bg-card text-card-foreground border-border rounded-card min-w-0 border shadow-sm">
     <header
       v-if="titulo || $slots.cabecalho || $slots.acoes"
       class="border-border flex items-start justify-between gap-4 border-b px-5 py-4"

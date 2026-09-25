@@ -11,6 +11,7 @@ import MonthPicker from '@/components/features/MonthPicker.vue'
 import StatisticsChart from '@/components/features/StatisticsChart.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
+import iconeUltimasTransacoes from '@/img/last_transitions_icon.svg'
 import { notificar } from '@/composables/useNotify'
 import { exportarRelatorioPdf } from '@/services/exportService'
 import { mensagemDeErro } from '@/services/http'
@@ -74,9 +75,34 @@ function iniciarDigitacao(): void {
 }
 
 watch(nomeUsuario, iniciarDigitacao)
-onBeforeUnmount(pararDigitacao)
+onBeforeUnmount(() => {
+  pararDigitacao()
+  window.removeEventListener('keydown', fecharComEsc)
+})
 
 const exportando = ref(false)
+
+/**
+ * O SVG tem `fill` fixo, então vira máscara: a cor vem de `bg-current` e acompanha o tema.
+ * A URL vai entre aspas porque o Vite pode inlinar o arquivo como data URI.
+ */
+const estiloIconeTransacoes = {
+  maskImage: `url("${iconeUltimasTransacoes}")`,
+  WebkitMaskImage: `url("${iconeUltimasTransacoes}")`,
+  maskRepeat: 'no-repeat',
+  WebkitMaskRepeat: 'no-repeat',
+  maskPosition: 'center',
+  WebkitMaskPosition: 'center',
+  maskSize: 'contain',
+  WebkitMaskSize: 'contain',
+}
+
+/** Painel lateral de últimas transações: oculto por padrão, aberto sob demanda. */
+const transacoesAbertas = ref(false)
+
+function fecharComEsc(evento: KeyboardEvent): void {
+  if (evento.key === 'Escape') transacoesAbertas.value = false
+}
 
 async function exportarDados(): Promise<void> {
   exportando.value = true
@@ -140,6 +166,7 @@ const seriesEntradas = computed(() => [
 const coresEntradas = computed(() => entradas.value.map((e) => e.cor))
 
 onMounted(() => {
+  window.addEventListener('keydown', fecharComEsc)
   iniciarDigitacao()
   void dashboardStore.carregar()
 })
@@ -179,223 +206,264 @@ watch(
         <Download class="size-4" aria-hidden="true" />
         Exportar dados
       </BaseButton>
+      <BaseButton
+        variante="outline"
+        class="!h-11 !w-11 justify-center !px-0"
+        :class="transacoesAbertas ? '!bg-success !border-success !text-success-foreground hover:!bg-success/90' : ''"
+        aria-label="Últimas transações"
+        title="Últimas transações"
+        aria-controls="painel-ultimas-transacoes"
+        :aria-expanded="transacoesAbertas"
+        @click="transacoesAbertas = !transacoesAbertas"
+      >
+        <span
+          class="inline-block size-7 bg-current"
+          :style="estiloIconeTransacoes"
+          aria-hidden="true"
+        />
+      </BaseButton>
     </template>
 
-    <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
-      <SummaryCard
-        rotulo="Entradas"
-        :valor="resumo?.totalEntradas ?? 0"
-        :icone="ArrowUpCircle"
-        tom="sucesso"
-        :variacao="resumo?.variacaoEntradas ?? null"
-        :carregando="carregandoInicial"
-      />
-      <SummaryCard
-        rotulo="Saídas"
-        :valor="resumo?.totalSaidas ?? 0"
-        :icone="ArrowDownCircle"
-        tom="perigo"
-        :variacao="resumo?.variacaoSaidas ?? null"
-        variacao-invertida
-        :carregando="carregandoInicial"
-      />
-      <SummaryCard
-        rotulo="Faturas de cartão"
-        :valor="resumo?.totalFaturas ?? 0"
-        :icone="CreditCard"
-        tom="aviso"
-        :variacao="null"
-        :detalhe="detalheFaturas"
-        :carregando="carregandoInicial"
-      />
-      <SummaryCard
-        rotulo="Saldo do mês"
-        :valor="resumo?.saldo ?? 0"
-        :icone="Wallet"
-        :tom="dashboardStore.saldoPositivo ? 'sucesso' : 'perigo'"
-        :variacao="null"
-        :detalhe="dashboardStore.saldoPositivo ? 'sobrou no período' : 'déficit no período'"
-        :carregando="carregandoInicial"
-      />
-    </div>
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-0">
+      <div class="flex min-w-0 flex-1 flex-col gap-6">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+        <SummaryCard
+          rotulo="Entradas"
+          :valor="resumo?.totalEntradas ?? 0"
+          :icone="ArrowUpCircle"
+          tom="sucesso"
+          :variacao="resumo?.variacaoEntradas ?? null"
+          :carregando="carregandoInicial"
+        />
+        <SummaryCard
+          rotulo="Saídas"
+          :valor="resumo?.totalSaidas ?? 0"
+          :icone="ArrowDownCircle"
+          tom="perigo"
+          :variacao="resumo?.variacaoSaidas ?? null"
+          variacao-invertida
+          :carregando="carregandoInicial"
+        />
+        <SummaryCard
+          rotulo="Faturas de cartão"
+          :valor="resumo?.totalFaturas ?? 0"
+          :icone="CreditCard"
+          tom="aviso"
+          :variacao="null"
+          :detalhe="detalheFaturas"
+          :carregando="carregandoInicial"
+        />
+        <SummaryCard
+          rotulo="Saldo do mês"
+          :valor="resumo?.saldo ?? 0"
+          :icone="Wallet"
+          :tom="dashboardStore.saldoPositivo ? 'sucesso' : 'perigo'"
+          :variacao="null"
+          :detalhe="dashboardStore.saldoPositivo ? 'sobrou no período' : 'déficit no período'"
+          :carregando="carregandoInicial"
+        />
+      </div>
 
-    <div class="grid gap-6">
-      <BaseCard titulo="Entradas x Saídas" descricao="Evolução dos últimos 6 meses">
-        <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
-        <StatisticsChart
-          v-else
-          tipo="barra"
-          :labels="labelsHistorico"
-          :series="seriesHistorico"
-          :altura="280"
-        />
-      </BaseCard>
-    </div>
+      <div class="grid grid-cols-1 gap-6">
+        <BaseCard titulo="Entradas x Saídas" descricao="Evolução dos últimos 6 meses">
+          <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
+          <StatisticsChart
+            v-else
+            tipo="barra"
+            :labels="labelsHistorico"
+            :series="seriesHistorico"
+            :altura="280"
+          />
+        </BaseCard>
+      </div>
 
-    <div class="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
-      <BaseCard titulo="Gastos por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
-        <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
-        <EmptyState
-          v-else-if="!gastos.length"
-          titulo="Sem gastos no período"
-          descricao="Nenhuma saída registrada para este mês."
-        />
-        <StatisticsChart
-          v-else
-          tipo="rosca"
-          :labels="labelsGastos"
-          :series="seriesGastos"
-          :cores="coresGastos"
-          :altura="280"
-        />
-      </BaseCard>
-      <BaseCard titulo="Gastos por tipo" :descricao="formatPeriodo(periodoStore.periodo)">
-        <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
-        <EmptyState
-          v-else-if="!tipos.length"
-          titulo="Sem gastos no período"
-          descricao="Nenhuma saída registrada para este mês."
-        />
-        <StatisticsChart
-          v-else
-          tipo="rosca"
-          :labels="labelsTipos"
-          :series="seriesTipos"
-          :cores="coresTipos"
-          :altura="280"
-        />
-      </BaseCard>
-      <BaseCard
-        titulo="Entradas por categoria"
-        :descricao="formatPeriodo(periodoStore.periodo)"
-        class="md:col-span-2 2xl:col-span-1"
-      >
-        <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
-        <EmptyState
-          v-else-if="!entradas.length"
-          titulo="Sem entradas no período"
-          descricao="Nenhuma entrada registrada para este mês."
-        />
-        <StatisticsChart
-          v-else
-          tipo="rosca"
-          :labels="labelsEntradas"
-          :series="seriesEntradas"
-          :cores="coresEntradas"
-          :altura="280"
-        />
-      </BaseCard>
-    </div>
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 2xl:grid-cols-3">
+        <BaseCard titulo="Gastos por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
+          <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
+          <EmptyState
+            v-else-if="!gastos.length"
+            titulo="Sem gastos no período"
+            descricao="Nenhuma saída registrada para este mês."
+          />
+          <StatisticsChart
+            v-else
+            tipo="rosca"
+            :labels="labelsGastos"
+            :series="seriesGastos"
+            :cores="coresGastos"
+            :altura="280"
+          />
+        </BaseCard>
+        <BaseCard titulo="Gastos por tipo" :descricao="formatPeriodo(periodoStore.periodo)">
+          <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
+          <EmptyState
+            v-else-if="!tipos.length"
+            titulo="Sem gastos no período"
+            descricao="Nenhuma saída registrada para este mês."
+          />
+          <StatisticsChart
+            v-else
+            tipo="rosca"
+            :labels="labelsTipos"
+            :series="seriesTipos"
+            :cores="coresTipos"
+            :altura="280"
+          />
+        </BaseCard>
+        <BaseCard
+          titulo="Entradas por categoria"
+          :descricao="formatPeriodo(periodoStore.periodo)"
+          class="md:col-span-2 2xl:col-span-1"
+        >
+          <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
+          <EmptyState
+            v-else-if="!entradas.length"
+            titulo="Sem entradas no período"
+            descricao="Nenhuma entrada registrada para este mês."
+          />
+          <StatisticsChart
+            v-else
+            tipo="rosca"
+            :labels="labelsEntradas"
+            :series="seriesEntradas"
+            :cores="coresEntradas"
+            :altura="280"
+          />
+        </BaseCard>
+      </div>
 
-    <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-      <BaseCard sem-padding>
-        <template #cabecalho>
-          <h2 class="text-base font-semibold">Últimas transações</h2>
-          <p class="text-muted-foreground mt-0.5 text-sm">Movimentações mais recentes do período</p>
-        </template>
-
-        <div v-if="carregandoInicial" class="flex flex-col gap-3 p-5">
-          <BaseSkeleton v-for="linha in 5" :key="linha" altura="h-9" />
-        </div>
-
-        <EmptyState
-          v-else-if="!resumo?.transacoesRecentes.length"
-          titulo="Nenhuma movimentação"
-          descricao="Adicione entradas ou saídas para ver o histórico aqui."
-        />
-
-        <ul v-else class="divide-border divide-y">
-          <li
-            v-for="transacao in resumo.transacoesRecentes"
-            :key="`${transacao.tipo}-${transacao.id}`"
-            class="flex items-center justify-between gap-3 px-5 py-3"
-          >
-            <div class="flex min-w-0 items-center gap-3">
-              <span
-                class="flex size-8 shrink-0 items-center justify-center rounded-full"
+      <div class="grid grid-cols-1 gap-6">
+        <BaseCard titulo="Comprometimento da renda" descricao="Quanto das entradas já foi gasto">
+          <BaseSkeleton v-if="carregandoInicial" :linhas="3" />
+          <template v-else>
+            <p class="numero-tabular text-3xl font-semibold">
+              {{ Math.round(dashboardStore.comprometimento) }}%
+            </p>
+            <div class="bg-muted mt-3 h-2 w-full overflow-hidden rounded-full">
+              <div
+                class="h-full rounded-full transition-all"
                 :class="
-                  transacao.tipo === 'ENTRADA'
-                    ? 'bg-success-soft text-success'
-                    : 'bg-danger-soft text-danger'
+                  dashboardStore.comprometimento >= 90
+                    ? 'bg-danger'
+                    : dashboardStore.comprometimento >= 70
+                      ? 'bg-warning'
+                      : 'bg-success'
                 "
-              >
-                <ArrowUpCircle
-                  v-if="transacao.tipo === 'ENTRADA'"
-                  class="size-4"
-                  aria-hidden="true"
-                />
-                <ArrowDownCircle v-else class="size-4" aria-hidden="true" />
-              </span>
-
-              <div class="min-w-0">
-                <p class="truncate text-sm font-medium">{{ transacao.descricao }}</p>
-                <div class="mt-0.5 flex items-center gap-2">
-                  <BaseBadge :cor="transacao.categoriaCor">{{ transacao.categoriaNome }}</BaseBadge>
-                  <span class="text-muted-foreground text-xs">{{ formatDate(transacao.data) }}</span>
-                </div>
-              </div>
+                :style="{ width: `${dashboardStore.comprometimento}%` }"
+                role="progressbar"
+                :aria-valuenow="Math.round(dashboardStore.comprometimento)"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-label="Percentual da renda comprometido"
+              />
             </div>
 
-            <p
-              class="numero-tabular shrink-0 text-sm font-semibold"
-              :class="transacao.tipo === 'ENTRADA' ? 'text-success' : 'text-danger'"
-            >
-              {{ transacao.tipo === 'ENTRADA' ? '+' : '−' }} {{ formatCurrency(transacao.valor) }}
-            </p>
-          </li>
-        </ul>
-      </BaseCard>
+            <dl class="mt-5 space-y-3 text-sm">
+              <div class="flex items-center justify-between">
+                <dt class="text-muted-foreground">Entradas</dt>
+                <dd class="numero-tabular text-success font-medium">
+                  {{ formatCurrency(resumo?.totalEntradas ?? 0) }}
+                </dd>
+              </div>
+              <div class="flex items-center justify-between">
+                <dt class="text-muted-foreground">Saídas</dt>
+                <dd class="numero-tabular text-danger font-medium">
+                  {{ formatCurrency(resumo?.totalSaidas ?? 0) }}
+                </dd>
+              </div>
+              <div class="border-border flex items-center justify-between border-t pt-3">
+                <dt class="font-medium">Saldo</dt>
+                <dd
+                  class="numero-tabular font-semibold"
+                  :class="dashboardStore.saldoPositivo ? 'text-success' : 'text-danger'"
+                >
+                  {{ formatCurrency(resumo?.saldo ?? 0) }}
+                </dd>
+              </div>
+            </dl>
+          </template>
+        </BaseCard>
+      </div>
+      </div>
 
-      <BaseCard titulo="Comprometimento da renda" descricao="Quanto das entradas já foi gasto">
-        <BaseSkeleton v-if="carregandoInicial" :linhas="3" />
-        <template v-else>
-          <p class="numero-tabular text-3xl font-semibold">
-            {{ Math.round(dashboardStore.comprometimento) }}%
-          </p>
-          <div class="bg-muted mt-3 h-2 w-full overflow-hidden rounded-full">
-            <div
-              class="h-full rounded-full transition-all"
-              :class="
-                dashboardStore.comprometimento >= 90
-                  ? 'bg-danger'
-                  : dashboardStore.comprometimento >= 70
-                    ? 'bg-warning'
-                    : 'bg-success'
-              "
-              :style="{ width: `${dashboardStore.comprometimento}%` }"
-              role="progressbar"
-              :aria-valuenow="Math.round(dashboardStore.comprometimento)"
-              aria-valuemin="0"
-              aria-valuemax="100"
-              aria-label="Percentual da renda comprometido"
-            />
+      <div
+        :inert="!transacoesAbertas"
+        :aria-hidden="!transacoesAbertas"
+        class="shrink-0 overflow-hidden transition-[width,opacity,margin] duration-300 ease-out motion-reduce:transition-none lg:sticky lg:top-4"
+        :class="
+          transacoesAbertas
+            ? 'w-full opacity-100 lg:ml-6 lg:w-96'
+            : 'hidden w-0 opacity-0 lg:ml-0 lg:block'
+        "
+      >
+        <aside
+          id="painel-ultimas-transacoes"
+          data-testid="painel-ultimas-transacoes"
+          aria-label="Últimas transações"
+          class="bg-card border-border flex max-h-[calc(100vh-2rem)] w-full flex-col rounded-xl border shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none lg:w-96"
+          :class="transacoesAbertas ? 'translate-x-0' : 'lg:translate-x-8'"
+        >
+          <div class="border-border flex items-center justify-between border-b px-5 py-4">
+            <div>
+              <h2 class="text-base font-semibold">Últimas transações</h2>
+              <p class="text-muted-foreground mt-0.5 text-sm">Movimentações mais recentes do período</p>
+            </div>
           </div>
 
-          <dl class="mt-5 space-y-3 text-sm">
-            <div class="flex items-center justify-between">
-              <dt class="text-muted-foreground">Entradas</dt>
-              <dd class="numero-tabular text-success font-medium">
-                {{ formatCurrency(resumo?.totalEntradas ?? 0) }}
-              </dd>
-            </div>
-            <div class="flex items-center justify-between">
-              <dt class="text-muted-foreground">Saídas</dt>
-              <dd class="numero-tabular text-danger font-medium">
-                {{ formatCurrency(resumo?.totalSaidas ?? 0) }}
-              </dd>
-            </div>
-            <div class="border-border flex items-center justify-between border-t pt-3">
-              <dt class="font-medium">Saldo</dt>
-              <dd
-                class="numero-tabular font-semibold"
-                :class="dashboardStore.saldoPositivo ? 'text-success' : 'text-danger'"
+          <div class="min-h-0 flex-1 overflow-y-auto">
+          <div v-if="carregandoInicial" class="flex flex-col gap-3 p-5">
+            <BaseSkeleton v-for="linha in 5" :key="linha" altura="h-9" />
+          </div>
+
+          <EmptyState
+            v-else-if="!resumo?.transacoesRecentes.length"
+            titulo="Nenhuma movimentação"
+            descricao="Adicione entradas ou saídas para ver o histórico aqui."
+          />
+
+          <ul v-else class="divide-border divide-y">
+            <li
+              v-for="transacao in resumo.transacoesRecentes"
+              :key="`${transacao.tipo}-${transacao.id}`"
+              class="flex items-center justify-between gap-3 px-5 py-3"
+            >
+              <div class="flex min-w-0 items-center gap-3">
+                <span
+                  class="flex size-8 shrink-0 items-center justify-center rounded-full"
+                  :class="
+                    transacao.tipo === 'ENTRADA'
+                      ? 'bg-success-soft text-success'
+                      : 'bg-danger-soft text-danger'
+                  "
+                >
+                  <ArrowUpCircle
+                    v-if="transacao.tipo === 'ENTRADA'"
+                    class="size-4"
+                    aria-hidden="true"
+                  />
+                  <ArrowDownCircle v-else class="size-4" aria-hidden="true" />
+                </span>
+
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium">{{ transacao.descricao }}</p>
+                  <div class="mt-0.5 flex items-center gap-2">
+                    <BaseBadge :cor="transacao.categoriaCor">{{ transacao.categoriaNome }}</BaseBadge>
+                    <span class="text-muted-foreground text-xs">{{ formatDate(transacao.data) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p
+                class="numero-tabular shrink-0 text-sm font-semibold"
+                :class="transacao.tipo === 'ENTRADA' ? 'text-success' : 'text-danger'"
               >
-                {{ formatCurrency(resumo?.saldo ?? 0) }}
-              </dd>
-            </div>
-          </dl>
-        </template>
-      </BaseCard>
+                {{ transacao.tipo === 'ENTRADA' ? '+' : '−' }} {{ formatCurrency(transacao.valor) }}
+              </p>
+            </li>
+          </ul>
+          </div>
+        </aside>
+      </div>
     </div>
   </PageLayout>
   </div>

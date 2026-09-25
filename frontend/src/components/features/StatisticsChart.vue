@@ -173,7 +173,7 @@ const opcoesRosca = computed<ChartOptions<'doughnut'>>(() => ({
 </script>
 
 <template>
-  <div :style="{ height: `${altura}px` }" class="relative w-full">
+  <div :style="{ height: `${altura}px` }" class="relative w-full min-w-0">
     <Line
       v-if="tipo === 'linha'"
       :data="(dadosCartesianos as ChartData<'line'>)"
