@@ -9,8 +9,12 @@
  * mantém claro/escuro consistente em um único lugar.
  */
 :root {
-  /* Largura da sidebar (>= lg) — usada por AppSidebar e pelo recuo do conteúdo em AppLayout. */
-  --sidebar-width: 18rem;
+  /*
+   * Largura da sidebar — usada por AppSidebar (gaveta no mobile, fixa a partir de lg) e pelo
+   * recuo do conteúdo em AppLayout. Cresce com a tela (ver breakpoints abaixo); as grades das
+   * páginas usam `2xl:` para dividir em mais colunas só quando sobra espaço ao lado dela.
+   */
+  --sidebar-width: 20rem;
   --background: oklch(0.985 0.002 250);
   --foreground: oklch(0.21 0.03 260);
   --card: oklch(1 0 0);
@@ -208,6 +212,13 @@ html {
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* 23rem = +28% sobre os 18rem originais. */
+@media (min-width: 80rem) {
+  :root {
+    --sidebar-width: 23rem;
+  }
 }
 
 @layer utilities {

@@ -37,9 +37,9 @@ const itens: ItemMenu[] = [
     :class="aberto ? 'translate-x-0' : '-translate-x-full'"
     :aria-hidden="!aberto ? 'true' : undefined"
   >
-    <div class="relative flex h-28 items-center justify-center">
+    <div class="relative flex justify-center pt-[5px] pb-[5px]">
       <RouterLink :to="{ name: 'dashboard' }" @click="emit('fechar')">
-        <img :src="logoSimpleFlow" alt="SimpleFlow" class="mx-auto w-[200px] max-w-full" />
+        <img :src="logoSimpleFlow" alt="SimpleFlow" class="mx-auto -mt-[40px] -mb-[32px] block w-[240px] max-w-full" />
       </RouterLink>
 
       <BaseButton
@@ -53,16 +53,16 @@ const itens: ItemMenu[] = [
       </BaseButton>
     </div>
 
-    <nav class="flex flex-1 flex-col space-y-1 p-4" aria-label="Navegação principal">
+    <nav class="flex flex-1 flex-col space-y-1 px-4 pb-4" aria-label="Navegação principal">
       <RouterLink
         v-for="item in itens"
         :key="item.rota"
         :to="{ name: item.rota }"
-        class="text-muted-foreground hover:bg-success hover:text-success-foreground focus-visible:bg-success focus-visible:text-success-foreground flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium outline-none transition-colors"
+        class="text-muted-foreground [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:hover:text-foreground [&:not(.router-link-active)]:focus-visible:bg-success/25 [&:not(.router-link-active)]:focus-visible:text-foreground flex items-center gap-3 rounded-lg px-5 py-3 text-base font-medium outline-none transition-colors"
         active-class="bg-success text-success-foreground"
         @click="emit('fechar')"
       >
-        <component :is="item.icone" class="size-4 shrink-0" aria-hidden="true" />
+        <component :is="item.icone" class="size-5 shrink-0" aria-hidden="true" />
         {{ item.rotulo }}
       </RouterLink>
     </nav>

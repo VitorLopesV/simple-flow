@@ -182,7 +182,7 @@ watch(
       </BaseButton>
     </template>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
       <SummaryCard
         rotulo="Entradas"
         :valor="resumo?.totalEntradas ?? 0"
@@ -233,7 +233,7 @@ watch(
       </BaseCard>
     </div>
 
-    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <div class="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
       <BaseCard titulo="Gastos por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
         <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
         <EmptyState
@@ -269,7 +269,7 @@ watch(
       <BaseCard
         titulo="Entradas por categoria"
         :descricao="formatPeriodo(periodoStore.periodo)"
-        class="md:col-span-2 xl:col-span-1"
+        class="md:col-span-2 2xl:col-span-1"
       >
         <BaseSkeleton v-if="carregandoInicial" altura="h-64" />
         <EmptyState
@@ -288,7 +288,7 @@ watch(
       </BaseCard>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+    <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <BaseCard sem-padding>
         <template #cabecalho>
           <h2 class="text-base font-semibold">Últimas transações</h2>
