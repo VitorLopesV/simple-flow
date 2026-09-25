@@ -26,7 +26,7 @@ async function handleDeslogar() {
     <BaseButton
       variante="ghost"
       tamanho="icon"
-      class="border-border !size-11 rounded-full border-2"
+      class="border-border !size-[47px] !rounded-full border-2"
       aria-label="Menu de usuário"
       @click="abrirPopover = !abrirPopover"
     >
