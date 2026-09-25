@@ -9,6 +9,8 @@
  * mantém claro/escuro consistente em um único lugar.
  */
 :root {
+  /* Largura da sidebar (>= lg) — usada por AppSidebar e pelo recuo do conteúdo em AppLayout. */
+  --sidebar-width: 18rem;
   --background: oklch(0.985 0.002 250);
   --foreground: oklch(0.21 0.03 260);
   --card: oklch(1 0 0);

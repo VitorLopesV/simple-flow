@@ -32,7 +32,7 @@ watch(() => route.fullPath, () => (menuAberto.value = false))
 
     <AppSidebar :aberto="menuAberto" @fechar="menuAberto = false" />
 
-    <div class="flex min-h-full min-w-0 flex-col lg:pl-64">
+    <div class="flex min-h-full min-w-0 flex-col lg:pl-(--sidebar-width)">
       <AppHeader @abrir-menu="menuAberto = true" />
 
       <main id="conteudo-principal" class="min-w-0 flex-1 px-4 py-6 sm:px-[50px]">

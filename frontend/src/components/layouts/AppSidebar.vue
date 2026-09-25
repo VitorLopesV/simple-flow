@@ -33,13 +33,13 @@ const itens: ItemMenu[] = [
 
   <aside
     id="menu-principal"
-    class="bg-card border-border fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r transition-transform duration-200 lg:translate-x-0"
+    class="bg-card border-border fixed inset-y-0 left-0 z-40 flex w-(--sidebar-width) max-w-[85vw] flex-col border-r transition-transform duration-200 lg:translate-x-0"
     :class="aberto ? 'translate-x-0' : '-translate-x-full'"
     :aria-hidden="!aberto ? 'true' : undefined"
   >
     <div class="relative flex h-28 items-center justify-center">
       <RouterLink :to="{ name: 'dashboard' }" @click="emit('fechar')">
-        <img :src="logoSimpleFlow" alt="SimpleFlow" class="mx-auto w-[160px]" />
+        <img :src="logoSimpleFlow" alt="SimpleFlow" class="mx-auto w-[200px] max-w-full" />
       </RouterLink>
 
       <BaseButton
@@ -53,12 +53,12 @@ const itens: ItemMenu[] = [
       </BaseButton>
     </div>
 
-    <nav class="flex flex-1 flex-col space-y-1 p-3" aria-label="Navegação principal">
+    <nav class="flex flex-1 flex-col space-y-1 p-4" aria-label="Navegação principal">
       <RouterLink
         v-for="item in itens"
         :key="item.rota"
         :to="{ name: item.rota }"
-        class="text-muted-foreground hover:bg-success hover:text-success-foreground focus-visible:bg-success focus-visible:text-success-foreground flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors"
+        class="text-muted-foreground hover:bg-success hover:text-success-foreground focus-visible:bg-success focus-visible:text-success-foreground flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium outline-none transition-colors"
         active-class="bg-success text-success-foreground"
         @click="emit('fechar')"
       >
@@ -67,7 +67,7 @@ const itens: ItemMenu[] = [
       </RouterLink>
     </nav>
 
-    <div class="p-3">
+    <div class="p-4">
       <p class="text-muted-foreground text-center text-xs">Versão atual: 0.2.0</p>
     </div>
   </aside>
