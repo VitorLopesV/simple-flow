@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { LogOut, Moon, Sun, User } from '@lucide/vue'
+import { LogOut, User } from '@lucide/vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 import BaseButton from '@/components/common/BaseButton.vue'
-import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { tema, definirTema } = useTheme()
 
 const abrirPopover = ref(false)
 
@@ -45,29 +43,6 @@ async function handleDeslogar() {
         <p v-if="authStore.usuario?.nome" class="text-xs text-muted-foreground">
           {{ authStore.usuario.nome }}
         </p>
-      </div>
-
-      <!-- Modo de visualização -->
-      <div class="border-b border-border px-4 py-3">
-        <p class="mb-2 text-xs font-medium text-muted-foreground uppercase">Modo de visualização</p>
-        <div class="grid grid-cols-2 gap-2">
-          <BaseButton
-            :variante="tema === 'light' ? 'primary' : 'outline'"
-            tamanho="sm"
-            @click="definirTema('light')"
-          >
-            <Sun class="size-4" aria-hidden="true" />
-            <span class="hidden sm:inline">Claro</span>
-          </BaseButton>
-          <BaseButton
-            :variante="tema === 'dark' ? 'primary' : 'outline'"
-            tamanho="sm"
-            @click="definirTema('dark')"
-          >
-            <Moon class="size-4" aria-hidden="true" />
-            <span class="hidden sm:inline">Escuro</span>
-          </BaseButton>
-        </div>
       </div>
 
       <!-- Sair -->

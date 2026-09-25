@@ -1,12 +1,9 @@
 @import 'tailwindcss';
 
-/* Tema escuro por classe no <html>, controlado pelo useTheme(). */
-@custom-variant dark (&:is(.dark *));
-
 /*
  * Design tokens semânticos (padrão shadcn): os componentes usam apenas
  * `bg-card`, `text-muted`, `border-border`... e nunca cores cruas, o que
- * mantém claro/escuro consistente em um único lugar.
+ * mantém a paleta em um único lugar. O sistema tem só o tema escuro.
  */
 :root {
   /*
@@ -15,32 +12,7 @@
    * páginas usam `2xl:` para dividir em mais colunas só quando sobra espaço ao lado dela.
    */
   --sidebar-width: 20rem;
-  --background: oklch(0.985 0.002 250);
-  --foreground: oklch(0.21 0.03 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.03 260);
-  --muted: oklch(0.96 0.005 250);
-  --muted-foreground: oklch(0.52 0.02 260);
-  --border: oklch(0.9 0.008 255);
-  --input: oklch(0.93 0.008 255);
-  --ring: oklch(0.62 0.15 250);
-  --primary: oklch(0.55 0.17 258);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.95 0.01 255);
-  --secondary-foreground: oklch(0.28 0.03 260);
-  --success: oklch(0.62 0.15 155);
-  --success-foreground: oklch(0.99 0 0);
-  --success-soft: oklch(0.95 0.04 155);
-  --danger: oklch(0.58 0.19 25);
-  --danger-foreground: oklch(0.99 0 0);
-  --danger-soft: oklch(0.95 0.03 25);
-  --warning: oklch(0.72 0.15 75);
-  --warning-soft: oklch(0.96 0.05 85);
-  --info: oklch(0.62 0.13 235);
-  --overlay: oklch(0.21 0.03 260 / 0.45);
-}
-
-.dark {
+  color-scheme: dark;
   --background: oklch(0.19 0.02 260);
   --foreground: oklch(0.96 0.005 250);
   --card: oklch(0.24 0.022 260);

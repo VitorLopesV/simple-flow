@@ -13,20 +13,6 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
     />
-    <script>
-      // Aplica o tema antes da primeira pintura para evitar flash de conteúdo claro.
-      ;(() => {
-        try {
-          const saved = localStorage.getItem('fc:theme')
-          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-          if (saved === 'dark' || (saved !== 'light' && prefersDark)) {
-            document.documentElement.classList.add('dark')
-          }
-        } catch {
-          /* localStorage indisponível: segue no tema claro */
-        }
-      })()
-    </script>
   </head>
   <body class="h-full">
     <div id="app" class="h-full"></div>

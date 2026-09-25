@@ -3,14 +3,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Toaster } from 'vue-sonner'
 
-import { useTheme } from '@/composables/useTheme'
 import { useCategoriaStore } from '@/stores/categoriaStore'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 
 const route = useRoute()
 const categoriaStore = useCategoriaStore()
-const { tema } = useTheme()
 
 const menuAberto = ref(false)
 
@@ -60,6 +58,6 @@ watch(() => route.fullPath, () => (menuAberto.value = false))
       </main>
     </div>
 
-    <Toaster :theme="tema" position="top-right" rich-colors close-button />
+    <Toaster theme="dark" position="top-right" rich-colors close-button />
   </div>
 </template>

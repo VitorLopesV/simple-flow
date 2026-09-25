@@ -21,7 +21,7 @@ src/
 │   ├── features/   # componentes de domínio (CartaoForm, TransactionForm, UsuarioPopover...)
 │   └── layouts/    # chrome da aplicação — prefixo App* (AppLayout, AppHeader, AppSidebar)
 ├── pages/          # uma página por rota
-├── composables/    # useTheme, usePreferencias, useNotify — estado singleton fora do Pinia
+├── composables/    # usePreferencias, useNotify — estado singleton fora do Pinia
 ├── stores/         # Pinia setup stores, um por domínio + index.ts barrel
 ├── services/       # um arquivo por domínio (axios OU mock) + http.ts + mock/
 ├── types/          # um arquivo por domínio + common.ts + index.ts barrel
@@ -43,7 +43,7 @@ Ao adicionar um recurso novo, crie o arquivo correspondente em cada camada (`typ
 ## Estado
 
 - **Pinia (setup store)** para estado de domínio/negócio: um store por domínio em `src/stores/`, com `loading`/`salvando`/`erro`, `computed` derivados, e ações assíncronas (`carregar`, `criar`, `atualizar`, `remover`) que chamam o `service`, capturam erro com `mensagemDeErro()` e retornam `boolean` de sucesso.
-- **Composable singleton fora do Pinia** (`useTheme`, `usePreferencias`) para preferências de UI puramente locais/de dispositivo, persistidas em `localStorage`. Regra: se é dado de negócio do usuário → Pinia; se é preferência de UI/dispositivo → composable singleton.
+- **Composable singleton fora do Pinia** (`usePreferencias`) para preferências de UI puramente locais/de dispositivo, persistidas em `localStorage`. Regra: se é dado de negócio do usuário → Pinia; se é preferência de UI/dispositivo → composable singleton.
 - `periodoStore` (mês de competência selecionado) é compartilhado entre páginas — não recriar esse estado localmente numa página nova.
 
 ## Roteamento
@@ -68,10 +68,10 @@ Ao adicionar um recurso novo, crie o arquivo correspondente em cada camada (`typ
 
 ## Estilização e tema
 
-- Tailwind v4, tokens semânticos estilo shadcn em `src/assets/main.css` (`--background`, `--card`, `--primary`, `--success`, `--danger`...), duplicados em `:root` e `.dark`. **Componentes usam só as classes semânticas (`bg-card`, `text-muted`...), nunca cor crua.**
-- Tema claro/escuro via classe `.dark` no `<html>`, controlado por `useTheme()`. Aplicado antes da primeira pintura por script inline em `index.html` (evita FOUC) — não remover esse script.
+- Tailwind v4, tokens semânticos estilo shadcn em `src/assets/main.css` (`--background`, `--card`, `--primary`, `--success`, `--danger`...), definidos em `:root`. **Componentes usam só as classes semânticas (`bg-card`, `text-muted`...), nunca cor crua.**
+- O sistema tem **só o tema escuro**: não há modo claro, variante `dark:` nem seletor de tema. Os tokens ficam direto em `:root` e o `color-scheme: dark` também.
 - Helper `cn()` próprio (não `clsx`/`tailwind-merge`) — **não faz merge de conflito de classes Tailwind**, então ao usá-lo, classes que devem sobrescrever precisam vir por último no array/args.
-- `Chart.js` não lê CSS custom properties — resolva cores do tema manualmente via `computed` a partir de `useTheme()` em qualquer componente de gráfico novo (ver `StatisticsChart.vue`).
+- `Chart.js` não lê CSS custom properties — resolva as cores manualmente (paleta fixa do tema escuro) em qualquer componente de gráfico novo (ver `StatisticsChart.vue`).
 
 ## Formulários
 
@@ -91,10 +91,6 @@ VITE_USE_MOCK=true|false
 VITE_MOCK_LATENCY=350
 ```
 Todas com prefixo `VITE_*` (exigido pelo Vite), tipadas em `env.d.ts`.
-
-## Gotchas conhecidos
-
-- `UsuarioPopover` (troca de tema) e `ConfiguracoesModal` (troca de tema) são dois pontos de UI para a mesma ação — intencional, ambos usam `useTheme()` como fonte única de verdade, sem risco de dessincronia.
 
 ## Scripts
 

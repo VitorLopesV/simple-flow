@@ -22,14 +22,14 @@ O mês selecionado é global (store `periodo`) e se mantém ao navegar entre as 
 
 ```
 frontend/src/
-├── assets/            # main.css: design tokens (oklch), tema claro/escuro, base layer
+├── assets/            # main.css: design tokens (oklch), tema escuro, base layer
 ├── components/
 │   ├── common/        # átomos/moléculas: BaseButton, BaseInput, BaseModal, CurrencyInput...
 │   ├── features/      # organismos de domínio: TransactionForm, TransactionList,
 │   │                  # CategoryFilter, MonthPicker, SummaryCard, StatisticsChart,
 │   │                  # CartaoCard, CartaoForm, FaturaDetalhe
 │   └── layouts/       # AppLayout, AppHeader, AppSidebar, PageLayout
-├── composables/       # useTheme, useNotify
+├── composables/       # usePreferencias, useNotify
 ├── pages/             # Dashboard, Entradas, Saidas, Cartoes, NotFound
 ├── router/            # rotas com lazy loading, títulos por rota e guarda de autenticação
 ├── services/          # auth/entrada/saida/cartao/categoria/dashboard + http (Axios)

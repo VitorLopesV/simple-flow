@@ -3,9 +3,7 @@ import { CreditCard, TrendingUp, Wallet } from '@lucide/vue'
 import { Toaster } from 'vue-sonner'
 
 import AuthMarca from '@/components/features/AuthMarca.vue'
-import { useTheme } from '@/composables/useTheme'
 
-const { tema } = useTheme()
 
 const DESTAQUES = [
   { icone: Wallet, texto: 'Saiba quanto sobra do seu mês, sem planilhas' },
@@ -72,6 +70,6 @@ const DESTAQUES = [
       </RouterView>
     </main>
 
-    <Toaster :theme="tema" position="top-right" rich-colors close-button />
+    <Toaster theme="dark" position="top-right" rich-colors close-button />
   </div>
 </template>

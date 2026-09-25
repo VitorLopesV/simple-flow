@@ -17,7 +17,6 @@ import {
 import { computed } from 'vue'
 import { Bar, Doughnut, Line } from 'vue-chartjs'
 
-import { useTheme } from '@/composables/useTheme'
 import { formatCurrency, formatCurrencyCompact } from '@/utils/currencyFormatter'
 
 ChartJS.register(
@@ -60,21 +59,16 @@ const props = withDefaults(
   { cores: () => [], altura: 260, exibirLegenda: true, preencher: false },
 )
 
-const { tema } = useTheme()
-
 // O Chart.js desenha em canvas e não enxerga as CSS vars do tema, então as
-// cores de grade/texto são resolvidas aqui a partir do tema atual.
-const paleta = computed(() => {
-  const escuro = tema.value === 'dark'
-  return {
-    texto: escuro ? '#cbd5e1' : '#64748b',
-    grade: escuro ? 'rgba(148, 163, 184, 0.16)' : 'rgba(100, 116, 139, 0.16)',
-    fundoTooltip: escuro ? '#1e293b' : '#ffffff',
-    textoTooltip: escuro ? '#f1f5f9' : '#0f172a',
-    bordaTooltip: escuro ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.2)',
-    bordaFatia: escuro ? '#1e293b' : '#ffffff',
-  }
-})
+// cores de grade/texto ficam aqui, alinhadas ao tema escuro.
+const paleta = {
+  texto: '#cbd5e1',
+  grade: 'rgba(148, 163, 184, 0.16)',
+  fundoTooltip: '#1e293b',
+  textoTooltip: '#f1f5f9',
+  bordaTooltip: 'rgba(148,163,184,0.35)',
+  bordaFatia: '#1e293b',
+}
 
 const dadosCartesianos = computed<ChartData<'line' | 'bar'>>(() => ({
   labels: props.labels,
@@ -101,7 +95,7 @@ const dadosRosca = computed<ChartData<'doughnut'>>(() => ({
       label: props.series[0]?.nome ?? '',
       data: props.series[0]?.dados ?? [],
       backgroundColor: props.cores.length ? props.cores : [props.series[0]?.cor ?? '#94a3b8'],
-      borderColor: paleta.value.bordaFatia,
+      borderColor: paleta.bordaFatia,
       borderWidth: 2,
       hoverOffset: 6,
     },
@@ -121,7 +115,7 @@ const legenda = computed(() => ({
   position: (props.tipo === 'rosca' ? 'right' : 'top') as 'right' | 'top',
   align: 'end' as const,
   labels: {
-    color: paleta.value.texto,
+    color: paleta.texto,
     usePointStyle: true,
     pointStyle: 'circle' as const,
     boxWidth: 8,
@@ -131,10 +125,10 @@ const legenda = computed(() => ({
 }))
 
 const tooltip = computed(() => ({
-  backgroundColor: paleta.value.fundoTooltip,
-  titleColor: paleta.value.textoTooltip,
-  bodyColor: paleta.value.textoTooltip,
-  borderColor: paleta.value.bordaTooltip,
+  backgroundColor: paleta.fundoTooltip,
+  titleColor: paleta.textoTooltip,
+  bodyColor: paleta.textoTooltip,
+  borderColor: paleta.bordaTooltip,
   borderWidth: 1,
   padding: 12,
   cornerRadius: 8,
@@ -151,14 +145,14 @@ const opcoesCartesianas = computed<ChartOptions<'line' | 'bar'>>(() => ({
     x: {
       grid: { display: false },
       border: { display: false },
-      ticks: { color: paleta.value.texto, font: { size: 11 } },
+      ticks: { color: paleta.texto, font: { size: 11 } },
     },
     y: {
       beginAtZero: true,
-      grid: { color: paleta.value.grade },
+      grid: { color: paleta.grade },
       border: { display: false },
       ticks: {
-        color: paleta.value.texto,
+        color: paleta.texto,
         font: { size: 11 },
         callback: (valor: string | number) => formatCurrencyCompact(Number(valor)),
       },
