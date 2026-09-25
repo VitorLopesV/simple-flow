@@ -4,11 +4,13 @@ import {
   compor,
   corHexadecimal,
   dataISO,
+  emailValido,
   maximoCaracteres,
   minimoCaracteres,
   numeroEntre,
   obrigatorio,
   somenteDigitos,
+  telefoneOpcional,
   valorMonetarioPositivo,
 } from '@/utils/validators'
 
@@ -162,5 +164,25 @@ describe('compor', () => {
 
   it('devolve true sem regras', () => {
     expect(compor()('x')).toBe(true)
+  })
+})
+
+describe('emailValido', () => {
+  it.each(['a@b.co', ' ana@exemplo.com '])('aceita %j', (valor) => {
+    expect(emailValido()(valor)).toBe(true)
+  })
+
+  it.each(['', 'sem-arroba', 'a@b', 'a b@c.com', null])('rejeita %j', (valor) => {
+    expect(emailValido()(valor)).toBe('E-mail inválido.')
+  })
+})
+
+describe('telefoneOpcional', () => {
+  it.each(['', null, undefined, '(11) 99999-8888', '1133334444'])('aceita %j', (valor) => {
+    expect(telefoneOpcional()(valor)).toBe(true)
+  })
+
+  it.each(['123', '(11) 9999-88', '119999988887'])('rejeita %j', (valor) => {
+    expect(telefoneOpcional()(valor)).toBe('Telefone inválido.')
   })
 })

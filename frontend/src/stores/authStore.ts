@@ -35,6 +35,12 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem(CHAVE_REFRESH_TOKEN, sessao.refreshToken)
   }
 
+  /** Troca só os dados do usuário (perfil editado), mantendo os tokens da sessão. */
+  function atualizarUsuario(atualizado: Usuario): void {
+    usuario.value = atualizado
+    localStorage.setItem(CHAVE_USUARIO, JSON.stringify(atualizado))
+  }
+
   function limparSessao(): void {
     usuario.value = null
     accessToken.value = null
@@ -45,5 +51,13 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(CHAVE_REFRESH_TOKEN)
   }
 
-  return { usuario, accessToken, refreshToken, autenticado, definirSessao, limparSessao }
+  return {
+    usuario,
+    accessToken,
+    refreshToken,
+    autenticado,
+    definirSessao,
+    atualizarUsuario,
+    limparSessao,
+  }
 })

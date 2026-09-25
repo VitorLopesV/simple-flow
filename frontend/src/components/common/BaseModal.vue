@@ -113,6 +113,7 @@ onBeforeUnmount(() => travarScroll(false))
             <BaseButton
               variante="ghost"
               tamanho="icon"
+              class="hover:!bg-danger/25 hover:!text-danger"
               data-fechar
               aria-label="Fechar"
               @click="fechar"

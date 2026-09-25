@@ -18,7 +18,7 @@ Organização por camada técnica (não por feature, não atomic design):
 src/
 ├── components/
 │   ├── common/     # design system genérico — prefixo Base* (BaseButton, BaseInput, BaseModal...)
-│   ├── features/   # componentes de domínio (CartaoForm, TransactionForm, UsuarioPopover...)
+│   ├── features/   # componentes de domínio (CartaoForm, TransactionForm, PerfilUsuario...)
 │   └── layouts/    # chrome da aplicação — prefixo App* (AppLayout, AppHeader, AppSidebar)
 ├── pages/          # uma página por rota
 ├── composables/    # usePreferencias, useNotify — estado singleton fora do Pinia
@@ -64,7 +64,7 @@ Ao adicionar um recurso novo, crie o arquivo correspondente em cada camada (`typ
 
 - Token JWT (access + refresh) persistido em **`localStorage`** (`simpleflow.accessToken`, `simpleflow.refreshToken`, `simpleflow.usuario`) — não em cookies. Trade-off consciente (simplicidade vs. exposição a XSS), não é bug.
 - Fluxo: `Login.vue` → `authService.login` → `authStore.definirSessao` → guard de rota libera `/app/*`.
-- Logout: `authStore.limparSessao()` (limpa localStorage) + `router.push({ name: 'login' })`, feito a partir de `UsuarioPopover.vue` (no `AppHeader`).
+- Logout: `authStore.limparSessao()` (limpa localStorage) + `router.push({ name: 'login' })`, feito pelo item "Sair" do menu do usuário (`PerfilUsuario.vue`, no `AppHeader`), que também abre o `PerfilModal.vue` em "Meu perfil".
 
 ## Estilização e tema
 

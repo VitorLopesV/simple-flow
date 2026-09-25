@@ -192,3 +192,21 @@ describe('autenticado', () => {
     expect(store.autenticado).toBe(false)
   })
 })
+
+describe('atualizarUsuario', () => {
+  it('troca os dados do usuário, persiste e mantém os tokens', () => {
+    const store = recriarStore()
+    store.definirSessao(sessao)
+
+    store.atualizarUsuario({ ...usuario, nome: 'Ana Souza', telefone: '11999998888', fotoUrl: 'data:x' })
+
+    expect(store.usuario?.nome).toBe('Ana Souza')
+    expect(store.accessToken).toBe('access-123')
+    expect(JSON.parse(localStorage.getItem(CHAVE_USUARIO)!)).toMatchObject({
+      nome: 'Ana Souza',
+      telefone: '11999998888',
+      fotoUrl: 'data:x',
+    })
+    expect(recriarStore().usuario?.nome).toBe('Ana Souza')
+  })
+})

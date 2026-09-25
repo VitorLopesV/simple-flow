@@ -1,4 +1,4 @@
-import type { LoginPayload, RegistroPayload, SessaoUsuario, Usuario } from '@/types/auth'
+import type { LoginPayload, PerfilPayload, RegistroPayload, SessaoUsuario, Usuario } from '@/types/auth'
 import { http, USE_MOCK } from './http'
 import { delay } from './mock'
 
@@ -38,6 +38,13 @@ export const authService = {
     if (USE_MOCK) return delay(sessaoMock('demo@simpleflow.app').usuario)
 
     const { data } = await http.get<Usuario>('/auth/me')
+    return data
+  },
+
+  async atualizarPerfil(payload: PerfilPayload): Promise<Usuario> {
+    if (USE_MOCK) return delay({ id: 'mock-user', ...payload })
+
+    const { data } = await http.patch<Usuario>('/auth/me', payload)
     return data
   },
 }

@@ -2,7 +2,7 @@
 import { Menu } from '@lucide/vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
-import UsuarioPopover from '@/components/features/UsuarioPopover.vue'
+import PerfilUsuario from '@/components/features/PerfilUsuario.vue'
 
 const emit = defineEmits<{ abrirMenu: [] }>()
 </script>
@@ -23,7 +23,7 @@ const emit = defineEmits<{ abrirMenu: [] }>()
     </BaseButton>
 
     <div class="ml-auto flex items-center gap-2">
-      <UsuarioPopover />
+      <PerfilUsuario />
     </div>
   </header>
 </template>

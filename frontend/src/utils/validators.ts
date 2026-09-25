@@ -85,3 +85,17 @@ export const corHexadecimal =
   (campo = 'Cor'): Regra =>
   (valor) =>
     /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(valor ?? '')) ? true : `${campo} inválida.`
+
+export const emailValido =
+  (campo = 'E-mail'): Regra =>
+  (valor) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(valor ?? '').trim()) ? true : `${campo} inválido.`
+
+/** Telefone é opcional: vazio passa; preenchido precisa de DDD + 8 ou 9 dígitos. */
+export const telefoneOpcional =
+  (campo = 'Telefone'): Regra =>
+  (valor) => {
+    const digitos = String(valor ?? '').replace(/\D/g, '')
+    if (digitos === '') return true
+    return digitos.length === 10 || digitos.length === 11 ? true : `${campo} inválido.`
+  }
