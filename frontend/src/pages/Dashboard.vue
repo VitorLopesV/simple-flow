@@ -219,7 +219,7 @@ watch(
     class="text-foreground text-2xl font-extralight tracking-tight wrap-break-word whitespace-pre-wrap sm:text-4xl"
   >
     <span aria-hidden="true">{{ saudacaoVisivel }}</span>
-    <span aria-hidden="true" class="text-primary font-semibold">{{ nomeVisivel }}</span>
+    <span aria-hidden="true" class="text-success font-semibold">{{ nomeVisivel }}</span>
     <span
       v-if="digitando"
       aria-hidden="true"
