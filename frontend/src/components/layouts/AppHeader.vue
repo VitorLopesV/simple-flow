@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Menu } from '@lucide/vue'
-import { useRoute } from 'vue-router'
 
 import BaseButton from '@/components/common/BaseButton.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
@@ -9,7 +8,6 @@ import { usePeriodoStore } from '@/stores/periodoStore'
 
 const emit = defineEmits<{ abrirMenu: [] }>()
 
-const route = useRoute()
 const periodoStore = usePeriodoStore()
 </script>
 
@@ -27,10 +25,6 @@ const periodoStore = usePeriodoStore()
     >
       <Menu class="size-5" aria-hidden="true" />
     </BaseButton>
-
-    <h1 class="truncate text-base font-semibold sm:text-lg">
-      {{ route.meta.titulo ?? 'SimpleFlow' }}
-    </h1>
 
     <div class="ml-auto flex items-center gap-2">
       <MonthPicker

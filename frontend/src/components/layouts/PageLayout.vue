@@ -6,7 +6,7 @@ withDefaults(defineProps<{ titulo: string; descricao?: string }>(), { descricao:
   <div class="flex w-full flex-col gap-6">
     <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
       <div>
-        <h2 class="text-xl font-semibold tracking-tight sm:text-2xl">{{ titulo }}</h2>
+        <h1 class="text-xl font-semibold tracking-tight sm:text-2xl">{{ titulo }}</h1>
         <p v-if="descricao" class="text-muted-foreground mt-1 text-sm">{{ descricao }}</p>
       </div>
 
