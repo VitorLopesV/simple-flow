@@ -8,6 +8,7 @@ import BaseCard from '@/components/common/BaseCard.vue'
 import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
+import SeletorOrigemGastos, { type OrigemGastos } from '@/components/features/SeletorOrigemGastos.vue'
 import StatisticsChart from '@/components/features/StatisticsChart.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
@@ -176,15 +177,40 @@ const detalheSaldo = computed(() => {
   return `${Math.round(dashboardStore.comprometimento)}% consumido`
 })
 
-const gastos = computed(() => resumo.value?.gastosPorCategoria.slice(0, 6) ?? [])
+/** Qual conjunto o gráfico "Gastos por categoria" plota — mesmo esquema de "Gastos por tipo". */
+const origemCategorias = ref<OrigemGastos>('saidas')
+
+/**
+ * Saídas: a fatura entra inteira na categoria da saída derivada ("Despesa Variável").
+ * Cartões: as transações dessas faturas, cada uma na sua categoria; `?? []` cobre um
+ * backend que ainda não devolva `gastosCartoesPorCategoria`.
+ */
+const gastos = computed(() =>
+  (origemCategorias.value === 'cartoes'
+    ? (resumo.value?.gastosCartoesPorCategoria ?? [])
+    : (resumo.value?.gastosPorCategoria ?? [])
+  ).slice(0, 6),
+)
 const labelsGastos = computed(() => gastos.value.map((g) => g.nome))
 const seriesGastos = computed(() => [
   { nome: 'Gastos', dados: gastos.value.map((g) => g.total), cor: '#6366f1' },
 ])
 const coresGastos = computed(() => gastos.value.map((g) => g.cor))
 
-// `porTipo` vem do resumo de saídas (`/saidas/resumo`) via dashboardStore.
-const tipos = computed(() => dashboardStore.gastosPorTipo.slice(0, 6))
+/** Qual conjunto o gráfico "Gastos por tipo" plota — o gráfico é o mesmo, só os dados trocam. */
+const origemTipos = ref<OrigemGastos>('saidas')
+
+/**
+ * Saídas: `porTipo` do resumo de saídas (`/saidas/resumo`) via dashboardStore — a fatura
+ * entra inteira como "Conta". Cartões: as transações dessas faturas, cada uma no seu tipo;
+ * `?? []` cobre um backend que ainda não devolva `gastosCartoesPorTipo`.
+ */
+const tipos = computed(() =>
+  (origemTipos.value === 'cartoes'
+    ? (resumo.value?.gastosCartoesPorTipo ?? [])
+    : dashboardStore.gastosPorTipo
+  ).slice(0, 6),
+)
 const labelsTipos = computed(() => tipos.value.map((t) => SAIDA_TIPO_LABEL[t.tipo]))
 const seriesTipos = computed(() => [
   { nome: 'Gastos', dados: tipos.value.map((t) => t.total), cor: '#6366f1' },
@@ -328,7 +354,21 @@ watch(
 
           <div class="grid grid-cols-1 gap-4 md:min-h-0 md:grid-cols-3">
             <BaseCard preencher titulo="Gastos por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
+              <template #acoes>
+                <SeletorOrigemGastos
+                  v-model="origemCategorias"
+                  rotulo="Dados do gráfico de gastos por categoria"
+                  data-testid="origem-gastos-por-categoria"
+                />
+              </template>
+
               <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+              <EmptyState
+                compacto
+                v-else-if="!gastos.length && origemCategorias === 'cartoes'"
+                titulo="Sem gastos no cartão"
+                descricao="Nenhuma fatura de cartão vence neste mês."
+              />
               <EmptyState
                 compacto
                 v-else-if="!gastos.length"
@@ -347,7 +387,21 @@ watch(
             </BaseCard>
 
             <BaseCard preencher titulo="Gastos por tipo" :descricao="formatPeriodo(periodoStore.periodo)">
+              <template #acoes>
+                <SeletorOrigemGastos
+                  v-model="origemTipos"
+                  rotulo="Dados do gráfico de gastos por tipo"
+                  data-testid="origem-gastos-por-tipo"
+                />
+              </template>
+
               <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+              <EmptyState
+                compacto
+                v-else-if="!tipos.length && origemTipos === 'cartoes'"
+                titulo="Sem gastos no cartão"
+                descricao="Nenhuma fatura de cartão vence neste mês."
+              />
               <EmptyState
                 compacto
                 v-else-if="!tipos.length"

@@ -1,5 +1,6 @@
 import type { Periodo, SeriePonto } from '@/types/common'
 import type { DashboardResumo, TransacaoRecente } from '@/types/dashboard'
+import type { SaidaTipo } from '@/types/saida'
 import { calcularVariacao } from '@/utils/currencyFormatter'
 import {
   dentroDoPeriodo,
@@ -70,6 +71,26 @@ export const dashboardService = {
       const gastosPorCategoria = porCategoria(saidasDoMes)
       const entradasPorCategoria = porCategoria(entradasDoMes)
 
+      // Mesma regra de mês de `totalFaturas`: a fatura vira saída na data de vencimento
+      // (ver `faturasComoSaidas` em mock/db.ts), não pela competência.
+      const faturasDoMes = new Set(
+        db.faturas
+          .filter((fatura) => dentroDoPeriodo(fatura.vencimento, periodo))
+          .map((fatura) => fatura.id),
+      )
+      const transacoesCartaoDoMes = db.transacoesCartao.filter((transacao) =>
+        faturasDoMes.has(transacao.faturaId),
+      )
+
+      const agrupadoPorTipo = new Map<SaidaTipo, number>()
+      for (const transacao of transacoesCartaoDoMes) {
+        agrupadoPorTipo.set(transacao.tipo, (agrupadoPorTipo.get(transacao.tipo) ?? 0) + transacao.valor)
+      }
+      const gastosCartoesPorTipo = [...agrupadoPorTipo.entries()]
+        .map(([tipo, total]) => ({ tipo, total }))
+        .sort((a, b) => b.total - a.total)
+      const gastosCartoesPorCategoria = porCategoria(transacoesCartaoDoMes)
+
       const transacoesRecentes: TransacaoRecente[] = [
         ...entradasDoMes.map<TransacaoRecente>((entrada) => ({
           id: entrada.id,
@@ -105,6 +126,8 @@ export const dashboardService = {
         serieFaturas,
         gastosPorCategoria,
         entradasPorCategoria,
+        gastosCartoesPorTipo,
+        gastosCartoesPorCategoria,
         transacoesRecentes,
       })
     }

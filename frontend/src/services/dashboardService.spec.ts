@@ -8,7 +8,7 @@ vi.hoisted(() => {
 
 import { dashboardService } from '@/services/dashboardService'
 import { mockDb } from '@/services/mock'
-import type { Cartao } from '@/types/cartao'
+import type { Cartao, TransacaoCartao } from '@/types/cartao'
 import type { Entrada } from '@/types/entrada'
 import type { Saida } from '@/types/saida'
 
@@ -244,6 +244,85 @@ describe('serieFaturas', () => {
     const { serieFaturas } = await dashboardService.resumo(AGOSTO)
 
     expect(serieFaturas?.every((p) => p.valor === 0)).toBe(true)
+  })
+})
+
+describe('gastos de cartão', () => {
+  function transacao(
+    faturaId: string,
+    tipo: TransacaoCartao['tipo'],
+    valor: number,
+    categoriaId = catA.id,
+  ): TransacaoCartao {
+    sequencia += 1
+    return {
+      id: `tra_teste_${sequencia}`,
+      cartaoId: 'car_a',
+      faturaId,
+      descricao: 'Compra',
+      valor,
+      data: '2026-08-01',
+      categoriaId,
+      tipo,
+      parcelaAtual: 1,
+      totalParcelas: 1,
+      recorrente: false,
+      criadoEm: '',
+      atualizadoEm: '',
+    }
+  }
+
+  it('agrupa as transações das faturas do mês por tipo, do maior para o menor, somando totalFaturas', async () => {
+    const faturaAgo = db.garantirFatura('car_a', '2026-08')
+    const faturaSet = db.garantirFatura('car_a', '2026-09')
+    db.transacoesCartao.push(
+      transacao(faturaAgo.id, 'LAZER', 50),
+      transacao(faturaAgo.id, 'ALIMENTACAO', 120),
+      transacao(faturaAgo.id, 'LAZER', 30),
+      // Fatura que vence em outro mês: fica de fora.
+      transacao(faturaSet.id, 'COMPRAS', 999),
+    )
+    db.recalcularTotalFatura(faturaAgo.id)
+    db.recalcularTotalFatura(faturaSet.id)
+
+    const resumo = await dashboardService.resumo(AGOSTO)
+
+    expect(resumo.gastosCartoesPorTipo).toEqual([
+      { tipo: 'ALIMENTACAO', total: 120 },
+      { tipo: 'LAZER', total: 80 },
+    ])
+    expect(resumo.totalFaturas).toBe(200)
+  })
+
+  it('agrupa as mesmas transações por categoria, com nome e cor, e "Outros" para categoria desconhecida', async () => {
+    const faturaAgo = db.garantirFatura('car_a', '2026-08')
+    const faturaSet = db.garantirFatura('car_a', '2026-09')
+    db.transacoesCartao.push(
+      transacao(faturaAgo.id, 'LAZER', 50, catA.id),
+      transacao(faturaAgo.id, 'ALIMENTACAO', 120, catB.id),
+      transacao(faturaAgo.id, 'LAZER', 30, catA.id),
+      transacao(faturaAgo.id, 'OUTROS', 10, 'cat_inexistente'),
+      transacao(faturaSet.id, 'COMPRAS', 999, catA.id),
+    )
+    // Saída comum: fica em gastosPorCategoria, nunca nos gastos de cartão.
+    db.saidas.push(saida({ valor: 500, categoriaId: catB.id }))
+
+    const resumo = await dashboardService.resumo(AGOSTO)
+
+    expect(resumo.gastosCartoesPorCategoria).toEqual([
+      { nome: catB.nome, cor: catB.cor, total: 120 },
+      { nome: catA.nome, cor: catA.cor, total: 80 },
+      { nome: 'Outros', cor: COR_PADRAO, total: 10 },
+    ])
+  })
+
+  it('devolve listas vazias sem fatura no mês', async () => {
+    db.saidas.push(saida({ valor: 200, tipo: 'LAZER' }))
+
+    const resumo = await dashboardService.resumo(AGOSTO)
+
+    expect(resumo.gastosCartoesPorTipo).toEqual([])
+    expect(resumo.gastosCartoesPorCategoria).toEqual([])
   })
 })
 

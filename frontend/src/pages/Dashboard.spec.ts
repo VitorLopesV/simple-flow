@@ -169,6 +169,143 @@ describe('gráficos', () => {
   })
 })
 
+/** Seletor Saídas/Cartões de um card (`tipo` ou `categoria`), pelo `data-testid`. */
+function seletorOrigem(tela: VueWrapper, card: 'tipo' | 'categoria') {
+  return tela.get(`[data-testid="origem-gastos-por-${card}"]`)
+}
+
+function botaoOrigem(tela: VueWrapper, card: 'tipo' | 'categoria', rotulo: string) {
+  const encontrado = seletorOrigem(tela, card)
+    .findAll('button')
+    .find((item) => item.text() === rotulo)
+  if (!encontrado) throw new Error(`Botão "${rotulo}" não encontrado`)
+  return encontrado
+}
+
+/** Rótulos do gráfico que fica no mesmo card do seletor Saídas/Cartões. */
+function labelsDoCard(tela: VueWrapper, card: 'tipo' | 'categoria'): string[] | undefined {
+  const secao = seletorOrigem(tela, card).element.closest('section')
+  return tela
+    .findAllComponents(StatisticsChart)
+    .find((grafico) => secao?.contains(grafico.element))
+    ?.props('labels')
+}
+
+describe('gastos por tipo', () => {
+  const botao = (tela: VueWrapper, rotulo: string) => botaoOrigem(tela, 'tipo', rotulo)
+  const labelsDoGrafico = (tela: VueWrapper) => labelsDoCard(tela, 'tipo')
+
+  beforeEach(() => {
+    saidaResumoMock.mockResolvedValue({
+      total: 300,
+      quantidade: 2,
+      media: 150,
+      totalPago: 0,
+      totalPendente: 300,
+      totalMesAnterior: 0,
+      porCategoria: [],
+      porTipo: [
+        { tipo: 'CONTA', total: 200 },
+        { tipo: 'TRANSPORTE', total: 100 },
+      ],
+    })
+  })
+
+  it('começa em Saídas, plotando os gastos das saídas por tipo', async () => {
+    const tela = await montar(resumo({ gastosCartoesPorTipo: [{ tipo: 'LAZER', total: 80 }] }))
+
+    expect(botao(tela, 'Saídas').attributes('aria-pressed')).toBe('true')
+    expect(botao(tela, 'Cartões').attributes('aria-pressed')).toBe('false')
+    expect(labelsDoGrafico(tela)).toEqual(['Conta', 'Transporte'])
+  })
+
+  it('alterna para os gastos de cartão no mesmo gráfico, com um só botão ativo', async () => {
+    const tela = await montar(
+      resumo({
+        gastosCartoesPorTipo: [
+          { tipo: 'LAZER', total: 80 },
+          { tipo: 'ALIMENTACAO', total: 40 },
+        ],
+      }),
+    )
+
+    await botao(tela, 'Cartões').trigger('click')
+
+    expect(botao(tela, 'Cartões').attributes('aria-pressed')).toBe('true')
+    expect(botao(tela, 'Saídas').attributes('aria-pressed')).toBe('false')
+    expect(labelsDoGrafico(tela)).toEqual(['Lazer', 'Alimentação'])
+
+    await botao(tela, 'Saídas').trigger('click')
+
+    expect(botao(tela, 'Saídas').attributes('aria-pressed')).toBe('true')
+    expect(labelsDoGrafico(tela)).toEqual(['Conta', 'Transporte'])
+  })
+
+  it('mostra estado vazio de cartão quando não há gastos no cartão (ou o backend não manda o campo)', async () => {
+    const tela = await montar(resumo())
+
+    await botao(tela, 'Cartões').trigger('click')
+
+    expect(tela.text()).toContain('Sem gastos no cartão')
+    expect(labelsDoGrafico(tela)).toBeUndefined()
+  })
+})
+
+describe('gastos por categoria', () => {
+  const botao = (tela: VueWrapper, rotulo: string) => botaoOrigem(tela, 'categoria', rotulo)
+  const labelsDoGrafico = (tela: VueWrapper) => labelsDoCard(tela, 'categoria')
+
+  const dados = resumo({
+    gastosPorCategoria: [
+      { nome: 'Despesa Variável', cor: '#14b8a6', total: 300 },
+      { nome: 'Despesa Fixa', cor: '#6366f1', total: 50 },
+    ],
+    gastosCartoesPorCategoria: [
+      { nome: 'Despesa Fixa', cor: '#6366f1', total: 90 },
+      { nome: 'Investimento', cor: '#0891b2', total: 20 },
+    ],
+  })
+
+  it('começa em Saídas, plotando os gastos das saídas por categoria', async () => {
+    const tela = await montar(dados)
+
+    expect(botao(tela, 'Saídas').attributes('aria-pressed')).toBe('true')
+    expect(botao(tela, 'Cartões').attributes('aria-pressed')).toBe('false')
+    expect(labelsDoGrafico(tela)).toEqual(['Despesa Variável', 'Despesa Fixa'])
+  })
+
+  it('alterna para os gastos de cartão por categoria, com um só botão ativo', async () => {
+    const tela = await montar(dados)
+
+    await botao(tela, 'Cartões').trigger('click')
+
+    expect(botao(tela, 'Cartões').attributes('aria-pressed')).toBe('true')
+    expect(botao(tela, 'Saídas').attributes('aria-pressed')).toBe('false')
+    expect(labelsDoGrafico(tela)).toEqual(['Despesa Fixa', 'Investimento'])
+
+    await botao(tela, 'Saídas').trigger('click')
+
+    expect(labelsDoGrafico(tela)).toEqual(['Despesa Variável', 'Despesa Fixa'])
+  })
+
+  it('não mexe no gráfico de gastos por tipo ao alternar', async () => {
+    const tela = await montar(dados)
+
+    await botao(tela, 'Cartões').trigger('click')
+
+    expect(botaoOrigem(tela, 'tipo', 'Saídas').attributes('aria-pressed')).toBe('true')
+  })
+
+  it('mostra estado vazio de cartão quando o backend não manda o campo', async () => {
+    const tela = await montar(resumo({ gastosPorCategoria: dados.gastosPorCategoria }))
+
+    await botao(tela, 'Cartões').trigger('click')
+
+    expect(tela.text()).toContain('Sem gastos no cartão')
+    expect(labelsDoGrafico(tela)).toBeUndefined()
+  })
+})
+
 describe('painel de últimas transações', () => {
   function botao(tela: VueWrapper) {
     return tela.get('button[aria-controls="painel-ultimas-transacoes"]')
