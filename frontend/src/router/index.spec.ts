@@ -5,20 +5,20 @@ import router from '@/router'
 import { useAuthStore } from '@/stores/authStore'
 
 // Só `route.name`, `fullPath` e `meta` interessam: layouts e páginas viram componentes vazios.
-const componenteVazio = vi.hoisted(() => ({ default: { render: () => null } }))
-vi.mock('@/components/layouts/AppLayout.vue', () => componenteVazio)
-vi.mock('@/components/layouts/AuthLayout.vue', () => componenteVazio)
-vi.mock('@/pages/Dashboard.vue', () => componenteVazio)
-vi.mock('@/pages/Entradas.vue', () => componenteVazio)
-vi.mock('@/pages/Saidas.vue', () => componenteVazio)
-vi.mock('@/pages/Cartoes.vue', () => componenteVazio)
-vi.mock('@/pages/Login.vue', () => componenteVazio)
-vi.mock('@/pages/Register.vue', () => componenteVazio)
-vi.mock('@/pages/NotFound.vue', () => componenteVazio)
+const emptyComponent = vi.hoisted(() => ({ default: { render: () => null } }))
+vi.mock('@/components/layouts/AppLayout.vue', () => emptyComponent)
+vi.mock('@/components/layouts/AuthLayout.vue', () => emptyComponent)
+vi.mock('@/pages/Dashboard.vue', () => emptyComponent)
+vi.mock('@/pages/Incomes.vue', () => emptyComponent)
+vi.mock('@/pages/Expenses.vue', () => emptyComponent)
+vi.mock('@/pages/CreditCards.vue', () => emptyComponent)
+vi.mock('@/pages/Login.vue', () => emptyComponent)
+vi.mock('@/pages/Register.vue', () => emptyComponent)
+vi.mock('@/pages/NotFound.vue', () => emptyComponent)
 
-function autenticar(): void {
-  useAuthStore().definirSessao({
-    usuario: { id: 'usr_1', email: 'ana@exemplo.com', nome: 'Ana' },
+function authenticate(): void {
+  useAuthStore().setSession({
+    user: { id: 'usr_1', email: 'ana@exemplo.com', name: 'Ana' },
     accessToken: 'access',
     refreshToken: 'refresh',
     expiresIn: 3600,
@@ -26,12 +26,12 @@ function autenticar(): void {
 }
 
 /** Navega e devolve onde a navegação terminou, já com redirects e guards aplicados. */
-async function ir(destino: string) {
-  await router.push(destino)
-  return { nome: router.currentRoute.value.name, caminho: router.currentRoute.value.fullPath }
+async function go(destination: string) {
+  await router.push(destination)
+  return { name: router.currentRoute.value.name, path: router.currentRoute.value.fullPath }
 }
 
-const ROTAS_PRIVADAS = ['/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes']
+const PRIVATE_ROUTES = ['/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes']
 
 beforeEach(async () => {
   localStorage.clear()
@@ -41,82 +41,82 @@ beforeEach(async () => {
 })
 
 describe('sem sessão', () => {
-  it.each(ROTAS_PRIVADAS)('%s redireciona para o login', async (rota) => {
-    expect(await ir(rota)).toEqual({ nome: 'login', caminho: '/auth/login' })
+  it.each(PRIVATE_ROUTES)('%s redireciona para o login', async (route) => {
+    expect(await go(route)).toEqual({ name: 'login', path: '/auth/login' })
   })
 
   it('/app redireciona para o login', async () => {
-    expect(await ir('/app')).toEqual({ nome: 'login', caminho: '/auth/login' })
+    expect(await go('/app')).toEqual({ name: 'login', path: '/auth/login' })
   })
 
   it('rota desconhecida dentro de /app também cai no login', async () => {
-    expect(await ir('/app/inexistente')).toEqual({ nome: 'login', caminho: '/auth/login' })
+    expect(await go('/app/inexistente')).toEqual({ name: 'login', path: '/auth/login' })
   })
 
   it('/auth/login e /auth/registro são liberados', async () => {
-    expect(await ir('/auth/registro')).toEqual({ nome: 'registro', caminho: '/auth/registro' })
-    expect(await ir('/auth/login')).toEqual({ nome: 'login', caminho: '/auth/login' })
+    expect(await go('/auth/registro')).toEqual({ name: 'register', path: '/auth/registro' })
+    expect(await go('/auth/login')).toEqual({ name: 'login', path: '/auth/login' })
   })
 
   it('/ redireciona para o login', async () => {
-    expect(await ir('/')).toEqual({ nome: 'login', caminho: '/auth/login' })
+    expect(await go('/')).toEqual({ name: 'login', path: '/auth/login' })
   })
 })
 
 describe('com sessão', () => {
   beforeEach(() => {
-    autenticar()
+    authenticate()
   })
 
-  it.each(ROTAS_PRIVADAS)('%s é liberado', async (rota) => {
-    const { caminho } = await ir(rota)
+  it.each(PRIVATE_ROUTES)('%s é liberado', async (route) => {
+    const { path } = await go(route)
 
-    expect(caminho).toBe(rota)
+    expect(path).toBe(route)
   })
 
-  it.each(['/auth/login', '/auth/registro'])('%s redireciona para o dashboard', async (rota) => {
-    expect(await ir(rota)).toEqual({ nome: 'dashboard', caminho: '/app/dashboard' })
+  it.each(['/auth/login', '/auth/registro'])('%s redireciona para o dashboard', async (route) => {
+    expect(await go(route)).toEqual({ name: 'dashboard', path: '/app/dashboard' })
   })
 
   it('/app redireciona para o dashboard', async () => {
-    expect(await ir('/app')).toEqual({ nome: 'dashboard', caminho: '/app/dashboard' })
+    expect(await go('/app')).toEqual({ name: 'dashboard', path: '/app/dashboard' })
   })
 
   it('/ redireciona para o login e, já autenticado, segue para o dashboard', async () => {
-    expect(await ir('/')).toEqual({ nome: 'dashboard', caminho: '/app/dashboard' })
+    expect(await go('/')).toEqual({ name: 'dashboard', path: '/app/dashboard' })
   })
 
-  it('rota desconhecida dentro de /app resolve para nao-encontrado', async () => {
-    expect((await ir('/app/inexistente')).nome).toBe('nao-encontrado')
+  it('rota desconhecida dentro de /app resolve para not-found', async () => {
+    expect((await go('/app/inexistente')).name).toBe('not-found')
   })
 })
 
 describe('sessão lida a cada navegação', () => {
   it('logo após autenticar, a rota privada deixa de ser bloqueada', async () => {
-    expect((await ir('/app/saidas')).nome).toBe('login')
+    expect((await go('/app/saidas')).name).toBe('login')
 
-    autenticar()
+    authenticate()
 
-    expect((await ir('/app/saidas')).nome).toBe('saidas')
+    expect((await go('/app/saidas')).name).toBe('expenses')
   })
 
   it('após o logout, a rota privada volta a ser bloqueada', async () => {
-    autenticar()
-    expect((await ir('/app/saidas')).nome).toBe('saidas')
+    authenticate()
+    expect((await go('/app/saidas')).name).toBe('expenses')
 
-    useAuthStore().limparSessao()
+    useAuthStore().clearSession()
 
-    expect((await ir('/app/entradas')).nome).toBe('login')
+    expect((await go('/app/entradas')).name).toBe('login')
   })
 })
 
 describe('rota inexistente', () => {
-  it.each([false, true])('resolve para nao-encontrado (autenticado: %s)', async (comSessao) => {
-    if (comSessao) autenticar()
+  it.each([false, true])('resolve para not-found (autenticado: %s)', async (withSession) => {
+    if (withSession) authenticate()
 
-    expect(await ir('/uma/rota/qualquer')).toEqual({
-      nome: 'nao-encontrado',
-      caminho: '/uma/rota/qualquer',
+    expect(await go('/uma/rota/qualquer')).toEqual({
+      name: 'not-found',
+      path: '/uma/rota/qualquer',
     })
   })
 })
@@ -124,17 +124,17 @@ describe('rota inexistente', () => {
 describe('título da página', () => {
   it.each(['/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes'])(
     '%s mantém apenas "SimpleFlow"',
-    async (rota) => {
-      autenticar()
+    async (route) => {
+      authenticate()
 
-      await ir(rota)
+      await go(route)
 
       expect(document.title).toBe('SimpleFlow')
     },
   )
 
   it('rotas de autenticação também usam apenas "SimpleFlow"', async () => {
-    await ir('/auth/registro')
+    await go('/auth/registro')
 
     expect(document.title).toBe('SimpleFlow')
   })
@@ -142,7 +142,7 @@ describe('título da página', () => {
   it('usa "SimpleFlow" também na 404', async () => {
     document.title = 'qualquer coisa'
 
-    await ir('/uma/rota/qualquer')
+    await go('/uma/rota/qualquer')
 
     expect(document.title).toBe('SimpleFlow')
   })

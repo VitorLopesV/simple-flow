@@ -7,93 +7,93 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BasePagination from '@/components/common/BasePagination.vue'
 import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import { useCartaoStore } from '@/stores/cartaoStore'
-import { useCategoriaStore } from '@/stores/categoriaStore'
-import type { Movimento } from '@/types/categoria'
-import type { Entrada } from '@/types/entrada'
-import type { Saida } from '@/types/saida'
-import { FORMA_PAGAMENTO_LABEL, SAIDA_STATUS_LABEL, SAIDA_TIPO_LABEL } from '@/types/saida'
+import { useCategoryStore } from '@/stores/categoryStore'
+import { useCreditCardStore } from '@/stores/creditCardStore'
+import type { Movement } from '@/types/category'
+import type { Expense } from '@/types/expense'
+import { EXPENSE_STATUS_LABEL, EXPENSE_TYPE_LABEL, PAYMENT_METHOD_LABEL } from '@/types/expense'
+import type { Income } from '@/types/income'
 import { formatCurrency } from '@/utils/currencyFormatter'
 import { formatDate } from '@/utils/dateFormatter'
 
-type Transacao = Entrada | Saida
+type Transaction = Income | Expense
 
 const props = withDefaults(
   defineProps<{
-    tipo: Movimento
-    itens: Transacao[]
-    carregando?: boolean
-    pagina: number
-    totalPaginas: number
+    kind: Movement
+    items: Transaction[]
+    loading?: boolean
+    page: number
+    totalPages: number
     total: number
-    tamanhoPagina: number
-    tituloVazio?: string
-    descricaoVazio?: string
+    pageSize: number
+    emptyTitle?: string
+    emptyDescription?: string
   }>(),
   {
-    carregando: false,
-    tituloVazio: 'Nenhum lançamento encontrado',
-    descricaoVazio: 'Ajuste os filtros ou adicione um novo lançamento neste período.',
+    loading: false,
+    emptyTitle: 'Nenhum lançamento encontrado',
+    emptyDescription: 'Ajuste os filtros ou adicione um novo lançamento neste período.',
   },
 )
 
 const emit = defineEmits<{
-  editar: [transacao: Transacao]
-  remover: [transacao: Transacao]
-  alternarStatus: [transacao: Saida]
-  mudarPagina: [pagina: number]
+  edit: [transaction: Transaction]
+  remove: [transaction: Transaction]
+  toggleStatus: [transaction: Expense]
+  changePage: [page: number]
 }>()
 
-const categoriaStore = useCategoriaStore()
-const cartaoStore = useCartaoStore()
+const categoryStore = useCategoryStore()
+const creditCardStore = useCreditCardStore()
 
-const ehSaida = computed(() => props.tipo === 'SAIDA')
-const corValor = computed(() => (ehSaida.value ? 'text-danger' : 'text-success'))
-const sinal = computed(() => (ehSaida.value ? '−' : '+'))
+const isExpense = computed(() => props.kind === 'SAIDA')
+const amountColor = computed(() => (isExpense.value ? 'text-danger' : 'text-success'))
+const sign = computed(() => (isExpense.value ? '−' : '+'))
 
-function comoSaida(transacao: Transacao): Saida {
-  return transacao as Saida
+function asExpense(transaction: Transaction): Expense {
+  return transaction as Expense
 }
 
 /** Ocorrência projetada de uma recorrência, ainda sem lançamento próprio no mês. */
-function ehProjecaoRecorrente(transacao: Transacao): boolean {
-  return Boolean(transacao.origemRecorrenciaId)
+function isRecurringProjection(transaction: Transaction): boolean {
+  return Boolean(transaction.recurrenceOriginId)
 }
 
 /** Realça a linha da fatura com a cor definida ao cartão na aba Cartões. */
-function estiloLinha(transacao: Transacao) {
-  if (!ehSaida.value) return undefined
-  const saida = comoSaida(transacao)
-  const cor = saida.automatica && saida.cartaoId ? cartaoStore.porId(saida.cartaoId)?.cor : null
-  return cor ? { backgroundColor: `color-mix(in srgb, ${cor} 18%, transparent)` } : undefined
+function rowStyle(transaction: Transaction) {
+  if (!isExpense.value) return undefined
+  const expense = asExpense(transaction)
+  const color = expense.automatic && expense.cardId ? creditCardStore.byId(expense.cardId)?.color : null
+  return color ? { backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)` } : undefined
 }
 
-function ehAutomatica(transacao: Transacao): boolean {
-  return ehSaida.value && Boolean(comoSaida(transacao).automatica)
+function isAutomatic(transaction: Transaction): boolean {
+  return isExpense.value && Boolean(asExpense(transaction).automatic)
 }
 
 // Editar (ou alternar a situação de) uma ocorrência projetada materializa um
 // lançamento próprio daquele mês — independente do original em situação, data de
 // pagamento e valor. Só a fatura de cartão continua totalmente bloqueada aqui.
-function podeEditar(transacao: Transacao): boolean {
-  return !ehAutomatica(transacao)
+function canEdit(transaction: Transaction): boolean {
+  return !isAutomatic(transaction)
 }
 
 // Remover só faz sentido depois que a ocorrência já existe como lançamento próprio.
-function podeExcluir(transacao: Transacao): boolean {
-  return !ehAutomatica(transacao) && !ehProjecaoRecorrente(transacao)
+function canDelete(transaction: Transaction): boolean {
+  return !isAutomatic(transaction) && !isRecurringProjection(transaction)
 }
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
-    <div v-if="carregando" class="flex flex-col gap-3 p-5">
-      <BaseSkeleton v-for="linha in 5" :key="linha" altura="h-10" />
+    <div v-if="loading" class="flex flex-col gap-3 p-5">
+      <BaseSkeleton v-for="line in 5" :key="line" height="h-10" />
     </div>
 
-    <EmptyState v-else-if="!itens.length" :titulo="tituloVazio" :descricao="descricaoVazio">
-      <template #acao>
-        <slot name="acaoVazio" />
+    <EmptyState v-else-if="!items.length" :title="emptyTitle" :description="emptyDescription">
+      <template #action>
+        <slot name="emptyAction" />
       </template>
     </EmptyState>
 
@@ -102,10 +102,10 @@ function podeExcluir(transacao: Transacao): boolean {
       <div class="hidden md:block">
         <table class="w-full table-fixed text-xs wrap-anywhere lg:text-sm">
           <caption class="sr-only">
-            Lista de {{ ehSaida ? 'saídas' : 'entradas' }} do período selecionado
+            Lista de {{ isExpense ? 'saídas' : 'entradas' }} do período selecionado
           </caption>
           <colgroup>
-            <template v-if="ehSaida">
+            <template v-if="isExpense">
               <col class="w-[17%]" />
               <col class="w-[14%]" />
               <col class="w-[6%]" />
@@ -129,12 +129,12 @@ function podeExcluir(transacao: Transacao): boolean {
             <tr class="text-muted-foreground border-border border-b text-left">
               <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Descrição</th>
               <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Categoria</th>
-              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Tipo</th>
+              <th v-if="isExpense" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Tipo</th>
               <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Data</th>
-              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Vencimento</th>
-              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Pagamento</th>
-              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Situação</th>
-              <th v-if="ehSaida" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Pago em</th>
+              <th v-if="isExpense" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Vencimento</th>
+              <th v-if="isExpense" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Pagamento</th>
+              <th v-if="isExpense" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Situação</th>
+              <th v-if="isExpense" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Pago em</th>
               <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 text-right font-medium">Valor</th>
               <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 text-right font-medium">
                 <span class="sr-only">Ações</span>
@@ -143,93 +143,93 @@ function podeExcluir(transacao: Transacao): boolean {
           </thead>
           <tbody>
             <tr
-              v-for="transacao in itens"
-              :key="transacao.id"
-              :style="estiloLinha(transacao)"
+              v-for="transaction in items"
+              :key="transaction.id"
+              :style="rowStyle(transaction)"
               class="border-border hover:bg-success/10 border-b transition-colors last:border-0"
             >
               <td class="px-2 py-3 lg:px-3 xl:px-5">
                 <div class="flex items-center gap-2">
-                  <span class="font-medium">{{ transacao.descricao }}</span>
+                  <span class="font-medium">{{ transaction.description }}</span>
                   <Repeat
-                    v-if="transacao.recorrente"
+                    v-if="transaction.recurring"
                     class="text-muted-foreground size-3.5 shrink-0"
                     aria-label="Lançamento recorrente"
                   />
                 </div>
-                <p v-if="transacao.observacao" class="text-muted-foreground truncate text-xs">
-                  {{ transacao.observacao }}
+                <p v-if="transaction.notes" class="text-muted-foreground truncate text-xs">
+                  {{ transaction.notes }}
                 </p>
               </td>
 
               <td class="px-2 py-3 lg:px-3 xl:px-5 [&>span]:whitespace-normal">
-                <BaseBadge :cor="categoriaStore.cor(transacao.categoriaId)">
-                  {{ categoriaStore.nome(transacao.categoriaId) }}
+                <BaseBadge :color="categoryStore.color(transaction.categoryId)">
+                  {{ categoryStore.name(transaction.categoryId) }}
                 </BaseBadge>
               </td>
 
-              <td v-if="ehSaida" class="text-muted-foreground px-2 py-3 lg:px-3 xl:px-5">
-                {{ SAIDA_TIPO_LABEL[comoSaida(transacao).tipo] }}
+              <td v-if="isExpense" class="text-muted-foreground px-2 py-3 lg:px-3 xl:px-5">
+                {{ EXPENSE_TYPE_LABEL[asExpense(transaction).type] }}
               </td>
 
-              <td class="text-muted-foreground numero-tabular px-2 py-3 lg:px-3 xl:px-5">
-                {{ formatDate(transacao.data) }}
+              <td class="text-muted-foreground tabular-number px-2 py-3 lg:px-3 xl:px-5">
+                {{ formatDate(transaction.date) }}
               </td>
 
-              <td v-if="ehSaida" class="text-muted-foreground numero-tabular px-2 py-3 lg:px-3 xl:px-5">
-                {{ comoSaida(transacao).vencimento ? formatDate(comoSaida(transacao).vencimento!) : '—' }}
+              <td v-if="isExpense" class="text-muted-foreground tabular-number px-2 py-3 lg:px-3 xl:px-5">
+                {{ asExpense(transaction).dueDate ? formatDate(asExpense(transaction).dueDate!) : '—' }}
               </td>
 
-              <td v-if="ehSaida" class="text-muted-foreground px-2 py-3 lg:px-3 xl:px-5">
-                {{ FORMA_PAGAMENTO_LABEL[comoSaida(transacao).formaPagamento] }}
+              <td v-if="isExpense" class="text-muted-foreground px-2 py-3 lg:px-3 xl:px-5">
+                {{ PAYMENT_METHOD_LABEL[asExpense(transaction).paymentMethod] }}
               </td>
 
-              <td v-if="ehSaida" class="px-2 py-3 lg:px-3 xl:px-5">
+              <td v-if="isExpense" class="px-2 py-3 lg:px-3 xl:px-5">
                 <button
-                  v-if="podeEditar(transacao)"
+                  v-if="canEdit(transaction)"
                   type="button"
                   class="focus-visible:outline-ring rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
                   :title="
-                    comoSaida(transacao).status === 'PAGO'
+                    asExpense(transaction).status === 'PAGO'
                       ? 'Marcar como pendente'
                       : 'Marcar como pago'
                   "
-                  @click="emit('alternarStatus', comoSaida(transacao))"
+                  @click="emit('toggleStatus', asExpense(transaction))"
                 >
-                  <BaseBadge :tom="comoSaida(transacao).status === 'PAGO' ? 'sucesso' : 'aviso'">
-                    {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
+                  <BaseBadge :tone="asExpense(transaction).status === 'PAGO' ? 'success' : 'warning'">
+                    {{ EXPENSE_STATUS_LABEL[asExpense(transaction).status] }}
                   </BaseBadge>
                 </button>
-                <BaseBadge v-else :tom="comoSaida(transacao).status === 'PAGO' ? 'sucesso' : 'aviso'">
-                  {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
+                <BaseBadge v-else :tone="asExpense(transaction).status === 'PAGO' ? 'success' : 'warning'">
+                  {{ EXPENSE_STATUS_LABEL[asExpense(transaction).status] }}
                 </BaseBadge>
               </td>
 
-              <td v-if="ehSaida" class="text-muted-foreground numero-tabular px-2 py-3 lg:px-3 xl:px-5">
-                {{ comoSaida(transacao).pagoEm ? formatDate(comoSaida(transacao).pagoEm!) : '—' }}
+              <td v-if="isExpense" class="text-muted-foreground tabular-number px-2 py-3 lg:px-3 xl:px-5">
+                {{ asExpense(transaction).paidAt ? formatDate(asExpense(transaction).paidAt!) : '—' }}
               </td>
 
-              <td class="numero-tabular px-2 py-3 lg:px-3 xl:px-5 text-right font-semibold" :class="corValor">
-                {{ sinal }} {{ formatCurrency(transacao.valor) }}
+              <td class="tabular-number px-2 py-3 lg:px-3 xl:px-5 text-right font-semibold" :class="amountColor">
+                {{ sign }} {{ formatCurrency(transaction.amount) }}
               </td>
 
               <td class="px-2 py-3 lg:px-3 xl:px-5">
-                <div v-if="podeEditar(transacao)" class="flex flex-wrap justify-end gap-1">
+                <div v-if="canEdit(transaction)" class="flex flex-wrap justify-end gap-1">
                   <BaseButton
-                    variante="ghost"
-                    tamanho="icon"
-                    :aria-label="`Editar ${transacao.descricao}`"
-                    @click="emit('editar', transacao)"
+                    variant="ghost"
+                    size="icon"
+                    :aria-label="`Editar ${transaction.description}`"
+                    @click="emit('edit', transaction)"
                   >
                     <Pencil class="size-4" aria-hidden="true" />
                   </BaseButton>
                   <BaseButton
-                    v-if="podeExcluir(transacao)"
-                    variante="ghost"
-                    tamanho="icon"
+                    v-if="canDelete(transaction)"
+                    variant="ghost"
+                    size="icon"
                     class="hover:text-danger"
-                    :aria-label="`Excluir ${transacao.descricao}`"
-                    @click="emit('remover', transacao)"
+                    :aria-label="`Excluir ${transaction.description}`"
+                    @click="emit('remove', transaction)"
                   >
                     <Trash2 class="size-4" aria-hidden="true" />
                   </BaseButton>
@@ -244,51 +244,51 @@ function podeExcluir(transacao: Transacao): boolean {
       <!-- Cartões (mobile) -->
       <ul class="divide-border divide-y md:hidden">
         <li
-          v-for="transacao in itens"
-          :key="transacao.id"
-          :style="estiloLinha(transacao)"
+          v-for="transaction in items"
+          :key="transaction.id"
+          :style="rowStyle(transaction)"
           class="flex flex-col gap-2 px-4 py-3"
         >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <p class="truncate font-medium">{{ transacao.descricao }}</p>
-              <p class="text-muted-foreground text-xs">{{ formatDate(transacao.data) }}</p>
+              <p class="truncate font-medium">{{ transaction.description }}</p>
+              <p class="text-muted-foreground text-xs">{{ formatDate(transaction.date) }}</p>
             </div>
-            <p class="numero-tabular shrink-0 font-semibold" :class="corValor">
-              {{ sinal }} {{ formatCurrency(transacao.valor) }}
+            <p class="tabular-number shrink-0 font-semibold" :class="amountColor">
+              {{ sign }} {{ formatCurrency(transaction.amount) }}
             </p>
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <BaseBadge :cor="categoriaStore.cor(transacao.categoriaId)">
-              {{ categoriaStore.nome(transacao.categoriaId) }}
+            <BaseBadge :color="categoryStore.color(transaction.categoryId)">
+              {{ categoryStore.name(transaction.categoryId) }}
             </BaseBadge>
-            <BaseBadge v-if="ehSaida">
-              {{ SAIDA_TIPO_LABEL[comoSaida(transacao).tipo] }}
+            <BaseBadge v-if="isExpense">
+              {{ EXPENSE_TYPE_LABEL[asExpense(transaction).type] }}
             </BaseBadge>
             <BaseBadge
-              v-if="ehSaida"
-              :tom="comoSaida(transacao).status === 'PAGO' ? 'sucesso' : 'aviso'"
+              v-if="isExpense"
+              :tone="asExpense(transaction).status === 'PAGO' ? 'success' : 'warning'"
             >
-              {{ SAIDA_STATUS_LABEL[comoSaida(transacao).status] }}
+              {{ EXPENSE_STATUS_LABEL[asExpense(transaction).status] }}
             </BaseBadge>
 
-            <div v-if="podeEditar(transacao)" class="ml-auto flex gap-1">
+            <div v-if="canEdit(transaction)" class="ml-auto flex gap-1">
               <BaseButton
-                variante="ghost"
-                tamanho="icon"
-                :aria-label="`Editar ${transacao.descricao}`"
-                @click="emit('editar', transacao)"
+                variant="ghost"
+                size="icon"
+                :aria-label="`Editar ${transaction.description}`"
+                @click="emit('edit', transaction)"
               >
                 <Pencil class="size-4" aria-hidden="true" />
               </BaseButton>
               <BaseButton
-                v-if="podeExcluir(transacao)"
-                variante="ghost"
-                tamanho="icon"
+                v-if="canDelete(transaction)"
+                variant="ghost"
+                size="icon"
                 class="hover:text-danger"
-                :aria-label="`Excluir ${transacao.descricao}`"
-                @click="emit('remover', transacao)"
+                :aria-label="`Excluir ${transaction.description}`"
+                @click="emit('remove', transaction)"
               >
                 <Trash2 class="size-4" aria-hidden="true" />
               </BaseButton>
@@ -296,12 +296,12 @@ function podeExcluir(transacao: Transacao): boolean {
             <span v-else class="text-muted-foreground ml-auto text-xs">Ver em Cartões</span>
           </div>
 
-          <div v-if="ehSaida" class="text-muted-foreground flex flex-wrap gap-x-4 text-xs">
-            <span v-if="comoSaida(transacao).vencimento">
-              Vencimento: {{ formatDate(comoSaida(transacao).vencimento!) }}
+          <div v-if="isExpense" class="text-muted-foreground flex flex-wrap gap-x-4 text-xs">
+            <span v-if="asExpense(transaction).dueDate">
+              Vencimento: {{ formatDate(asExpense(transaction).dueDate!) }}
             </span>
-            <span v-if="comoSaida(transacao).pagoEm">
-              Pago em: {{ formatDate(comoSaida(transacao).pagoEm!) }}
+            <span v-if="asExpense(transaction).paidAt">
+              Pago em: {{ formatDate(asExpense(transaction).paidAt!) }}
             </span>
           </div>
         </li>
@@ -309,11 +309,11 @@ function podeExcluir(transacao: Transacao): boolean {
 
       <div class="px-5 pb-5">
         <BasePagination
-          :pagina="pagina"
-          :total-paginas="totalPaginas"
+          :page="page"
+          :total-pages="totalPages"
           :total="total"
-          :tamanho-pagina="tamanhoPagina"
-          @mudar="emit('mudarPagina', $event)"
+          :page-size="pageSize"
+          @change="emit('changePage', $event)"
         />
       </div>
     </template>

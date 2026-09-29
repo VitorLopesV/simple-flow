@@ -5,9 +5,9 @@
  * Toda conversão para `Date` usa horário local ao meio-dia para evitar o
  * clássico off-by-one causado por UTC em fusos negativos como o do Brasil.
  */
-import type { Periodo } from '@/types/common'
+import type { Period } from '@/types/common'
 
-export const MESES = [
+export const MONTHS = [
   'Janeiro',
   'Fevereiro',
   'Março',
@@ -22,7 +22,7 @@ export const MESES = [
   'Dezembro',
 ] as const
 
-export const MESES_CURTOS = [
+export const SHORT_MONTHS = [
   'Jan',
   'Fev',
   'Mar',
@@ -39,16 +39,16 @@ export const MESES_CURTOS = [
 
 /** `'2026-08-15'` -> `Date` local (12h). */
 export function toDate(iso: string): Date {
-  const [ano, mes, dia] = iso.split('-').map(Number)
-  return new Date(ano ?? 1970, (mes ?? 1) - 1, dia ?? 1, 12, 0, 0)
+  const [year, month, day] = iso.split('-').map(Number)
+  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1, 12, 0, 0)
 }
 
 /** `Date` -> `'2026-08-15'`. */
-export function toISODate(data: Date): string {
-  const ano = data.getFullYear()
-  const mes = String(data.getMonth() + 1).padStart(2, '0')
-  const dia = String(data.getDate()).padStart(2, '0')
-  return `${ano}-${mes}-${dia}`
+export function toISODate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /** `'2026-08-15'` -> `'15/08/2026'`. */
@@ -58,99 +58,99 @@ export function formatDate(iso: string | null | undefined): string {
 }
 
 /** `'2026-08-15'` -> `'15/08/2026'`, vazio se não houver valor. Usado no texto editável do DateInput. */
-export function paraMascaraDataBR(iso: string | null | undefined): string {
+export function toBrDateMask(iso: string | null | undefined): string {
   if (!iso) return ''
-  const [ano, mes, dia] = iso.split('-')
-  if (!ano || !mes || !dia) return ''
-  return `${dia}/${mes}/${ano}`
+  const [year, month, day] = iso.split('-')
+  if (!year || !month || !day) return ''
+  return `${day}/${month}/${year}`
 }
 
 /** Reaplica a máscara dd/mm/aaaa a cada tecla digitada, ignorando o que não for dígito. */
-export function mascararDataBR(entrada: string): string {
-  const digitos = entrada.replace(/\D/g, '').slice(0, 8)
-  const dia = digitos.slice(0, 2)
-  const mes = digitos.slice(2, 4)
-  const ano = digitos.slice(4, 8)
-  return [dia, mes, ano].filter(Boolean).join('/')
+export function maskBrDate(input: string): string {
+  const digits = input.replace(/\D/g, '').slice(0, 8)
+  const day = digits.slice(0, 2)
+  const month = digits.slice(2, 4)
+  const year = digits.slice(4, 8)
+  return [day, month, year].filter(Boolean).join('/')
 }
 
 /** `'15/08/2026'` -> `'2026-08-15'`, ou `null` se a máscara ainda estiver incompleta/inválida. */
-export function paraISODataBR(mascarada: string): string | null {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(mascarada)
+export function brDateToISO(masked: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(masked)
   if (!match) return null
-  const [, dia, mes, ano] = match
-  return `${ano}-${mes}-${dia}`
+  const [, day, month, year] = match
+  return `${year}-${month}-${day}`
 }
 
 /** `'2026-08-15'` -> `'15 de ago.'`. */
 export function formatDateShort(iso: string | null | undefined): string {
   if (!iso) return '—'
-  const data = toDate(iso)
-  return `${data.getDate()} de ${MESES_CURTOS[data.getMonth()]?.toLowerCase()}.`
+  const date = toDate(iso)
+  return `${date.getDate()} de ${SHORT_MONTHS[date.getMonth()]?.toLowerCase()}.`
 }
 
-/** `{ mes: 8, ano: 2026 }` -> `'Agosto de 2026'`. */
-export function formatPeriodo(periodo: Periodo): string {
-  return `${MESES[periodo.mes - 1]} de ${periodo.ano}`
+/** `{ month: 8, year: 2026 }` -> `'Agosto de 2026'`. */
+export function formatPeriod(period: Period): string {
+  return `${MONTHS[period.month - 1]} de ${period.year}`
 }
 
-/** `{ mes: 8, ano: 2026 }` -> `'2026-08'`. */
-export function toCompetencia(periodo: Periodo): string {
-  return `${periodo.ano}-${String(periodo.mes).padStart(2, '0')}`
+/** `{ month: 8, year: 2026 }` -> `'2026-08'`. */
+export function toReferenceMonth(period: Period): string {
+  return `${period.year}-${String(period.month).padStart(2, '0')}`
 }
 
-/** `'2026-08'` -> `{ mes: 8, ano: 2026 }`. */
-export function fromCompetencia(competencia: string): Periodo {
-  const [ano, mes] = competencia.split('-').map(Number)
-  return { mes: mes ?? 1, ano: ano ?? new Date().getFullYear() }
+/** `'2026-08'` -> `{ month: 8, year: 2026 }`. */
+export function fromReferenceMonth(referenceMonth: string): Period {
+  const [year, month] = referenceMonth.split('-').map(Number)
+  return { month: month ?? 1, year: year ?? new Date().getFullYear() }
 }
 
-export function periodoAtual(): Periodo {
-  const hoje = new Date()
-  return { mes: hoje.getMonth() + 1, ano: hoje.getFullYear() }
+export function currentPeriod(): Period {
+  const today = new Date()
+  return { month: today.getMonth() + 1, year: today.getFullYear() }
 }
 
 /** Soma (ou subtrai, com valor negativo) meses a um período. */
-export function addMeses(periodo: Periodo, quantidade: number): Periodo {
-  const total = periodo.ano * 12 + (periodo.mes - 1) + quantidade
-  return { ano: Math.floor(total / 12), mes: (total % 12) + 1 }
+export function addMonths(period: Period, amount: number): Period {
+  const total = period.year * 12 + (period.month - 1) + amount
+  return { year: Math.floor(total / 12), month: (total % 12) + 1 }
 }
 
-export function mesmoPeriodo(a: Periodo, b: Periodo): boolean {
-  return a.mes === b.mes && a.ano === b.ano
+export function isSamePeriod(a: Period, b: Period): boolean {
+  return a.month === b.month && a.year === b.year
 }
 
 /** Verdadeiro se a data ISO cai dentro do período informado. */
-export function dentroDoPeriodo(iso: string, periodo: Periodo): boolean {
-  const data = toDate(iso)
-  return data.getMonth() + 1 === periodo.mes && data.getFullYear() === periodo.ano
+export function isWithinPeriod(iso: string, period: Period): boolean {
+  const date = toDate(iso)
+  return date.getMonth() + 1 === period.month && date.getFullYear() === period.year
 }
 
 /** Último dia do mês do período (28-31). */
-export function ultimoDiaDoMes(periodo: Periodo): number {
-  return new Date(periodo.ano, periodo.mes, 0).getDate()
+export function lastDayOfMonth(period: Period): number {
+  return new Date(period.year, period.month, 0).getDate()
 }
 
 /** Data ISO de um dia dentro do período, limitada ao último dia do mês. */
-export function diaDoPeriodo(periodo: Periodo, dia: number): string {
-  const seguro = Math.min(dia, ultimoDiaDoMes(periodo))
-  return `${periodo.ano}-${String(periodo.mes).padStart(2, '0')}-${String(seguro).padStart(2, '0')}`
+export function dayInPeriod(period: Period, day: number): string {
+  const safe = Math.min(day, lastDayOfMonth(period))
+  return `${period.year}-${String(period.month).padStart(2, '0')}-${String(safe).padStart(2, '0')}`
 }
 
-/** Os `n` períodos que terminam em `periodo` (inclusive), do mais antigo ao mais recente. */
-export function ultimosPeriodos(periodo: Periodo, n: number): Periodo[] {
-  return Array.from({ length: n }, (_, i) => addMeses(periodo, i - (n - 1)))
+/** Os `n` períodos que terminam em `period` (inclusive), do mais antigo ao mais recente. */
+export function lastPeriods(period: Period, n: number): Period[] {
+  return Array.from({ length: n }, (_, i) => addMonths(period, i - (n - 1)))
 }
 
 /** Rótulo curto para eixos de gráfico: `'ago/26'`. */
-export function labelCurtoPeriodo(periodo: Periodo): string {
-  return `${MESES_CURTOS[periodo.mes - 1]?.toLowerCase()}/${String(periodo.ano).slice(-2)}`
+export function shortPeriodLabel(period: Period): string {
+  return `${SHORT_MONTHS[period.month - 1]?.toLowerCase()}/${String(period.year).slice(-2)}`
 }
 
 /** Dias até o vencimento (negativo se já venceu). */
-export function diasAte(iso: string): number {
-  const hoje = new Date()
-  hoje.setHours(12, 0, 0, 0)
-  const diff = toDate(iso).getTime() - hoje.getTime()
+export function daysUntil(iso: string): number {
+  const today = new Date()
+  today.setHours(12, 0, 0, 0)
+  const diff = toDate(iso).getTime() - today.getTime()
   return Math.round(diff / 86_400_000)
 }

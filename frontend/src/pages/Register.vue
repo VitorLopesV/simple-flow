@@ -6,77 +6,77 @@ import { toast } from 'vue-sonner'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
-import AuthMarca from '@/components/features/AuthMarca.vue'
+import AuthBrand from '@/components/features/AuthBrand.vue'
 import { authService } from '@/services/authService'
-import { mensagemDeErro } from '@/services/http'
+import { getErrorMessage } from '@/services/http'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-const nomeUsuario = ref('')
+const username = ref('')
 const email = ref('')
-const telefone = ref('')
-const senha = ref('')
-const confirmarSenha = ref('')
-const carregando = ref(false)
-const erros = ref<Record<string, string>>({})
+const phone = ref('')
+const password = ref('')
+const confirmPassword = ref('')
+const loading = ref(false)
+const errors = ref<Record<string, string>>({})
 
 const handleSubmit = async () => {
-  erros.value = {}
+  errors.value = {}
 
-  if (!nomeUsuario.value) {
-    erros.value.nomeUsuario = 'Nome de usuário é obrigatório'
-  } else if (nomeUsuario.value.length < 3) {
-    erros.value.nomeUsuario = 'Nome de usuário deve ter no mínimo 3 caracteres'
+  if (!username.value) {
+    errors.value.username = 'Nome de usuário é obrigatório'
+  } else if (username.value.length < 3) {
+    errors.value.username = 'Nome de usuário deve ter no mínimo 3 caracteres'
   }
 
   if (!email.value) {
-    erros.value.email = 'E-mail é obrigatório'
+    errors.value.email = 'E-mail é obrigatório'
   } else if (!isValidEmail(email.value)) {
-    erros.value.email = 'E-mail inválido'
+    errors.value.email = 'E-mail inválido'
   }
 
-  if (!telefone.value) {
-    erros.value.telefone = 'Número de telefone é obrigatório'
-  } else if (!isValidPhone(telefone.value)) {
-    erros.value.telefone = 'Número de telefone inválido'
+  if (!phone.value) {
+    errors.value.phone = 'Número de telefone é obrigatório'
+  } else if (!isValidPhone(phone.value)) {
+    errors.value.phone = 'Número de telefone inválido'
   }
 
-  if (!senha.value) {
-    erros.value.senha = 'Senha é obrigatória'
-  } else if (senha.value.length < 6) {
-    erros.value.senha = 'Senha deve ter no mínimo 6 caracteres'
+  if (!password.value) {
+    errors.value.password = 'Senha é obrigatória'
+  } else if (password.value.length < 6) {
+    errors.value.password = 'Senha deve ter no mínimo 6 caracteres'
   }
 
-  if (!confirmarSenha.value) {
-    erros.value.confirmarSenha = 'Confirmação de senha é obrigatória'
-  } else if (senha.value !== confirmarSenha.value) {
-    erros.value.confirmarSenha = 'As senhas não coincidem'
+  if (!confirmPassword.value) {
+    errors.value.confirmPassword = 'Confirmação de senha é obrigatória'
+  } else if (password.value !== confirmPassword.value) {
+    errors.value.confirmPassword = 'As senhas não coincidem'
   }
 
-  if (Object.keys(erros.value).length > 0) {
+  if (Object.keys(errors.value).length > 0) {
     return
   }
 
-  carregando.value = true
+  loading.value = true
 
   try {
     // Telefone é validado no formulário, mas ainda não é persistido pelo backend
     // (a tabela profiles só guarda nome) — fica como possível melhoria futura.
-    const sessao = await authService.registrar({
+    const session = await authService.register({
       email: email.value,
-      senha: senha.value,
-      nome: nomeUsuario.value,
+      password: password.value,
+      name: username.value,
     })
-    authStore.definirSessao(sessao)
+    authStore.setSession(session)
 
     toast.success('Cadastro realizado com sucesso!')
     await router.push({ name: 'dashboard' })
   } catch (error) {
-    toast.error(mensagemDeErro(error, 'Erro ao registrar. Tente novamente.'))
+    toast.error(getErrorMessage(error, 'Erro ao registrar. Tente novamente.'))
   } finally {
-    carregando.value = false
+    loading.value = false
   }
 }
 
@@ -102,14 +102,14 @@ const formatPhone = (value: string) => {
 
 const handlePhoneInput = (event: Event) => {
   const input = event.target as HTMLInputElement
-  telefone.value = formatPhone(input.value)
+  phone.value = formatPhone(input.value)
 }
 </script>
 
 <template>
   <div class="w-full max-w-md">
     <!-- No mobile o painel da marca some (ver AuthLayout): a marca fica acima do card. -->
-    <AuthMarca class="mb-6 lg:hidden" />
+    <AuthBrand class="mb-6 lg:hidden" />
 
     <BaseCard class="border shadow-lg">
       <div class="space-y-6">
@@ -122,59 +122,59 @@ const handlePhoneInput = (event: Event) => {
         <!-- Form -->
         <form @submit.prevent="handleSubmit" class="space-y-4">
           <BaseInput
-            v-model="nomeUsuario"
+            v-model="username"
             label="Nome de usuário"
-            tipo="text"
+            type="text"
             placeholder="seu_usuario"
-            :erro="erros.nomeUsuario"
+            :error="errors.username"
             autocomplete="username"
           />
 
           <BaseInput
             v-model="email"
             label="E-mail"
-            tipo="text"
+            type="text"
             placeholder="seu@email.com"
-            :erro="erros.email"
+            :error="errors.email"
             autocomplete="email"
           />
 
           <BaseInput
-            v-model="telefone"
+            v-model="phone"
             label="Número de telefone"
-            tipo="text"
+            type="text"
             placeholder="(11) 99999-9999"
-            :erro="erros.telefone"
+            :error="errors.phone"
             @input="handlePhoneInput"
             autocomplete="tel"
           />
 
           <BaseInput
-            v-model="senha"
+            v-model="password"
             label="Senha"
-            tipo="password"
+            type="password"
             placeholder="••••••••"
-            :erro="erros.senha"
+            :error="errors.password"
             autocomplete="new-password"
-            dica="Mínimo 6 caracteres"
+            hint="Mínimo 6 caracteres"
           />
 
           <BaseInput
-            v-model="confirmarSenha"
+            v-model="confirmPassword"
             label="Confirmar senha"
-            tipo="password"
+            type="password"
             placeholder="••••••••"
-            :erro="erros.confirmarSenha"
+            :error="errors.confirmPassword"
             autocomplete="new-password"
           />
 
           <BaseButton
-            tipo="submit"
-            variante="success"
-            tamanho="lg"
-            :carregando="carregando"
-            :desabilitado="carregando"
-            blocoCompleto
+            type="submit"
+            variant="success"
+            size="lg"
+            :loading="loading"
+            :disabled="loading"
+            full-width
           >
             Registrar
           </BaseButton>

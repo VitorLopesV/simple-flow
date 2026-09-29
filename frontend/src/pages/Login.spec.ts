@@ -19,7 +19,7 @@ const STUBS = { RouterLink: { template: '<a><slot /></a>' } }
 
 let wrapper: VueWrapper | undefined
 
-function montar() {
+function mountComponent() {
   wrapper = mount(Login, { global: { stubs: STUBS } })
   return wrapper
 }
@@ -34,58 +34,58 @@ afterEach(() => {
 
 describe('Login', () => {
   it('tem título, campos rotulados e botão de envio', () => {
-    const tela = montar()
+    const screen = mountComponent()
 
-    expect(tela.get('h1').text()).toBe('Bem-vindo de volta')
-    expect(tela.get('label[for]').text()).toContain('E-mail')
-    expect(tela.find('input[autocomplete="email"]').exists()).toBe(true)
-    expect(tela.find('input[autocomplete="current-password"]').exists()).toBe(true)
-    expect(tela.get('button[type="submit"]').text()).toBe('Entrar')
+    expect(screen.get('h1').text()).toBe('Bem-vindo de volta')
+    expect(screen.get('label[for]').text()).toContain('E-mail')
+    expect(screen.find('input[autocomplete="email"]').exists()).toBe(true)
+    expect(screen.find('input[autocomplete="current-password"]').exists()).toBe(true)
+    expect(screen.get('button[type="submit"]').text()).toBe('Entrar')
   })
 
   it('aponta para o registro', () => {
-    const tela = montar()
+    const screen = mountComponent()
 
-    expect(tela.text()).toContain('Registre-se aqui')
+    expect(screen.text()).toContain('Registre-se aqui')
   })
 
   it('valida campos vazios com mensagens acessíveis e não chama o serviço', async () => {
-    const tela = montar()
+    const screen = mountComponent()
 
-    await tela.get('form').trigger('submit')
+    await screen.get('form').trigger('submit')
 
-    const alertas = tela.findAll('[role="alert"]').map((alerta) => alerta.text())
-    expect(alertas).toEqual(['E-mail é obrigatório', 'Senha é obrigatória'])
-    expect(tela.get('input[autocomplete="email"]').attributes('aria-invalid')).toBe('true')
+    const alerts = screen.findAll('[role="alert"]').map((alerta) => alerta.text())
+    expect(alerts).toEqual(['E-mail é obrigatório', 'Senha é obrigatória'])
+    expect(screen.get('input[autocomplete="email"]').attributes('aria-invalid')).toBe('true')
     expect(loginMock).not.toHaveBeenCalled()
   })
 
   it('rejeita e-mail inválido', async () => {
-    const tela = montar()
+    const screen = mountComponent()
 
-    await tela.get('input[autocomplete="email"]').setValue('sem-arroba')
-    await tela.get('input[autocomplete="current-password"]').setValue('123456')
-    await tela.get('form').trigger('submit')
+    await screen.get('input[autocomplete="email"]').setValue('sem-arroba')
+    await screen.get('input[autocomplete="current-password"]').setValue('123456')
+    await screen.get('form').trigger('submit')
 
-    expect(tela.text()).toContain('E-mail inválido')
+    expect(screen.text()).toContain('E-mail inválido')
     expect(loginMock).not.toHaveBeenCalled()
   })
 
   it('envia as credenciais e vai para o dashboard', async () => {
     loginMock.mockResolvedValue({
-      usuario: { id: 'u1', email: 'a@b.com', nome: null },
+      user: { id: 'u1', email: 'a@b.com', name: null },
       accessToken: 'a',
       refreshToken: 'r',
       expiresIn: 3600,
     })
-    const tela = montar()
+    const screen = mountComponent()
 
-    await tela.get('input[autocomplete="email"]').setValue('a@b.com')
-    await tela.get('input[autocomplete="current-password"]').setValue('123456')
-    await tela.get('form').trigger('submit')
+    await screen.get('input[autocomplete="email"]').setValue('a@b.com')
+    await screen.get('input[autocomplete="current-password"]').setValue('123456')
+    await screen.get('form').trigger('submit')
     await flushPromises()
 
-    expect(loginMock).toHaveBeenCalledWith({ email: 'a@b.com', senha: '123456' })
+    expect(loginMock).toHaveBeenCalledWith({ email: 'a@b.com', password: '123456' })
     expect(push).toHaveBeenCalledWith({ name: 'dashboard' })
   })
 })

@@ -6,50 +6,50 @@ import { toast } from 'vue-sonner'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
-import AuthMarca from '@/components/features/AuthMarca.vue'
+import AuthBrand from '@/components/features/AuthBrand.vue'
 import { authService } from '@/services/authService'
-import { mensagemDeErro } from '@/services/http'
+import { getErrorMessage } from '@/services/http'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const email = ref('')
-const senha = ref('')
-const carregando = ref(false)
-const erros = ref<Record<string, string>>({})
+const password = ref('')
+const loading = ref(false)
+const errors = ref<Record<string, string>>({})
 
 const handleSubmit = async () => {
-  erros.value = {}
+  errors.value = {}
 
   if (!email.value) {
-    erros.value.email = 'E-mail é obrigatório'
+    errors.value.email = 'E-mail é obrigatório'
   } else if (!isValidEmail(email.value)) {
-    erros.value.email = 'E-mail inválido'
+    errors.value.email = 'E-mail inválido'
   }
 
-  if (!senha.value) {
-    erros.value.senha = 'Senha é obrigatória'
-  } else if (senha.value.length < 6) {
-    erros.value.senha = 'Senha deve ter no mínimo 6 caracteres'
+  if (!password.value) {
+    errors.value.password = 'Senha é obrigatória'
+  } else if (password.value.length < 6) {
+    errors.value.password = 'Senha deve ter no mínimo 6 caracteres'
   }
 
-  if (Object.keys(erros.value).length > 0) {
+  if (Object.keys(errors.value).length > 0) {
     return
   }
 
-  carregando.value = true
+  loading.value = true
 
   try {
-    const sessao = await authService.login({ email: email.value, senha: senha.value })
-    authStore.definirSessao(sessao)
+    const session = await authService.login({ email: email.value, password: password.value })
+    authStore.setSession(session)
 
     toast.success('Login realizado com sucesso!')
     await router.push({ name: 'dashboard' })
   } catch (error) {
-    toast.error(mensagemDeErro(error, 'Erro ao fazer login. Verifique seus dados.'))
+    toast.error(getErrorMessage(error, 'Erro ao fazer login. Verifique seus dados.'))
   } finally {
-    carregando.value = false
+    loading.value = false
   }
 }
 
@@ -61,7 +61,7 @@ const isValidEmail = (email: string) => {
 <template>
   <div class="w-full max-w-md">
     <!-- No mobile o painel da marca some (ver AuthLayout): a marca fica acima do card. -->
-    <AuthMarca class="mb-6 lg:hidden" />
+    <AuthBrand class="mb-6 lg:hidden" />
 
     <BaseCard class="border shadow-lg">
       <div class="space-y-6">
@@ -76,28 +76,28 @@ const isValidEmail = (email: string) => {
           <BaseInput
             v-model="email"
             label="E-mail"
-            tipo="text"
+            type="text"
             placeholder="seu@email.com"
-            :erro="erros.email"
+            :error="errors.email"
             autocomplete="email"
           />
 
           <BaseInput
-            v-model="senha"
+            v-model="password"
             label="Senha"
-            tipo="password"
+            type="password"
             placeholder="••••••••"
-            :erro="erros.senha"
+            :error="errors.password"
             autocomplete="current-password"
           />
 
           <BaseButton
-            tipo="submit"
-            variante="success"
-            tamanho="lg"
-            :carregando="carregando"
-            :desabilitado="carregando"
-            blocoCompleto
+            type="submit"
+            variant="success"
+            size="lg"
+            :loading="loading"
+            :disabled="loading"
+            full-width
           >
             Entrar
           </BaseButton>
@@ -107,7 +107,7 @@ const isValidEmail = (email: string) => {
         <div class="border-border border-t pt-5 text-center text-sm">
           <p class="text-muted-foreground">
             Não tem uma conta?
-            <RouterLink :to="{ name: 'registro' }" class="text-success hover:underline font-semibold">
+            <RouterLink :to="{ name: 'register' }" class="text-success hover:underline font-semibold">
               Registre-se aqui
             </RouterLink>
           </p>

@@ -2,19 +2,19 @@ import type { PageRequest, Paginated } from '@/types/common'
 import { MOCK_LATENCY } from '../http'
 
 /** Simula a latência da rede para que loadings e skeletons sejam exercitados. */
-export function delay<T>(valor: T, ms = MOCK_LATENCY): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(valor), ms))
+export function delay<T>(value: T, ms = MOCK_LATENCY): Promise<T> {
+  return new Promise((resolve) => setTimeout(() => resolve(value), ms))
 }
 
-export function paginar<T>(itens: T[], { page, pageSize }: PageRequest): Paginated<T> {
-  const total = itens.length
+export function paginate<T>(items: T[], { page, pageSize }: PageRequest): Paginated<T> {
+  const total = items.length
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const paginaSegura = Math.min(Math.max(1, page), totalPages)
-  const inicio = (paginaSegura - 1) * pageSize
+  const safePage = Math.min(Math.max(1, page), totalPages)
+  const start = (safePage - 1) * pageSize
 
   return {
-    items: itens.slice(inicio, inicio + pageSize),
-    page: paginaSegura,
+    items: items.slice(start, start + pageSize),
+    page: safePage,
     pageSize,
     total,
     totalPages,
@@ -22,15 +22,15 @@ export function paginar<T>(itens: T[], { page, pageSize }: PageRequest): Paginat
 }
 
 /** Busca acento-insensível e case-insensível. */
-export function normalizar(texto: string): string {
-  return texto
+export function normalize(text: string): string {
+  return text
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .trim()
 }
 
-export function contemBusca(texto: string, busca: string | undefined | null): boolean {
-  if (!busca?.trim()) return true
-  return normalizar(texto).includes(normalizar(busca))
+export function matchesSearch(text: string, search: string | undefined | null): boolean {
+  if (!search?.trim()) return true
+  return normalize(text).includes(normalize(search))
 }

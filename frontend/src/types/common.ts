@@ -4,11 +4,11 @@
 export type ID = string
 
 /** Período de competência (mês/ano) usado em todos os filtros da aplicação. */
-export interface Periodo {
+export interface Period {
   /** 1-12 */
-  mes: number
+  month: number
   /** Ex.: 2026 */
-  ano: number
+  year: number
 }
 
 export interface PageRequest {
@@ -27,17 +27,17 @@ export interface Paginated<T> {
 export type SortDirection = 'asc' | 'desc'
 
 export interface SortRequest<TField extends string = string> {
-  campo: TField
-  direcao: SortDirection
+  field: TField
+  direction: SortDirection
 }
 
 /** Ponto de uma série temporal usada nos gráficos. */
-export interface SeriePonto {
+export interface SeriesPoint {
   label: string
-  valor: number
+  value: number
 }
 
-export interface OpcaoSelect<T = string> {
+export interface SelectOption<T = string> {
   label: string
   value: T
   disabled?: boolean
@@ -46,5 +46,5 @@ export interface OpcaoSelect<T = string> {
 /** Estado de requisição usado pelas stores. */
 export interface RequestState {
   loading: boolean
-  erro: string | null
+  error: string | null
 }

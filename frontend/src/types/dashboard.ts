@@ -1,46 +1,54 @@
-import type { ID, SeriePonto } from './common'
-import type { SaidaTipo } from './saida'
+import type { Movement } from './category'
+import type { ID, SeriesPoint } from './common'
+import type { ExpenseType } from './expense'
 
-export interface TransacaoRecente {
+export interface RecentTransaction {
   id: ID
-  tipo: 'ENTRADA' | 'SAIDA'
-  descricao: string
-  valor: number
-  data: string
-  categoriaNome: string
-  categoriaCor: string
+  movement: Movement
+  description: string
+  amount: number
+  date: string
+  categoryName: string
+  categoryColor: string
 }
 
-export interface DashboardResumo {
-  totalEntradas: number
-  totalSaidas: number
-  saldo: number
+/** Total agrupado por categoria, com nome e cor prontos para o gráfico. */
+export interface CategoryTotal {
+  name: string
+  color: string
+  total: number
+}
+
+export interface DashboardSummary {
+  totalIncome: number
+  totalExpenses: number
+  balance: number
   /**
-   * Quanto de `totalSaidas` é fatura de cartão — recorte do mesmo conjunto, pelo
+   * Quanto de `totalExpenses` é fatura de cartão — recorte do mesmo conjunto, pelo
    * mês de vencimento da fatura, não pela competência.
    */
-  totalFaturas: number
-  variacaoEntradas: number
-  variacaoSaidas: number
+  totalInvoices: number
+  incomeChange: number
+  expenseChange: number
   /** Últimos 6 meses de entradas e saídas. */
-  serieEntradas: SeriePonto[]
-  serieSaidas: SeriePonto[]
+  incomeSeries: SeriesPoint[]
+  expenseSeries: SeriesPoint[]
   /**
-   * Últimos 6 meses só de faturas de cartão — recorte de `serieSaidas`, não soma a mais.
+   * Últimos 6 meses só de faturas de cartão — recorte de `expenseSeries`, não soma a mais.
    * Opcional: um backend que ainda não devolva a série é tratado como "sem cartão".
    */
-  serieFaturas?: SeriePonto[]
+  invoiceSeries?: SeriesPoint[]
   /** Distribuição das saídas por categoria no período. */
-  gastosPorCategoria: { nome: string; cor: string; total: number }[]
+  expensesByCategory: CategoryTotal[]
   /** Distribuição das entradas por categoria no período. */
-  entradasPorCategoria: { nome: string; cor: string; total: number }[]
+  incomeByCategory: CategoryTotal[]
   /**
-   * Transações lançadas nos cartões, agrupadas por `SaidaTipo` — só as das faturas que
-   * entram em `totalFaturas` (mesma regra de mês), então a soma bate com ele.
+   * Transações lançadas nos cartões, agrupadas por `ExpenseType` — só as das faturas que
+   * entram em `totalInvoices` (mesma regra de mês), então a soma bate com ele.
    * Opcional: um backend que ainda não devolva o campo é tratado como "sem cartão".
    */
-  gastosCartoesPorTipo?: { tipo: SaidaTipo; total: number }[]
-  /** Mesmas transações de `gastosCartoesPorTipo`, agrupadas por categoria. Opcional pelo mesmo motivo. */
-  gastosCartoesPorCategoria?: { nome: string; cor: string; total: number }[]
-  transacoesRecentes: TransacaoRecente[]
+  cardExpensesByType?: { type: ExpenseType; total: number }[]
+  /** Mesmas transações de `cardExpensesByType`, agrupadas por categoria. Opcional pelo mesmo motivo. */
+  cardExpensesByCategory?: CategoryTotal[]
+  recentTransactions: RecentTransaction[]
 }

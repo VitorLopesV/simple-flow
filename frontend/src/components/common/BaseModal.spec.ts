@@ -6,11 +6,11 @@ import BaseModal from '@/components/common/BaseModal.vue'
 
 type Props = InstanceType<typeof BaseModal>['$props']
 
-const montados: VueWrapper[] = []
-const removiveis: HTMLElement[] = []
+const mounted: VueWrapper[] = []
+const removables: HTMLElement[] = []
 
 /** Conteúdo padrão: dois elementos focáveis no corpo do modal. */
-const conteudoPadrao = () => [
+const defaultContent = () => [
   h('input', { id: 'campo-a', type: 'text' }),
   h('button', { id: 'botao-b', type: 'button' }, 'B'),
 ]
@@ -19,389 +19,389 @@ const conteudoPadrao = () => [
  * Monta ligado como `v-model:aberto` (fechar de dentro remove o conteúdo) e preso ao documento.
  * `Teleport` vem stubado: o conteúdo fica dentro do wrapper.
  */
-function montar(
+function mountComponent(
   props: Partial<Props> = {},
-  slots: { default?: () => VNodeChild; rodape?: () => VNodeChild } = { default: conteudoPadrao },
+  slots: { default?: () => VNodeChild; footer?: () => VNodeChild } = { default: defaultContent },
 ) {
   const wrapper: VueWrapper = mount(BaseModal, {
     props: {
-      titulo: 'Título do modal',
-      aberto: true,
-      'onUpdate:aberto': (valor: boolean) => wrapper.setProps({ aberto: valor }),
+      title: 'Título do modal',
+      open: true,
+      'onUpdate:open': (amount: boolean) => wrapper.setProps({ open: amount }),
       ...props,
     } as Props,
     slots,
     attachTo: document.body,
     global: { stubs: { teleport: true } },
   })
-  montados.push(wrapper)
+  mounted.push(wrapper)
   return wrapper
 }
 
 /** Abre um modal que começou fechado, como o app faz, e espera o foco inicial ser aplicado. */
-async function abrir(wrapper: VueWrapper) {
-  await wrapper.setProps({ aberto: true })
+async function openModal(wrapper: VueWrapper) {
+  await wrapper.setProps({ open: true })
   await nextTick()
   await nextTick()
 }
 
-const dialogo = (wrapper: VueWrapper) => wrapper.find('[role="dialog"]')
-const fundo = (wrapper: VueWrapper) => dialogo(wrapper).element.parentElement as HTMLElement
-const botaoFechar = (wrapper: VueWrapper) => wrapper.get('button[aria-label="Fechar"]')
-const elementoFechar = (wrapper: VueWrapper) => botaoFechar(wrapper).element as HTMLElement
-const porId = (id: string) => document.getElementById(id) as HTMLElement
+const dialog = (wrapper: VueWrapper) => wrapper.find('[role="dialog"]')
+const backdrop = (wrapper: VueWrapper) => dialog(wrapper).element.parentElement as HTMLElement
+const closeButton = (wrapper: VueWrapper) => wrapper.get('button[aria-label="Fechar"]')
+const closeElement = (wrapper: VueWrapper) => closeButton(wrapper).element as HTMLElement
+const byId = (id: string) => document.getElementById(id) as HTMLElement
 
 /** Dispara uma tecla no elemento (borbulha até o fundo do modal) e diz se o padrão foi impedido. */
-function teclar(alvo: Element, key: string, opcoes: { shiftKey?: boolean } = {}): boolean {
-  const evento = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...opcoes })
-  alvo.dispatchEvent(evento)
-  return evento.defaultPrevented
+function pressKey(target: Element, key: string, options: { shiftKey?: boolean } = {}): boolean {
+  const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options })
+  target.dispatchEvent(event)
+  return event.defaultPrevented
 }
 
 afterEach(() => {
-  while (montados.length) montados.pop()!.unmount()
-  while (removiveis.length) removiveis.pop()!.remove()
+  while (mounted.length) mounted.pop()!.unmount()
+  while (removables.length) removables.pop()!.remove()
   document.body.style.overflow = ''
   vi.restoreAllMocks()
 })
 
 describe('estrutura e acessibilidade', () => {
   it('fechado não renderiza nada', () => {
-    const wrapper = montar({ aberto: false })
+    const wrapper = mountComponent({ open: false })
 
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(dialog(wrapper).exists()).toBe(false)
     expect(wrapper.text()).toBe('')
   })
 
   it('aberto expõe role="dialog" e aria-modal="true"', () => {
-    const modal = dialogo(montar())
+    const modal = dialog(mountComponent())
 
     expect(modal.exists()).toBe(true)
     expect(modal.attributes('aria-modal')).toBe('true')
   })
 
   it('é rotulado pelo título', () => {
-    const wrapper = montar({ titulo: 'Novo lançamento' })
+    const wrapper = mountComponent({ title: 'Novo lançamento' })
 
-    const titulo = wrapper.get('h2')
-    expect(titulo.text()).toBe('Novo lançamento')
-    expect(dialogo(wrapper).attributes('aria-labelledby')).toBe(titulo.attributes('id'))
+    const title = wrapper.get('h2')
+    expect(title.text()).toBe('Novo lançamento')
+    expect(dialog(wrapper).attributes('aria-labelledby')).toBe(title.attributes('id'))
   })
 
   it('descrição opcional: aparece e é ligada por aria-describedby', () => {
-    const wrapper = montar({ descricao: 'Preencha os dados abaixo.' })
+    const wrapper = mountComponent({ description: 'Preencha os dados abaixo.' })
 
-    const descricao = wrapper.get('h2 + p')
-    expect(descricao.text()).toBe('Preencha os dados abaixo.')
-    expect(dialogo(wrapper).attributes('aria-describedby')).toBe(descricao.attributes('id'))
+    const description = wrapper.get('h2 + p')
+    expect(description.text()).toBe('Preencha os dados abaixo.')
+    expect(dialog(wrapper).attributes('aria-describedby')).toBe(description.attributes('id'))
   })
 
   it('sem descrição não há aria-describedby', () => {
-    expect(dialogo(montar()).attributes('aria-describedby')).toBeUndefined()
+    expect(dialog(mountComponent()).attributes('aria-describedby')).toBeUndefined()
   })
 
   it('renderiza o conteúdo e só mostra o rodapé quando o slot existe', () => {
-    const sem = montar()
-    expect(sem.find('footer').exists()).toBe(false)
-    expect(sem.find('#campo-a').exists()).toBe(true)
+    const withoutFooter = mountComponent()
+    expect(withoutFooter.find('footer').exists()).toBe(false)
+    expect(withoutFooter.find('#campo-a').exists()).toBe(true)
 
-    const com = montar({}, { default: conteudoPadrao, rodape: () => h('button', { id: 'salvar' }, 'Salvar') })
-    expect(com.get('footer').text()).toBe('Salvar')
+    const withFooter = mountComponent({}, { default: defaultContent, footer: () => h('button', { id: 'save' }, 'Salvar') })
+    expect(withFooter.get('footer').text()).toBe('Salvar')
   })
 
   it.each([
     ['sm', 'max-w-sm'],
     ['md', 'max-w-lg'],
     ['lg', 'max-w-2xl'],
-  ] as const)('largura %s usa %s', (largura, classe) => {
-    expect(dialogo(montar({ largura })).classes()).toContain(classe)
+  ] as const)('largura %s usa %s', (width, classe) => {
+    expect(dialog(mountComponent({ width })).classes()).toContain(classe)
   })
 
   it('a largura padrão é md', () => {
-    expect(dialogo(montar()).classes()).toContain('max-w-lg')
+    expect(dialog(mountComponent()).classes()).toContain('max-w-lg')
   })
 
   it('reflete a mudança do título', async () => {
-    const wrapper = montar({ titulo: 'Antes' })
+    const wrapper = mountComponent({ title: 'Antes' })
 
-    await wrapper.setProps({ titulo: 'Depois' })
+    await wrapper.setProps({ title: 'Depois' })
 
     expect(wrapper.get('h2').text()).toBe('Depois')
   })
 })
 
-describe('foco', () => {
+describe('focus', () => {
   it('ao abrir, o foco vai para o primeiro campo dentro do modal', async () => {
-    const wrapper = montar({ aberto: false })
+    const wrapper = mountComponent({ open: false })
 
-    await abrir(wrapper)
+    await openModal(wrapper)
 
-    expect(document.activeElement).toBe(porId('campo-a'))
-    expect(dialogo(wrapper).element.contains(document.activeElement)).toBe(true)
+    expect(document.activeElement).toBe(byId('campo-a'))
+    expect(dialog(wrapper).element.contains(document.activeElement)).toBe(true)
   })
 
   it('o botão Fechar do cabeçalho nunca é o foco inicial', async () => {
-    const wrapper = montar({ aberto: false }, { default: () => h('button', { id: 'so-botao' }, 'Ok') })
+    const wrapper = mountComponent({ open: false }, { default: () => h('button', { id: 'so-botao' }, 'Ok') })
 
-    await abrir(wrapper)
+    await openModal(wrapper)
 
-    expect(document.activeElement).toBe(porId('so-botao'))
-    expect(document.activeElement).not.toBe(elementoFechar(wrapper))
+    expect(document.activeElement).toBe(byId('so-botao'))
+    expect(document.activeElement).not.toBe(closeElement(wrapper))
   })
 
   it('sem elemento focável no conteúdo o foco não é movido', async () => {
-    const antes = document.createElement('button')
-    document.body.append(antes)
-    removiveis.push(antes)
-    antes.focus()
-    const wrapper = montar({ aberto: false }, { default: () => h('p', 'Só texto') })
+    const before = document.createElement('button')
+    document.body.append(before)
+    removables.push(before)
+    before.focus()
+    const wrapper = mountComponent({ open: false }, { default: () => h('p', 'Só texto') })
 
-    await abrir(wrapper)
+    await openModal(wrapper)
 
-    expect(document.activeElement).toBe(antes)
+    expect(document.activeElement).toBe(before)
   })
 
   it('ao fechar, o foco volta ao elemento que abriu', async () => {
-    const gatilho = document.createElement('button')
-    gatilho.textContent = 'Abrir'
-    document.body.append(gatilho)
-    removiveis.push(gatilho)
-    gatilho.focus()
-    const wrapper = montar({ aberto: false })
+    const trigger = document.createElement('button')
+    trigger.textContent = 'Abrir'
+    document.body.append(trigger)
+    removables.push(trigger)
+    trigger.focus()
+    const wrapper = mountComponent({ open: false })
 
-    await abrir(wrapper)
-    expect(document.activeElement).toBe(porId('campo-a'))
+    await openModal(wrapper)
+    expect(document.activeElement).toBe(byId('campo-a'))
 
-    await wrapper.setProps({ aberto: false })
+    await wrapper.setProps({ open: false })
 
-    expect(document.activeElement).toBe(gatilho)
+    expect(document.activeElement).toBe(trigger)
   })
 
   it('cada abertura guarda o elemento que a originou', async () => {
-    const primeiro = document.createElement('button')
-    const segundo = document.createElement('button')
-    document.body.append(primeiro, segundo)
-    removiveis.push(primeiro, segundo)
-    const wrapper = montar({ aberto: false })
+    const first = document.createElement('button')
+    const second = document.createElement('button')
+    document.body.append(first, second)
+    removables.push(first, second)
+    const wrapper = mountComponent({ open: false })
 
-    primeiro.focus()
-    await abrir(wrapper)
-    await wrapper.setProps({ aberto: false })
-    expect(document.activeElement).toBe(primeiro)
+    first.focus()
+    await openModal(wrapper)
+    await wrapper.setProps({ open: false })
+    expect(document.activeElement).toBe(first)
 
-    segundo.focus()
-    await abrir(wrapper)
-    await wrapper.setProps({ aberto: false })
-    expect(document.activeElement).toBe(segundo)
+    second.focus()
+    await openModal(wrapper)
+    await wrapper.setProps({ open: false })
+    expect(document.activeElement).toBe(second)
   })
 })
 
 describe('focus-trap (Tab / Shift+Tab)', () => {
   // Ordem dos focáveis no modal: [Fechar (cabeçalho), campo-a, botao-b].
   it('Tab no último elemento volta ao primeiro (o botão Fechar) e impede o padrão', async () => {
-    const wrapper = montar({ aberto: false })
-    await abrir(wrapper)
-    porId('botao-b').focus()
+    const wrapper = mountComponent({ open: false })
+    await openModal(wrapper)
+    byId('botao-b').focus()
 
-    const impedido = teclar(porId('botao-b'), 'Tab')
+    const prevented = pressKey(byId('botao-b'), 'Tab')
 
-    expect(impedido).toBe(true)
-    expect(document.activeElement).toBe(elementoFechar(wrapper))
+    expect(prevented).toBe(true)
+    expect(document.activeElement).toBe(closeElement(wrapper))
   })
 
   it('Shift+Tab no primeiro elemento vai ao último e impede o padrão', async () => {
-    const wrapper = montar({ aberto: false })
-    await abrir(wrapper)
-    elementoFechar(wrapper).focus()
+    const wrapper = mountComponent({ open: false })
+    await openModal(wrapper)
+    closeElement(wrapper).focus()
 
-    const impedido = teclar(elementoFechar(wrapper), 'Tab', { shiftKey: true })
+    const prevented = pressKey(closeElement(wrapper), 'Tab', { shiftKey: true })
 
-    expect(impedido).toBe(true)
-    expect(document.activeElement).toBe(porId('botao-b'))
+    expect(prevented).toBe(true)
+    expect(document.activeElement).toBe(byId('botao-b'))
   })
 
   it('Tab no meio não é interceptado (o navegador segue a ordem natural)', async () => {
-    const wrapper = montar({ aberto: false })
-    await abrir(wrapper)
-    porId('campo-a').focus()
+    const wrapper = mountComponent({ open: false })
+    await openModal(wrapper)
+    byId('campo-a').focus()
 
-    expect(teclar(porId('campo-a'), 'Tab')).toBe(false)
-    expect(document.activeElement).toBe(porId('campo-a'))
+    expect(pressKey(byId('campo-a'), 'Tab')).toBe(false)
+    expect(document.activeElement).toBe(byId('campo-a'))
   })
 
   it('Shift+Tab no meio e Tab no primeiro não são interceptados', async () => {
-    const wrapper = montar({ aberto: false })
-    await abrir(wrapper)
+    const wrapper = mountComponent({ open: false })
+    await openModal(wrapper)
 
-    porId('campo-a').focus()
-    expect(teclar(porId('campo-a'), 'Tab', { shiftKey: true })).toBe(false)
+    byId('campo-a').focus()
+    expect(pressKey(byId('campo-a'), 'Tab', { shiftKey: true })).toBe(false)
 
-    elementoFechar(wrapper).focus()
-    expect(teclar(elementoFechar(wrapper), 'Tab')).toBe(false)
-    expect(document.activeElement).toBe(elementoFechar(wrapper))
+    closeElement(wrapper).focus()
+    expect(pressKey(closeElement(wrapper), 'Tab')).toBe(false)
+    expect(document.activeElement).toBe(closeElement(wrapper))
   })
 
   it('o rodapé entra no ciclo: Tab no último botão do rodapé volta ao primeiro', async () => {
-    const wrapper = montar(
-      { aberto: false },
-      { default: conteudoPadrao, rodape: () => h('button', { id: 'salvar', type: 'button' }, 'Salvar') },
+    const wrapper = mountComponent(
+      { open: false },
+      { default: defaultContent, footer: () => h('button', { id: 'save', type: 'button' }, 'Salvar') },
     )
-    await abrir(wrapper)
-    porId('salvar').focus()
+    await openModal(wrapper)
+    byId('save').focus()
 
-    expect(teclar(porId('salvar'), 'Tab')).toBe(true)
-    expect(document.activeElement).toBe(elementoFechar(wrapper))
+    expect(pressKey(byId('save'), 'Tab')).toBe(true)
+    expect(document.activeElement).toBe(closeElement(wrapper))
 
-    expect(teclar(elementoFechar(wrapper), 'Tab', { shiftKey: true })).toBe(true)
-    expect(document.activeElement).toBe(porId('salvar'))
+    expect(pressKey(closeElement(wrapper), 'Tab', { shiftKey: true })).toBe(true)
+    expect(document.activeElement).toBe(byId('save'))
   })
 
   it('botões desabilitados e tabindex="-1" ficam fora do ciclo', async () => {
-    const wrapper = montar(
-      { aberto: false },
+    const wrapper = mountComponent(
+      { open: false },
       {
         default: () => [
           h('button', { id: 'ultimo-habilitado', type: 'button' }, 'Ok'),
-          h('button', { id: 'desabilitado', type: 'button', disabled: true }, 'X'),
+          h('button', { id: 'disabled', type: 'button', disabled: true }, 'X'),
           h('div', { id: 'fora-da-ordem', tabindex: '-1' }, 'não focável por Tab'),
         ],
       },
     )
-    await abrir(wrapper)
-    porId('ultimo-habilitado').focus()
+    await openModal(wrapper)
+    byId('ultimo-habilitado').focus()
 
-    expect(teclar(porId('ultimo-habilitado'), 'Tab')).toBe(true)
-    expect(document.activeElement).toBe(elementoFechar(wrapper))
+    expect(pressKey(byId('ultimo-habilitado'), 'Tab')).toBe(true)
+    expect(document.activeElement).toBe(closeElement(wrapper))
   })
 
   it('outras teclas não são interceptadas', async () => {
-    const wrapper = montar({ aberto: false })
-    await abrir(wrapper)
-    porId('botao-b').focus()
+    const wrapper = mountComponent({ open: false })
+    await openModal(wrapper)
+    byId('botao-b').focus()
 
-    expect(teclar(porId('botao-b'), 'a')).toBe(false)
-    expect(teclar(porId('botao-b'), 'Enter')).toBe(false)
-    expect(document.activeElement).toBe(porId('botao-b'))
+    expect(pressKey(byId('botao-b'), 'a')).toBe(false)
+    expect(pressKey(byId('botao-b'), 'Enter')).toBe(false)
+    expect(document.activeElement).toBe(byId('botao-b'))
   })
 
   it('percorrer o ciclo inteiro nas duas direções nunca leva o foco para fora do modal', async () => {
-    const wrapper = montar({ aberto: false })
-    await abrir(wrapper)
-    const dentro = () => dialogo(wrapper).element.contains(document.activeElement)
-    const ordem = [elementoFechar(wrapper), porId('campo-a'), porId('botao-b')]
+    const wrapper = mountComponent({ open: false })
+    await openModal(wrapper)
+    const inside = () => dialog(wrapper).element.contains(document.activeElement)
+    const order = [closeElement(wrapper), byId('campo-a'), byId('botao-b')]
 
     // Simula o Tab do navegador: avança um a um e só passa a mão ao modal nas pontas.
-    let indice = 0
-    ordem[indice]!.focus()
+    let index = 0
+    order[index]!.focus()
     for (let passo = 0; passo < 9; passo += 1) {
-      const atual = ordem[indice]!
-      const interceptado = teclar(atual, 'Tab')
-      indice = interceptado ? 0 : indice + 1
-      if (!interceptado) ordem[indice]!.focus()
-      expect(dentro()).toBe(true)
+      const current = order[index]!
+      const intercepted = pressKey(current, 'Tab')
+      index = intercepted ? 0 : index + 1
+      if (!intercepted) order[index]!.focus()
+      expect(inside()).toBe(true)
     }
 
-    ordem[indice]!.focus()
+    order[index]!.focus()
     for (let passo = 0; passo < 9; passo += 1) {
-      const atual = ordem[indice]!
-      const interceptado = teclar(atual, 'Tab', { shiftKey: true })
-      indice = interceptado ? ordem.length - 1 : indice - 1
-      if (!interceptado) ordem[indice]!.focus()
-      expect(dentro()).toBe(true)
+      const current = order[index]!
+      const intercepted = pressKey(current, 'Tab', { shiftKey: true })
+      index = intercepted ? order.length - 1 : index - 1
+      if (!intercepted) order[index]!.focus()
+      expect(inside()).toBe(true)
     }
   })
 })
 
-describe('fechar', () => {
+describe('close', () => {
   it('Esc fecha o modal', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    teclar(dialogo(wrapper).element, 'Escape')
+    pressKey(dialog(wrapper).element, 'Escape')
     await nextTick()
 
-    expect(wrapper.emitted('update:aberto')).toEqual([[false]])
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(wrapper.emitted('update:open')).toEqual([[false]])
+    expect(dialog(wrapper).exists()).toBe(false)
   })
 
   it('Esc não propaga para fora do modal', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
     const ouvinte = vi.fn()
     document.addEventListener('keydown', ouvinte)
 
-    teclar(porId('campo-a'), 'Escape')
+    pressKey(byId('campo-a'), 'Escape')
     await nextTick()
     document.removeEventListener('keydown', ouvinte)
 
     expect(ouvinte).not.toHaveBeenCalled()
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(dialog(wrapper).exists()).toBe(false)
   })
 
   it('outras teclas não fecham o modal', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    teclar(porId('campo-a'), 'Enter')
-    teclar(porId('campo-a'), 'a')
+    pressKey(byId('campo-a'), 'Enter')
+    pressKey(byId('campo-a'), 'a')
     await nextTick()
 
-    expect(dialogo(wrapper).exists()).toBe(true)
-    expect(wrapper.emitted('update:aberto')).toBeUndefined()
+    expect(dialog(wrapper).exists()).toBe(true)
+    expect(wrapper.emitted('update:open')).toBeUndefined()
   })
 
   it('clique no backdrop fecha', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    fundo(wrapper).click()
+    backdrop(wrapper).click()
     await nextTick()
 
-    expect(wrapper.emitted('update:aberto')).toEqual([[false]])
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(wrapper.emitted('update:open')).toEqual([[false]])
+    expect(dialog(wrapper).exists()).toBe(false)
   })
 
   it('clique dentro do painel (corpo, título) não fecha', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await dialogo(wrapper).trigger('click')
+    await dialog(wrapper).trigger('click')
     await wrapper.get('#campo-a').trigger('click')
     await wrapper.get('h2').trigger('click')
 
-    expect(dialogo(wrapper).exists()).toBe(true)
-    expect(wrapper.emitted('update:aberto')).toBeUndefined()
+    expect(dialog(wrapper).exists()).toBe(true)
+    expect(wrapper.emitted('update:open')).toBeUndefined()
   })
 
   it('o botão Fechar (X) fecha e tem nome acessível', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await botaoFechar(wrapper).trigger('click')
+    await closeButton(wrapper).trigger('click')
 
-    expect(wrapper.emitted('update:aberto')).toEqual([[false]])
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(wrapper.emitted('update:open')).toEqual([[false]])
+    expect(dialog(wrapper).exists()).toBe(false)
   })
 })
 
 describe('scroll-lock do body', () => {
   it('abrir bloqueia o scroll do body e fechar restaura', async () => {
-    const wrapper = montar({ aberto: false })
+    const wrapper = mountComponent({ open: false })
     expect(document.body.style.overflow).toBe('')
 
-    await abrir(wrapper)
+    await openModal(wrapper)
     expect(document.body.style.overflow).toBe('hidden')
 
-    await wrapper.setProps({ aberto: false })
+    await wrapper.setProps({ open: false })
     expect(document.body.style.overflow).toBe('')
   })
 
   it('fechar por Esc, backdrop e X também restaura', async () => {
-    const wrapper = montar({ aberto: false })
+    const wrapper = mountComponent({ open: false })
 
-    for (const fechar of [
-      () => teclar(dialogo(wrapper).element, 'Escape'),
-      () => fundo(wrapper).click(),
-      () => elementoFechar(wrapper).click(),
+    for (const close of [
+      () => pressKey(dialog(wrapper).element, 'Escape'),
+      () => backdrop(wrapper).click(),
+      () => closeElement(wrapper).click(),
     ]) {
-      await abrir(wrapper)
+      await openModal(wrapper)
       expect(document.body.style.overflow).toBe('hidden')
 
-      fechar()
+      close()
       await nextTick()
       await nextTick()
 
@@ -410,21 +410,21 @@ describe('scroll-lock do body', () => {
   })
 
   it('desmontar com o modal aberto restaura o scroll', async () => {
-    const wrapper = montar({ aberto: false })
-    await abrir(wrapper)
+    const wrapper = mountComponent({ open: false })
+    await openModal(wrapper)
     expect(document.body.style.overflow).toBe('hidden')
 
     wrapper.unmount()
-    montados.splice(montados.indexOf(wrapper), 1)
+    mounted.splice(mounted.indexOf(wrapper), 1)
 
     expect(document.body.style.overflow).toBe('')
   })
 
   it('desmontar com o modal fechado também deixa o body liberado', () => {
-    const wrapper = montar({ aberto: false })
+    const wrapper = mountComponent({ open: false })
 
     wrapper.unmount()
-    montados.splice(montados.indexOf(wrapper), 1)
+    mounted.splice(mounted.indexOf(wrapper), 1)
 
     expect(document.body.style.overflow).toBe('')
   })
@@ -432,7 +432,7 @@ describe('scroll-lock do body', () => {
   // Comportamento atual, registrado de propósito: o bloqueio e o foco inicial dependem da
   // *mudança* de `aberto`; um modal já montado aberto não bloqueia o scroll nem move o foco.
   it('(comportamento atual) montar já aberto não bloqueia o scroll', () => {
-    montar({ aberto: true })
+    mountComponent({ open: true })
 
     expect(document.body.style.overflow).toBe('')
   })
@@ -440,35 +440,35 @@ describe('scroll-lock do body', () => {
 
 describe('sem vazamento após desmontar', () => {
   it('não deixa o diálogo, o estilo do body nem listeners globais para trás', async () => {
-    const adicionarDoc = vi.spyOn(document, 'addEventListener')
-    const removerDoc = vi.spyOn(document, 'removeEventListener')
-    const adicionarJanela = vi.spyOn(window, 'addEventListener')
-    const removerJanela = vi.spyOn(window, 'removeEventListener')
-    const wrapper = montar({ aberto: false })
+    const docAdd = vi.spyOn(document, 'addEventListener')
+    const docRemove = vi.spyOn(document, 'removeEventListener')
+    const windowAdd = vi.spyOn(window, 'addEventListener')
+    const windowRemove = vi.spyOn(window, 'removeEventListener')
+    const wrapper = mountComponent({ open: false })
 
-    await abrir(wrapper)
-    teclar(porId('botao-b'), 'Tab')
-    await wrapper.setProps({ aberto: false })
-    await abrir(wrapper)
+    await openModal(wrapper)
+    pressKey(byId('botao-b'), 'Tab')
+    await wrapper.setProps({ open: false })
+    await openModal(wrapper)
     wrapper.unmount()
-    montados.splice(montados.indexOf(wrapper), 1)
+    mounted.splice(mounted.indexOf(wrapper), 1)
 
     expect(document.body.querySelector('[role="dialog"]')).toBeNull()
     expect(document.body.style.overflow).toBe('')
     // Todo listener registrado em document/window precisa ter sido removido.
-    expect(adicionarDoc.mock.calls.filter(([tipo]) => tipo === 'keydown')).toHaveLength(
-      removerDoc.mock.calls.filter(([tipo]) => tipo === 'keydown').length,
+    expect(docAdd.mock.calls.filter(([type]) => type === 'keydown')).toHaveLength(
+      docRemove.mock.calls.filter(([type]) => type === 'keydown').length,
     )
-    expect(adicionarDoc.mock.calls.length).toBeLessThanOrEqual(removerDoc.mock.calls.length)
-    expect(adicionarJanela.mock.calls.length).toBeLessThanOrEqual(removerJanela.mock.calls.length)
+    expect(docAdd.mock.calls.length).toBeLessThanOrEqual(docRemove.mock.calls.length)
+    expect(windowAdd.mock.calls.length).toBeLessThanOrEqual(windowRemove.mock.calls.length)
   })
 
   it('depois de desmontado, teclas e cliques no documento não geram erro nem efeito', async () => {
-    const wrapper = montar({ aberto: false })
-    await abrir(wrapper)
+    const wrapper = mountComponent({ open: false })
+    await openModal(wrapper)
 
     wrapper.unmount()
-    montados.splice(montados.indexOf(wrapper), 1)
+    mounted.splice(mounted.indexOf(wrapper), 1)
 
     expect(() => {
       document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))

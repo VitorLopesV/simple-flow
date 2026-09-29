@@ -6,68 +6,68 @@ import { computed } from 'vue'
 import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import { formatCurrency, formatPercent } from '@/utils/currencyFormatter'
 
-type Tom = 'neutro' | 'sucesso' | 'perigo' | 'info' | 'aviso'
+type Tone = 'neutral' | 'success' | 'danger' | 'info' | 'warning'
 
 const props = withDefaults(
   defineProps<{
-    rotulo: string
-    valor: number
-    icone?: Component | null
-    tom?: Tom
+    label: string
+    value: number
+    icon?: Component | null
+    tone?: Tone
     /** Variação em fração (0.12 = +12%) em relação ao mês anterior. */
-    variacao?: number | null
+    change?: number | null
     /** Quando a métrica é uma despesa, subir é ruim: inverte as cores. */
-    variacaoInvertida?: boolean
-    detalhe?: string
-    carregando?: boolean
+    invertedChange?: boolean
+    detail?: string
+    loading?: boolean
   }>(),
   {
-    icone: null,
-    tom: 'neutro',
-    variacao: null,
-    variacaoInvertida: false,
-    detalhe: '',
-    carregando: false,
+    icon: null,
+    tone: 'neutral',
+    change: null,
+    invertedChange: false,
+    detail: '',
+    loading: false,
   },
 )
 
-const TONS: Record<Tom, { icone: string; valor: string }> = {
-  neutro: { icone: 'bg-muted text-muted-foreground', valor: 'text-foreground' },
-  sucesso: { icone: 'bg-success-soft text-success', valor: 'text-success' },
-  perigo: { icone: 'bg-danger-soft text-danger', valor: 'text-danger' },
-  info: { icone: 'bg-primary/10 text-primary', valor: 'text-foreground' },
-  aviso: { icone: 'bg-warning-soft text-warning', valor: 'text-foreground' },
+const TONES: Record<Tone, { icon: string; value: string }> = {
+  neutral: { icon: 'bg-muted text-muted-foreground', value: 'text-foreground' },
+  success: { icon: 'bg-success-soft text-success', value: 'text-success' },
+  danger: { icon: 'bg-danger-soft text-danger', value: 'text-danger' },
+  info: { icon: 'bg-primary/10 text-primary', value: 'text-foreground' },
+  warning: { icon: 'bg-warning-soft text-warning', value: 'text-foreground' },
 }
 
-const subiu = computed(() => (props.variacao ?? 0) >= 0)
+const wentUp = computed(() => (props.change ?? 0) >= 0)
 
-const corVariacao = computed(() => {
-  const positivo = props.variacaoInvertida ? !subiu.value : subiu.value
-  return positivo ? 'text-success' : 'text-danger'
+const changeColor = computed(() => {
+  const positive = props.invertedChange ? !wentUp.value : wentUp.value
+  return positive ? 'text-success' : 'text-danger'
 })
 </script>
 
 <template>
   <div class="bg-card border-border rounded-card border p-5 shadow-sm">
     <div class="flex items-start justify-between gap-3">
-      <p class="text-muted-foreground text-sm font-medium">{{ rotulo }}</p>
-      <span v-if="icone" class="rounded-lg p-2" :class="TONS[tom].icone">
-        <component :is="icone" class="size-4" aria-hidden="true" />
+      <p class="text-muted-foreground text-sm font-medium">{{ label }}</p>
+      <span v-if="icon" class="rounded-lg p-2" :class="TONES[tone].icon">
+        <component :is="icon" class="size-4" aria-hidden="true" />
       </span>
     </div>
 
-    <BaseSkeleton v-if="carregando" altura="h-8" class="mt-3" />
-    <p v-else class="numero-tabular mt-3 text-2xl font-semibold tracking-tight" :class="TONS[tom].valor">
-      {{ formatCurrency(valor) }}
+    <BaseSkeleton v-if="loading" height="h-8" class="mt-3" />
+    <p v-else class="tabular-number mt-3 text-2xl font-semibold tracking-tight" :class="TONES[tone].value">
+      {{ formatCurrency(value) }}
     </p>
 
-    <div v-if="!carregando" class="mt-2 flex items-center gap-2 text-sm">
-      <span v-if="variacao !== null" class="inline-flex items-center gap-1 font-medium" :class="corVariacao">
-        <TrendingUp v-if="subiu" class="size-4" aria-hidden="true" />
+    <div v-if="!loading" class="mt-2 flex items-center gap-2 text-sm">
+      <span v-if="change !== null" class="inline-flex items-center gap-1 font-medium" :class="changeColor">
+        <TrendingUp v-if="wentUp" class="size-4" aria-hidden="true" />
         <TrendingDown v-else class="size-4" aria-hidden="true" />
-        {{ formatPercent(Math.abs(variacao)) }}
+        {{ formatPercent(Math.abs(change)) }}
       </span>
-      <span class="text-muted-foreground">{{ detalhe || 'vs. mês anterior' }}</span>
+      <span class="text-muted-foreground">{{ detail || 'vs. mês anterior' }}</span>
     </div>
   </div>
 </template>

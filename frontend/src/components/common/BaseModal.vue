@@ -6,76 +6,76 @@ import BaseButton from './BaseButton.vue'
 
 const props = withDefaults(
   defineProps<{
-    titulo: string
-    descricao?: string
-    largura?: 'sm' | 'md' | 'lg'
+    title: string
+    description?: string
+    width?: 'sm' | 'md' | 'lg'
   }>(),
-  { descricao: '', largura: 'md' },
+  { description: '', width: 'md' },
 )
 
-const aberto = defineModel<boolean>('aberto', { default: false })
+const open = defineModel<boolean>('open', { default: false })
 
-const LARGURAS = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' } as const
+const WIDTHS = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' } as const
 
-const painel = ref<HTMLElement | null>(null)
+const panel = ref<HTMLElement | null>(null)
 const id = useId()
-const idTitulo = computed(() => `${id}-titulo`)
-const idDescricao = computed(() => `${id}-descricao`)
+const titleId = computed(() => `${id}-title`)
+const descriptionId = computed(() => `${id}-description`)
 
-let focoAnterior: HTMLElement | null = null
+let previousFocus: HTMLElement | null = null
 
-function fechar(): void {
-  aberto.value = false
+function close(): void {
+  open.value = false
 }
 
 /** Mantém o Tab dentro do modal enquanto ele estiver aberto (a11y). */
-function aoPressionarTecla(evento: KeyboardEvent): void {
-  if (evento.key === 'Escape') {
-    evento.stopPropagation()
-    fechar()
+function onKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape') {
+    event.stopPropagation()
+    close()
     return
   }
-  if (evento.key !== 'Tab' || !painel.value) return
+  if (event.key !== 'Tab' || !panel.value) return
 
-  const focaveis = painel.value.querySelectorAll<HTMLElement>(
+  const focusable = panel.value.querySelectorAll<HTMLElement>(
     'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
   )
-  if (!focaveis.length) return
+  if (!focusable.length) return
 
-  const primeiro = focaveis[0]!
-  const ultimo = focaveis[focaveis.length - 1]!
-  const ativo = document.activeElement
+  const first = focusable[0]!
+  const last = focusable[focusable.length - 1]!
+  const active = document.activeElement
 
-  if (evento.shiftKey && ativo === primeiro) {
-    evento.preventDefault()
-    ultimo.focus()
-  } else if (!evento.shiftKey && ativo === ultimo) {
-    evento.preventDefault()
-    primeiro.focus()
+  if (event.shiftKey && active === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault()
+    first.focus()
   }
 }
 
-function travarScroll(travar: boolean): void {
-  document.body.style.overflow = travar ? 'hidden' : ''
+function lockScroll(lock: boolean): void {
+  document.body.style.overflow = lock ? 'hidden' : ''
 }
 
-watch(aberto, async (estaAberto) => {
-  travarScroll(estaAberto)
+watch(open, async (isOpen) => {
+  lockScroll(isOpen)
 
-  if (estaAberto) {
-    focoAnterior = document.activeElement as HTMLElement | null
+  if (isOpen) {
+    previousFocus = document.activeElement as HTMLElement | null
     await nextTick()
-    const alvo = painel.value?.querySelector<HTMLElement>(
-      'input, select, textarea, button:not([data-fechar])',
+    const target = panel.value?.querySelector<HTMLElement>(
+      'input, select, textarea, button:not([data-close])',
     )
-    alvo?.focus()
+    target?.focus()
   } else {
-    focoAnterior?.focus()
-    focoAnterior = null
+    previousFocus?.focus()
+    previousFocus = null
   }
 })
 
-onBeforeUnmount(() => travarScroll(false))
+onBeforeUnmount(() => lockScroll(false))
 </script>
 
 <template>
@@ -87,36 +87,36 @@ onBeforeUnmount(() => travarScroll(false))
       leave-to-class="opacity-0"
     >
       <div
-        v-if="aberto"
+        v-if="open"
         class="bg-overlay fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-0 backdrop-blur-sm sm:items-center sm:p-4"
-        @click.self="fechar"
-        @keydown="aoPressionarTecla"
+        @click.self="close"
+        @keydown="onKeydown"
       >
         <div
-          ref="painel"
+          ref="panel"
           role="dialog"
           aria-modal="true"
-          :aria-labelledby="idTitulo"
-          :aria-describedby="descricao ? idDescricao : undefined"
+          :aria-labelledby="titleId"
+          :aria-describedby="description ? descriptionId : undefined"
           :class="[
             'bg-card text-card-foreground border-border max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border shadow-xl sm:rounded-2xl',
-            LARGURAS[props.largura],
+            WIDTHS[props.width],
           ]"
         >
           <header class="border-border flex items-start justify-between gap-4 border-b px-5 py-4">
             <div>
-              <h2 :id="idTitulo" class="text-base font-semibold">{{ titulo }}</h2>
-              <p v-if="descricao" :id="idDescricao" class="text-muted-foreground mt-0.5 text-sm">
-                {{ descricao }}
+              <h2 :id="titleId" class="text-base font-semibold">{{ title }}</h2>
+              <p v-if="description" :id="descriptionId" class="text-muted-foreground mt-0.5 text-sm">
+                {{ description }}
               </p>
             </div>
             <BaseButton
-              variante="ghost"
-              tamanho="icon"
+              variant="ghost"
+              size="icon"
               class="hover:!bg-danger/25 hover:!text-danger"
-              data-fechar
+              data-close
               aria-label="Fechar"
-              @click="fechar"
+              @click="close"
             >
               <X class="size-4" aria-hidden="true" />
             </BaseButton>
@@ -126,8 +126,8 @@ onBeforeUnmount(() => travarScroll(false))
             <slot />
           </div>
 
-          <footer v-if="$slots.rodape" class="border-border bg-muted/40 border-t px-5 py-3">
-            <slot name="rodape" />
+          <footer v-if="$slots.footer" class="border-border bg-muted/40 border-t px-5 py-3">
+            <slot name="footer" />
           </footer>
         </div>
       </div>

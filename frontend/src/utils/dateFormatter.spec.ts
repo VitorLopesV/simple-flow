@@ -1,24 +1,24 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  addMeses,
-  dentroDoPeriodo,
-  diaDoPeriodo,
-  diasAte,
+  addMonths,
+  isWithinPeriod,
+  dayInPeriod,
+  daysUntil,
   formatDate,
   formatDateShort,
-  formatPeriodo,
-  fromCompetencia,
-  labelCurtoPeriodo,
-  mascararDataBR,
-  mesmoPeriodo,
-  paraISODataBR,
-  paraMascaraDataBR,
-  toCompetencia,
+  formatPeriod,
+  fromReferenceMonth,
+  shortPeriodLabel,
+  maskBrDate,
+  isSamePeriod,
+  brDateToISO,
+  toBrDateMask,
+  toReferenceMonth,
   toDate,
   toISODate,
-  ultimoDiaDoMes,
-  ultimosPeriodos,
+  lastDayOfMonth,
+  lastPeriods,
 } from '@/utils/dateFormatter'
 
 afterEach(() => {
@@ -27,11 +27,11 @@ afterEach(() => {
 
 describe('toDate / toISODate', () => {
   it('converte ISO para Date local ao meio-dia', () => {
-    const data = toDate('2026-08-15')
-    expect(data.getFullYear()).toBe(2026)
-    expect(data.getMonth()).toBe(7)
-    expect(data.getDate()).toBe(15)
-    expect(data.getHours()).toBe(12)
+    const date = toDate('2026-08-15')
+    expect(date.getFullYear()).toBe(2026)
+    expect(date.getMonth()).toBe(7)
+    expect(date.getDate()).toBe(15)
+    expect(date.getHours()).toBe(12)
   })
 
   it.each(['2026-08-15', '2026-01-01', '2026-12-31'])('faz round-trip de %s', (iso) => {
@@ -39,119 +39,119 @@ describe('toDate / toISODate', () => {
   })
 })
 
-describe('formatDate / formatDateShort / paraMascaraDataBR', () => {
+describe('formatDate / formatDateShort / toBrDateMask', () => {
   it('formata datas válidas', () => {
     expect(formatDate('2026-08-15')).toBe('15/08/2026')
     expect(formatDateShort('2026-08-15')).toBe('15 de ago.')
-    expect(paraMascaraDataBR('2026-08-15')).toBe('15/08/2026')
+    expect(toBrDateMask('2026-08-15')).toBe('15/08/2026')
   })
 
-  it.each([null, undefined, ''])('trata %j', (entrada) => {
-    expect(formatDate(entrada)).toBe('—')
-    expect(formatDateShort(entrada)).toBe('—')
-    expect(paraMascaraDataBR(entrada)).toBe('')
+  it.each([null, undefined, ''])('trata %j', (input) => {
+    expect(formatDate(input)).toBe('—')
+    expect(formatDateShort(input)).toBe('—')
+    expect(toBrDateMask(input)).toBe('')
   })
 })
 
-describe('mascararDataBR / paraISODataBR', () => {
+describe('maskBrDate / brDateToISO', () => {
   it('aplica a máscara completa', () => {
-    expect(mascararDataBR('15082026')).toBe('15/08/2026')
+    expect(maskBrDate('15082026')).toBe('15/08/2026')
   })
 
   it('aplica a máscara em entrada parcial', () => {
-    expect(mascararDataBR('150')).toBe('15/0')
+    expect(maskBrDate('150')).toBe('15/0')
   })
 
   it('ignora letras e corta em 8 dígitos', () => {
-    expect(mascararDataBR('1a5b0c8d2026')).toBe('15/08/2026')
-    expect(mascararDataBR('150820261234')).toBe('15/08/2026')
+    expect(maskBrDate('1a5b0c8d2026')).toBe('15/08/2026')
+    expect(maskBrDate('150820261234')).toBe('15/08/2026')
   })
 
   it('converte máscara completa para ISO e devolve null se incompleta', () => {
-    expect(paraISODataBR('15/08/2026')).toBe('2026-08-15')
-    expect(paraISODataBR('15/08/20')).toBeNull()
-    expect(paraISODataBR('')).toBeNull()
+    expect(brDateToISO('15/08/2026')).toBe('2026-08-15')
+    expect(brDateToISO('15/08/20')).toBeNull()
+    expect(brDateToISO('')).toBeNull()
   })
 })
 
 describe('competência', () => {
   it('converte ida e volta', () => {
-    expect(toCompetencia({ mes: 8, ano: 2026 })).toBe('2026-08')
-    expect(fromCompetencia('2026-08')).toEqual({ mes: 8, ano: 2026 })
+    expect(toReferenceMonth({ month: 8, year: 2026 })).toBe('2026-08')
+    expect(fromReferenceMonth('2026-08')).toEqual({ month: 8, year: 2026 })
   })
 })
 
-describe('addMeses', () => {
+describe('addMonths', () => {
   it('avança de dezembro para janeiro do ano seguinte', () => {
-    expect(addMeses({ mes: 12, ano: 2026 }, 1)).toEqual({ mes: 1, ano: 2027 })
+    expect(addMonths({ month: 12, year: 2026 }, 1)).toEqual({ month: 1, year: 2027 })
   })
 
   it('volta de janeiro para dezembro do ano anterior', () => {
-    expect(addMeses({ mes: 1, ano: 2026 }, -1)).toEqual({ mes: 12, ano: 2025 })
+    expect(addMonths({ month: 1, year: 2026 }, -1)).toEqual({ month: 12, year: 2025 })
   })
 
   it('soma e subtrai múltiplos anos', () => {
-    expect(addMeses({ mes: 8, ano: 2026 }, 24)).toEqual({ mes: 8, ano: 2028 })
-    expect(addMeses({ mes: 8, ano: 2026 }, -13)).toEqual({ mes: 7, ano: 2025 })
+    expect(addMonths({ month: 8, year: 2026 }, 24)).toEqual({ month: 8, year: 2028 })
+    expect(addMonths({ month: 8, year: 2026 }, -13)).toEqual({ month: 7, year: 2025 })
   })
 })
 
-describe('ultimosPeriodos', () => {
+describe('lastPeriods', () => {
   it('devolve 6 períodos do mais antigo ao atual, atravessando a virada de ano', () => {
-    const lista = ultimosPeriodos({ mes: 2, ano: 2026 }, 6)
-    expect(lista).toHaveLength(6)
-    expect(lista[0]).toEqual({ mes: 9, ano: 2025 })
-    expect(lista[3]).toEqual({ mes: 12, ano: 2025 })
-    expect(lista[4]).toEqual({ mes: 1, ano: 2026 })
-    expect(lista[5]).toEqual({ mes: 2, ano: 2026 })
+    const list = lastPeriods({ month: 2, year: 2026 }, 6)
+    expect(list).toHaveLength(6)
+    expect(list[0]).toEqual({ month: 9, year: 2025 })
+    expect(list[3]).toEqual({ month: 12, year: 2025 })
+    expect(list[4]).toEqual({ month: 1, year: 2026 })
+    expect(list[5]).toEqual({ month: 2, year: 2026 })
   })
 })
 
-describe('ultimoDiaDoMes / diaDoPeriodo', () => {
+describe('lastDayOfMonth / dayInPeriod', () => {
   it('calcula o último dia de cada mês', () => {
-    expect(ultimoDiaDoMes({ mes: 2, ano: 2026 })).toBe(28)
-    expect(ultimoDiaDoMes({ mes: 2, ano: 2028 })).toBe(29)
-    expect(ultimoDiaDoMes({ mes: 4, ano: 2026 })).toBe(30)
-    expect(ultimoDiaDoMes({ mes: 1, ano: 2026 })).toBe(31)
+    expect(lastDayOfMonth({ month: 2, year: 2026 })).toBe(28)
+    expect(lastDayOfMonth({ month: 2, year: 2028 })).toBe(29)
+    expect(lastDayOfMonth({ month: 4, year: 2026 })).toBe(30)
+    expect(lastDayOfMonth({ month: 1, year: 2026 })).toBe(31)
   })
 
   it('limita o dia ao último dia do mês', () => {
-    expect(diaDoPeriodo({ mes: 2, ano: 2026 }, 31)).toBe('2026-02-28')
-    expect(diaDoPeriodo({ mes: 8, ano: 2026 }, 5)).toBe('2026-08-05')
+    expect(dayInPeriod({ month: 2, year: 2026 }, 31)).toBe('2026-02-28')
+    expect(dayInPeriod({ month: 8, year: 2026 }, 5)).toBe('2026-08-05')
   })
 })
 
 describe('períodos', () => {
-  it('dentroDoPeriodo', () => {
-    expect(dentroDoPeriodo('2026-08-15', { mes: 8, ano: 2026 })).toBe(true)
-    expect(dentroDoPeriodo('2026-08-15', { mes: 7, ano: 2026 })).toBe(false)
-    expect(dentroDoPeriodo('2026-08-15', { mes: 8, ano: 2025 })).toBe(false)
+  it('isWithinPeriod', () => {
+    expect(isWithinPeriod('2026-08-15', { month: 8, year: 2026 })).toBe(true)
+    expect(isWithinPeriod('2026-08-15', { month: 7, year: 2026 })).toBe(false)
+    expect(isWithinPeriod('2026-08-15', { month: 8, year: 2025 })).toBe(false)
   })
 
-  it('mesmoPeriodo', () => {
-    expect(mesmoPeriodo({ mes: 8, ano: 2026 }, { mes: 8, ano: 2026 })).toBe(true)
-    expect(mesmoPeriodo({ mes: 8, ano: 2026 }, { mes: 9, ano: 2026 })).toBe(false)
+  it('isSamePeriod', () => {
+    expect(isSamePeriod({ month: 8, year: 2026 }, { month: 8, year: 2026 })).toBe(true)
+    expect(isSamePeriod({ month: 8, year: 2026 }, { month: 9, year: 2026 })).toBe(false)
   })
 
   it('labels', () => {
-    expect(labelCurtoPeriodo({ mes: 8, ano: 2026 })).toBe('ago/26')
-    expect(formatPeriodo({ mes: 8, ano: 2026 })).toBe('Agosto de 2026')
+    expect(shortPeriodLabel({ month: 8, year: 2026 })).toBe('ago/26')
+    expect(formatPeriod({ month: 8, year: 2026 })).toBe('Agosto de 2026')
   })
 })
 
-describe('diasAte', () => {
+describe('daysUntil', () => {
   it('conta dias a partir de hoje com relógio controlado', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 7, 15, 9, 30))
-    expect(diasAte('2026-08-15')).toBe(0)
-    expect(diasAte('2026-08-16')).toBe(1)
-    expect(diasAte('2026-08-14')).toBe(-1)
+    expect(daysUntil('2026-08-15')).toBe(0)
+    expect(daysUntil('2026-08-16')).toBe(1)
+    expect(daysUntil('2026-08-14')).toBe(-1)
   })
 
   it('não depende da hora do dia', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 7, 15, 23, 59))
-    expect(diasAte('2026-08-15')).toBe(0)
-    expect(diasAte('2026-08-16')).toBe(1)
+    expect(daysUntil('2026-08-15')).toBe(0)
+    expect(daysUntil('2026-08-16')).toBe(1)
   })
 })

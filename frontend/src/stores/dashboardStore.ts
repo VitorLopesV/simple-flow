@@ -2,49 +2,49 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { dashboardService } from '@/services/dashboardService'
-import { mensagemDeErro } from '@/services/http'
-import { saidaService } from '@/services/saidaService'
-import type { DashboardResumo } from '@/types/dashboard'
-import type { SaidaResumo } from '@/types/saida'
-import { usePeriodoStore } from './periodoStore'
+import { expenseService } from '@/services/expenseService'
+import { getErrorMessage } from '@/services/http'
+import type { DashboardSummary } from '@/types/dashboard'
+import type { ExpenseSummary } from '@/types/expense'
+import { usePeriodStore } from './periodStore'
 
 export const useDashboardStore = defineStore('dashboard', () => {
-  const periodoStore = usePeriodoStore()
+  const periodStore = usePeriodStore()
 
-  const resumo = ref<DashboardResumo | null>(null)
+  const summary = ref<DashboardSummary | null>(null)
   /** Distribuição das saídas por tipo — vem de `/saidas/resumo`, não do resumo do dashboard. */
-  const gastosPorTipo = ref<SaidaResumo['porTipo']>([])
+  const expensesByType = ref<ExpenseSummary['byType']>([])
   const loading = ref(false)
-  const erro = ref<string | null>(null)
+  const error = ref<string | null>(null)
 
-  const saldoPositivo = computed(() => (resumo.value?.saldo ?? 0) >= 0)
+  const isBalancePositive = computed(() => (summary.value?.balance ?? 0) >= 0)
 
   /** Percentual da renda já comprometido com despesas (0-100). */
-  const comprometimento = computed(() => {
-    const { totalEntradas = 0, totalSaidas = 0 } = resumo.value ?? {}
-    if (!totalEntradas) return totalSaidas > 0 ? 100 : 0
-    return Math.min(100, (totalSaidas / totalEntradas) * 100)
+  const incomeCommitment = computed(() => {
+    const { totalIncome = 0, totalExpenses = 0 } = summary.value ?? {}
+    if (!totalIncome) return totalExpenses > 0 ? 100 : 0
+    return Math.min(100, (totalExpenses / totalIncome) * 100)
   })
 
-  async function carregar(): Promise<void> {
+  async function load(): Promise<void> {
     loading.value = true
-    erro.value = null
+    error.value = null
     try {
-      const periodo = periodoStore.periodo
-      const [dashboard, saidas] = await Promise.all([
-        dashboardService.resumo(periodo),
-        saidaService.resumo(periodo),
+      const period = periodStore.period
+      const [dashboard, expenses] = await Promise.all([
+        dashboardService.summary(period),
+        expenseService.summary(period),
       ])
-      resumo.value = dashboard
-      gastosPorTipo.value = saidas.porTipo ?? []
+      summary.value = dashboard
+      expensesByType.value = expenses.byType ?? []
     } catch (e) {
-      erro.value = mensagemDeErro(e, 'Não foi possível carregar o resumo financeiro.')
-      resumo.value = null
-      gastosPorTipo.value = []
+      error.value = getErrorMessage(e, 'Não foi possível carregar o resumo financeiro.')
+      summary.value = null
+      expensesByType.value = []
     } finally {
       loading.value = false
     }
   }
 
-  return { resumo, gastosPorTipo, loading, erro, saldoPositivo, comprometimento, carregar }
+  return { summary, expensesByType, loading, error, isBalancePositive, incomeCommitment, load }
 })

@@ -2,20 +2,20 @@
 import { CreditCard, TrendingUp, Wallet } from '@lucide/vue'
 import { Toaster } from 'vue-sonner'
 
-import AuthMarca from '@/components/features/AuthMarca.vue'
+import AuthBrand from '@/components/features/AuthBrand.vue'
 
 
-const DESTAQUES = [
-  { icone: Wallet, texto: 'Saiba quanto sobra do seu mês, sem planilhas' },
-  { icone: TrendingUp, texto: 'Acompanhe entradas e saídas mês a mês' },
-  { icone: CreditCard, texto: 'Faturas de cartão separadas dos demais gastos' },
+const HIGHLIGHTS = [
+  { icon: Wallet, text: 'Saiba quanto sobra do seu mês, sem planilhas' },
+  { icon: TrendingUp, text: 'Acompanhe entradas e saídas mês a mês' },
+  { icon: CreditCard, text: 'Faturas de cartão separadas dos demais gastos' },
 ]
 </script>
 
 <template>
   <div class="bg-background min-h-screen lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
     <a
-      href="#conteudo-principal"
+      href="#main-content"
       class="bg-primary text-primary-foreground sr-only z-50 rounded-lg px-4 py-2 focus:not-sr-only focus:absolute focus:left-4 focus:top-4"
     >
       Pular para o conteúdo
@@ -35,7 +35,7 @@ const DESTAQUES = [
       />
 
       <div class="relative">
-        <AuthMarca alinhamento="inicio" />
+        <AuthBrand align="start" />
       </div>
 
       <div class="relative max-w-md">
@@ -44,11 +44,11 @@ const DESTAQUES = [
         </h2>
 
         <ul class="mt-8 space-y-4">
-          <li v-for="destaque in DESTAQUES" :key="destaque.texto" class="flex items-center gap-3">
+          <li v-for="highlight in HIGHLIGHTS" :key="highlight.text" class="flex items-center gap-3">
             <span class="bg-success/15 text-success flex size-10 shrink-0 items-center justify-center rounded-lg">
-              <component :is="destaque.icone" class="size-5" aria-hidden="true" />
+              <component :is="highlight.icon" class="size-5" aria-hidden="true" />
             </span>
-            <span class="text-foreground/80 text-base">{{ destaque.texto }}</span>
+            <span class="text-foreground/80 text-base">{{ highlight.text }}</span>
           </li>
         </ul>
       </div>
@@ -56,7 +56,7 @@ const DESTAQUES = [
       <p class="text-muted-foreground relative text-sm">SimpleFlow · Controle financeiro pessoal</p>
     </aside>
 
-    <main id="conteudo-principal" class="flex min-h-screen items-center justify-center px-4 py-10 sm:px-8">
+    <main id="main-content" class="flex min-h-screen items-center justify-center px-4 py-10 sm:px-8">
       <RouterView v-slot="{ Component }">
         <Transition
           mode="out-in"

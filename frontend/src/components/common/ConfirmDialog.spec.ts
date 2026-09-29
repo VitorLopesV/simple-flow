@@ -6,89 +6,89 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 type Props = InstanceType<typeof ConfirmDialog>['$props']
 
-const montados: VueWrapper[] = []
+const mounted: VueWrapper[] = []
 
 /**
  * Monta ligado como `v-model:aberto` (fechar de dentro remove o conteúdo) e preso ao documento.
  * `Teleport` vem stubado por padrão: o conteúdo fica dentro do wrapper.
  */
-function montar(props: Partial<Props> = {}, { teleportReal = false } = {}) {
+function mountComponent(props: Partial<Props> = {}, { teleportReal = false } = {}) {
   const wrapper: VueWrapper = mount(ConfirmDialog, {
     props: {
-      mensagem: 'Excluir esta saída?',
-      aberto: true,
-      'onUpdate:aberto': (valor: boolean) => wrapper.setProps({ aberto: valor }),
+      message: 'Excluir esta saída?',
+      open: true,
+      'onUpdate:open': (amount: boolean) => wrapper.setProps({ open: amount }),
       ...props,
     } as Props,
     attachTo: document.body,
     global: { stubs: { teleport: !teleportReal } },
   })
-  montados.push(wrapper)
+  mounted.push(wrapper)
   return wrapper
 }
 
-const dialogo = (wrapper: VueWrapper) => wrapper.find('[role="dialog"]')
-const botao = (wrapper: VueWrapper, texto: string) => {
-  const encontrado = wrapper.findAll('button').find((b) => b.text() === texto)
-  expect(encontrado, `botão "${texto}" não encontrado`).toBeDefined()
-  return encontrado!
+const dialog = (wrapper: VueWrapper) => wrapper.find('[role="dialog"]')
+const button = (wrapper: VueWrapper, text: string) => {
+  const found = wrapper.findAll('button').find((b) => b.text() === text)
+  expect(found, `botão "${text}" não encontrado`).toBeDefined()
+  return found!
 }
-const botaoConfirmar = (wrapper: VueWrapper) => botao(wrapper, 'Confirmar')
-const botaoCancelar = (wrapper: VueWrapper) => botao(wrapper, 'Cancelar')
-const botaoFechar = (wrapper: VueWrapper) => wrapper.get('button[aria-label="Fechar"]')
+const confirmButton = (wrapper: VueWrapper) => button(wrapper, 'Confirmar')
+const cancelButton = (wrapper: VueWrapper) => button(wrapper, 'Cancelar')
+const closeButton = (wrapper: VueWrapper) => wrapper.get('button[aria-label="Fechar"]')
 
-const estaDesabilitado = (b: ReturnType<typeof botaoConfirmar>) => b.attributes('disabled') !== undefined
+const isDisabled = (b: ReturnType<typeof confirmButton>) => b.attributes('disabled') !== undefined
 
 afterEach(() => {
-  while (montados.length) montados.pop()!.unmount()
+  while (mounted.length) mounted.pop()!.unmount()
   document.body.style.overflow = ''
 })
 
 describe('aberto e fechado', () => {
   it('fechado não renderiza conteúdo', () => {
-    const wrapper = montar({ aberto: false })
+    const wrapper = mountComponent({ open: false })
 
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(dialog(wrapper).exists()).toBe(false)
     expect(wrapper.text()).toBe('')
   })
 
   it('aberto exibe o diálogo com título e mensagem recebidos', () => {
-    const wrapper = montar({ titulo: 'Excluir saída', mensagem: 'Esta ação não pode ser desfeita.' })
+    const wrapper = mountComponent({ title: 'Excluir saída', message: 'Esta ação não pode ser desfeita.' })
 
-    expect(dialogo(wrapper).exists()).toBe(true)
+    expect(dialog(wrapper).exists()).toBe(true)
     expect(wrapper.get('h2').text()).toBe('Excluir saída')
     expect(wrapper.get('p').text()).toBe('Esta ação não pode ser desfeita.')
   })
 
   it('abre e fecha conforme o valor externo', async () => {
-    const wrapper = montar({ aberto: false })
+    const wrapper = mountComponent({ open: false })
 
-    await wrapper.setProps({ aberto: true })
-    expect(dialogo(wrapper).exists()).toBe(true)
+    await wrapper.setProps({ open: true })
+    expect(dialog(wrapper).exists()).toBe(true)
 
-    await wrapper.setProps({ aberto: false })
-    expect(dialogo(wrapper).exists()).toBe(false)
+    await wrapper.setProps({ open: false })
+    expect(dialog(wrapper).exists()).toBe(false)
   })
 
   it('usa os textos padrão', () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
     expect(wrapper.get('h2').text()).toBe('Confirmar ação')
-    expect(botaoConfirmar(wrapper).exists()).toBe(true)
-    expect(botaoCancelar(wrapper).exists()).toBe(true)
+    expect(confirmButton(wrapper).exists()).toBe(true)
+    expect(cancelButton(wrapper).exists()).toBe(true)
   })
 
   it('aceita textos de confirmar e cancelar customizados', () => {
-    const wrapper = montar({ textoConfirmar: 'Excluir', textoCancelar: 'Voltar' })
+    const wrapper = mountComponent({ confirmText: 'Excluir', cancelText: 'Voltar' })
 
-    expect(botao(wrapper, 'Excluir').exists()).toBe(true)
-    expect(botao(wrapper, 'Voltar').exists()).toBe(true)
+    expect(button(wrapper, 'Excluir').exists()).toBe(true)
+    expect(button(wrapper, 'Voltar').exists()).toBe(true)
     expect(wrapper.findAll('button').some((b) => b.text() === 'Confirmar')).toBe(false)
   })
 
   it('é um diálogo modal acessível, rotulado pelo título', () => {
-    const wrapper = montar({ titulo: 'Excluir saída' })
-    const modal = dialogo(wrapper)
+    const wrapper = mountComponent({ title: 'Excluir saída' })
+    const modal = dialog(wrapper)
 
     expect(modal.attributes('aria-modal')).toBe('true')
     expect(modal.attributes('aria-labelledby')).toBe(wrapper.get('h2').attributes('id'))
@@ -97,7 +97,7 @@ describe('aberto e fechado', () => {
 
 describe('Teleport', () => {
   it('sem stub, o conteúdo vai para o document.body e não para dentro do wrapper', () => {
-    const wrapper = montar({ titulo: 'Excluir saída' }, { teleportReal: true })
+    const wrapper = mountComponent({ title: 'Excluir saída' }, { teleportReal: true })
 
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
     const noBody = document.body.querySelector('[role="dialog"]')
@@ -106,186 +106,186 @@ describe('Teleport', () => {
   })
 
   it('ao desmontar, não deixa o diálogo para trás no body', () => {
-    const wrapper = montar({}, { teleportReal: true })
+    const wrapper = mountComponent({}, { teleportReal: true })
     expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
 
     wrapper.unmount()
-    montados.splice(montados.indexOf(wrapper), 1)
+    mounted.splice(mounted.indexOf(wrapper), 1)
 
     expect(document.body.querySelector('[role="dialog"]')).toBeNull()
   })
 })
 
-describe('confirmar', () => {
+describe('confirm', () => {
   it('clicar em Confirmar emite confirmar uma vez', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await botaoConfirmar(wrapper).trigger('click')
+    await confirmButton(wrapper).trigger('click')
 
-    expect(wrapper.emitted('confirmar')).toHaveLength(1)
-    expect(wrapper.emitted('confirmar')![0]).toEqual([])
+    expect(wrapper.emitted('confirm')).toHaveLength(1)
+    expect(wrapper.emitted('confirm')![0]).toEqual([])
   })
 
   it('confirmar não fecha nem cancela por conta própria (quem decide é o pai)', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await botaoConfirmar(wrapper).trigger('click')
+    await confirmButton(wrapper).trigger('click')
 
-    expect(wrapper.emitted('cancelar')).toBeUndefined()
-    expect(wrapper.emitted('update:aberto')).toBeUndefined()
-    expect(dialogo(wrapper).exists()).toBe(true)
+    expect(wrapper.emitted('cancel')).toBeUndefined()
+    expect(wrapper.emitted('update:open')).toBeUndefined()
+    expect(dialog(wrapper).exists()).toBe(true)
   })
 
   it('só o clique em Confirmar dispara a ação: nada mais emite confirmar', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await botaoCancelar(wrapper).trigger('click')
-    await wrapper.setProps({ aberto: true })
-    await botaoFechar(wrapper).trigger('click')
-    await wrapper.setProps({ aberto: true })
-    await dialogo(wrapper).trigger('keydown', { key: 'Escape' })
-    await wrapper.setProps({ aberto: true })
-    await dialogo(wrapper).element.parentElement!.click()
+    await cancelButton(wrapper).trigger('click')
+    await wrapper.setProps({ open: true })
+    await closeButton(wrapper).trigger('click')
+    await wrapper.setProps({ open: true })
+    await dialog(wrapper).trigger('keydown', { key: 'Escape' })
+    await wrapper.setProps({ open: true })
+    await dialog(wrapper).element.parentElement!.click()
     await nextTick()
 
-    expect(wrapper.emitted('confirmar')).toBeUndefined()
+    expect(wrapper.emitted('confirm')).toBeUndefined()
   })
 
   it('a ação é destrutiva por padrão e pode ser não destrutiva', () => {
-    const destrutivo = montar()
-    const neutro = montar({ destrutivo: false })
+    const destructive = mountComponent()
+    const neutro = mountComponent({ destructive: false })
 
-    expect(botaoConfirmar(destrutivo).classes()).toContain('bg-danger')
-    expect(destrutivo.html()).toContain('bg-danger-soft')
-    expect(botaoConfirmar(neutro).classes()).toContain('bg-primary')
-    expect(botaoConfirmar(neutro).classes()).not.toContain('bg-danger')
+    expect(confirmButton(destructive).classes()).toContain('bg-danger')
+    expect(destructive.html()).toContain('bg-danger-soft')
+    expect(confirmButton(neutro).classes()).toContain('bg-primary')
+    expect(confirmButton(neutro).classes()).not.toContain('bg-danger')
     expect(neutro.html()).toContain('bg-warning-soft')
   })
 })
 
 describe('cancelar e fechar', () => {
   it('Cancelar fecha o diálogo e emite cancelar', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await botaoCancelar(wrapper).trigger('click')
+    await cancelButton(wrapper).trigger('click')
 
-    expect(wrapper.emitted('update:aberto')).toEqual([[false]])
-    expect(wrapper.emitted('cancelar')).toHaveLength(1)
-    expect(wrapper.emitted('confirmar')).toBeUndefined()
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(wrapper.emitted('update:open')).toEqual([[false]])
+    expect(wrapper.emitted('cancel')).toHaveLength(1)
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(dialog(wrapper).exists()).toBe(false)
   })
 
   it('Esc fecha o diálogo (sem emitir confirmar)', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await dialogo(wrapper).trigger('keydown', { key: 'Escape' })
+    await dialog(wrapper).trigger('keydown', { key: 'Escape' })
 
-    expect(wrapper.emitted('update:aberto')).toEqual([[false]])
-    expect(wrapper.emitted('confirmar')).toBeUndefined()
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(wrapper.emitted('update:open')).toEqual([[false]])
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(dialog(wrapper).exists()).toBe(false)
   })
 
   // Comportamento atual, registrado de propósito: só o botão Cancelar emite `cancelar`.
   // Esc, o X e o clique no fundo apenas fecham via `update:aberto`.
   it('(comportamento atual) Esc, X e clique no fundo fecham sem emitir cancelar', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await dialogo(wrapper).trigger('keydown', { key: 'Escape' })
-    await wrapper.setProps({ aberto: true })
-    await botaoFechar(wrapper).trigger('click')
-    await wrapper.setProps({ aberto: true })
-    await dialogo(wrapper).element.parentElement!.click()
+    await dialog(wrapper).trigger('keydown', { key: 'Escape' })
+    await wrapper.setProps({ open: true })
+    await closeButton(wrapper).trigger('click')
+    await wrapper.setProps({ open: true })
+    await dialog(wrapper).element.parentElement!.click()
     await nextTick()
 
-    expect(wrapper.emitted('update:aberto')).toEqual([[false], [false], [false]])
-    expect(wrapper.emitted('cancelar')).toBeUndefined()
+    expect(wrapper.emitted('update:open')).toEqual([[false], [false], [false]])
+    expect(wrapper.emitted('cancel')).toBeUndefined()
   })
 
   it('o botão X fecha o diálogo', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await botaoFechar(wrapper).trigger('click')
+    await closeButton(wrapper).trigger('click')
 
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(dialog(wrapper).exists()).toBe(false)
   })
 
   it('clicar no fundo fecha, mas clicar dentro do painel não', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await dialogo(wrapper).trigger('click')
-    expect(dialogo(wrapper).exists()).toBe(true)
+    await dialog(wrapper).trigger('click')
+    expect(dialog(wrapper).exists()).toBe(true)
 
-    await dialogo(wrapper).element.parentElement!.click()
+    await dialog(wrapper).element.parentElement!.click()
     await nextTick()
-    expect(dialogo(wrapper).exists()).toBe(false)
+    expect(dialog(wrapper).exists()).toBe(false)
   })
 
   it('outras teclas não fecham o diálogo', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await dialogo(wrapper).trigger('keydown', { key: 'Enter' })
-    await dialogo(wrapper).trigger('keydown', { key: 'a' })
+    await dialog(wrapper).trigger('keydown', { key: 'Enter' })
+    await dialog(wrapper).trigger('keydown', { key: 'a' })
 
-    expect(dialogo(wrapper).exists()).toBe(true)
-    expect(wrapper.emitted('update:aberto')).toBeUndefined()
+    expect(dialog(wrapper).exists()).toBe(true)
+    expect(wrapper.emitted('update:open')).toBeUndefined()
   })
 
   it('ao abrir, o foco vai para Cancelar (não para a ação destrutiva)', async () => {
-    const wrapper = montar({ aberto: false })
+    const wrapper = mountComponent({ open: false })
 
-    await wrapper.setProps({ aberto: true })
+    await wrapper.setProps({ open: true })
     await nextTick()
     await nextTick()
 
-    expect(document.activeElement).toBe(botaoCancelar(wrapper).element)
+    expect(document.activeElement).toBe(cancelButton(wrapper).element)
   })
 })
 
-describe('carregando', () => {
+describe('loading', () => {
   it('desabilita Cancelar e Confirmar e marca a ação como ocupada', () => {
-    const wrapper = montar({ carregando: true })
+    const wrapper = mountComponent({ loading: true })
 
-    expect(estaDesabilitado(botaoCancelar(wrapper))).toBe(true)
-    expect(estaDesabilitado(botaoConfirmar(wrapper))).toBe(true)
-    expect(botaoConfirmar(wrapper).attributes('aria-busy')).toBe('true')
+    expect(isDisabled(cancelButton(wrapper))).toBe(true)
+    expect(isDisabled(confirmButton(wrapper))).toBe(true)
+    expect(confirmButton(wrapper).attributes('aria-busy')).toBe('true')
   })
 
   it('sem carregando, os dois botões ficam habilitados', () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    expect(estaDesabilitado(botaoCancelar(wrapper))).toBe(false)
-    expect(estaDesabilitado(botaoConfirmar(wrapper))).toBe(false)
-    expect(botaoConfirmar(wrapper).attributes('aria-busy')).toBeUndefined()
+    expect(isDisabled(cancelButton(wrapper))).toBe(false)
+    expect(isDisabled(confirmButton(wrapper))).toBe(false)
+    expect(confirmButton(wrapper).attributes('aria-busy')).toBeUndefined()
   })
 
   it('não emite confirmar nem cancelar enquanto carrega', async () => {
-    const wrapper = montar({ carregando: true })
+    const wrapper = mountComponent({ loading: true })
 
-    await botaoConfirmar(wrapper).trigger('click')
-    await botaoCancelar(wrapper).trigger('click')
+    await confirmButton(wrapper).trigger('click')
+    await cancelButton(wrapper).trigger('click')
 
-    expect(wrapper.emitted('confirmar')).toBeUndefined()
-    expect(wrapper.emitted('cancelar')).toBeUndefined()
-    expect(dialogo(wrapper).exists()).toBe(true)
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(wrapper.emitted('cancel')).toBeUndefined()
+    expect(dialog(wrapper).exists()).toBe(true)
   })
 
   it('impede confirmação dupla: depois do primeiro clique o pai marca carregando e o segundo é ignorado', async () => {
-    const wrapper = montar()
+    const wrapper = mountComponent()
 
-    await botaoConfirmar(wrapper).trigger('click')
-    await wrapper.setProps({ carregando: true })
-    await botaoConfirmar(wrapper).trigger('click')
-    await botaoConfirmar(wrapper).trigger('click')
+    await confirmButton(wrapper).trigger('click')
+    await wrapper.setProps({ loading: true })
+    await confirmButton(wrapper).trigger('click')
+    await confirmButton(wrapper).trigger('click')
 
-    expect(wrapper.emitted('confirmar')).toHaveLength(1)
+    expect(wrapper.emitted('confirm')).toHaveLength(1)
   })
 
   it('volta a permitir a confirmação quando o carregamento termina', async () => {
-    const wrapper = montar({ carregando: true })
+    const wrapper = mountComponent({ loading: true })
 
-    await wrapper.setProps({ carregando: false })
-    await botaoConfirmar(wrapper).trigger('click')
+    await wrapper.setProps({ loading: false })
+    await confirmButton(wrapper).trigger('click')
 
-    expect(wrapper.emitted('confirmar')).toHaveLength(1)
+    expect(wrapper.emitted('confirm')).toHaveLength(1)
   })
 })

@@ -6,11 +6,11 @@ import { toast } from 'vue-sonner'
  */
 export function useNotify() {
   return {
-    sucesso: (mensagem: string, descricao?: string) => toast.success(mensagem, { description: descricao }),
-    erro: (mensagem: string, descricao?: string) => toast.error(mensagem, { description: descricao }),
-    info: (mensagem: string, descricao?: string) => toast.info(mensagem, { description: descricao }),
-    aviso: (mensagem: string, descricao?: string) => toast.warning(mensagem, { description: descricao }),
+    success: (message: string, description?: string) => toast.success(message, { description }),
+    error: (message: string, description?: string) => toast.error(message, { description }),
+    info: (message: string, description?: string) => toast.info(message, { description }),
+    warning: (message: string, description?: string) => toast.warning(message, { description }),
   }
 }
 
-export const notificar = useNotify()
+export const notify = useNotify()

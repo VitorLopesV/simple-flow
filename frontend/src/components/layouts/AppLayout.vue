@@ -3,46 +3,46 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Toaster } from 'vue-sonner'
 
-import { useCategoriaStore } from '@/stores/categoriaStore'
+import { useCategoryStore } from '@/stores/categoryStore'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 
 const route = useRoute()
-const categoriaStore = useCategoriaStore()
+const categoryStore = useCategoryStore()
 
-const menuAberto = ref(false)
+const menuOpen = ref(false)
 
 /** Páginas que cabem na viewport (md+): a coluna assume a altura da tela e o conteúdo se ajusta. */
-const semScroll = computed(() => route.meta.semScroll === true)
+const noScroll = computed(() => route.meta.noScroll === true)
 
 // As categorias alimentam filtros e formulários de todas as páginas.
-onMounted(() => void categoriaStore.carregar())
+onMounted(() => void categoryStore.load())
 
 // Fecha o menu mobile ao navegar.
-watch(() => route.fullPath, () => (menuAberto.value = false))
+watch(() => route.fullPath, () => (menuOpen.value = false))
 </script>
 
 <template>
   <div class="min-h-full">
     <a
-      href="#conteudo-principal"
+      href="#main-content"
       class="bg-primary text-primary-foreground sr-only z-50 rounded-lg px-4 py-2 focus:not-sr-only focus:absolute focus:left-4 focus:top-4"
     >
       Pular para o conteúdo
     </a>
 
-    <AppSidebar :aberto="menuAberto" @fechar="menuAberto = false" />
+    <AppSidebar :open="menuOpen" @close="menuOpen = false" />
 
     <div
       class="flex min-h-full min-w-0 flex-col lg:pl-(--sidebar-width)"
-      :class="semScroll && 'md:h-dvh md:overflow-hidden'"
+      :class="noScroll && 'md:h-dvh md:overflow-hidden'"
     >
-      <AppHeader @abrir-menu="menuAberto = true" />
+      <AppHeader @open-menu="menuOpen = true" />
 
       <main
-        id="conteudo-principal"
+        id="main-content"
         class="min-w-0 flex-1 px-4 py-6 sm:px-[50px]"
-        :class="semScroll && 'md:flex md:min-h-0 md:flex-col md:pb-6'"
+        :class="noScroll && 'md:flex md:min-h-0 md:flex-col md:pb-6'"
       >
         <RouterView v-slot="{ Component }">
           <Transition
