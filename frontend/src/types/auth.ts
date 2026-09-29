@@ -1,17 +1,17 @@
 import type { ID } from './common'
 
-export interface Usuario {
+export interface User {
   id: ID
   email: string
-  nome: string | null
+  name: string | null
   /** Só dígitos ou já formatado, ex.: `(11) 99999-9999`. */
-  telefone?: string | null
+  phone?: string | null
   /** Foto em data URL (JPEG reduzido no cliente); `null`/ausente = sem foto. */
-  fotoUrl?: string | null
+  photoUrl?: string | null
 }
 
-export interface SessaoUsuario {
-  usuario: Usuario
+export interface UserSession {
+  user: User
   accessToken: string
   refreshToken: string
   expiresIn: number
@@ -19,19 +19,19 @@ export interface SessaoUsuario {
 
 export interface LoginPayload {
   email: string
-  senha: string
+  password: string
 }
 
-export interface RegistroPayload {
+export interface RegisterPayload {
   email: string
-  senha: string
-  nome?: string
+  password: string
+  name?: string
 }
 
-/** Dados editáveis no perfil. `fotoUrl: null` remove a foto atual. */
-export interface PerfilPayload {
-  nome: string
+/** Dados editáveis no perfil. `photoUrl: null` remove a foto atual. */
+export interface ProfilePayload {
+  name: string
   email: string
-  telefone: string | null
-  fotoUrl: string | null
+  phone: string | null
+  photoUrl: string | null
 }

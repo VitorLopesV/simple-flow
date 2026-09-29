@@ -7,89 +7,89 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import ExpenseSourceToggle, { type ExpenseSource } from '@/components/features/ExpenseSourceToggle.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
-import SeletorOrigemGastos, { type OrigemGastos } from '@/components/features/SeletorOrigemGastos.vue'
 import StatisticsChart from '@/components/features/StatisticsChart.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
-import iconeUltimasTransacoes from '@/img/last_transitions_icon.svg'
-import { notificar } from '@/composables/useNotify'
-import { exportarRelatorioPdf } from '@/services/exportService'
-import { mensagemDeErro } from '@/services/http'
+import recentTransactionsIcon from '@/img/last_transitions_icon.svg'
+import { notify } from '@/composables/useNotify'
+import { exportPdfReport } from '@/services/exportService'
+import { getErrorMessage } from '@/services/http'
 import { useAuthStore } from '@/stores/authStore'
 import { useDashboardStore } from '@/stores/dashboardStore'
-import { usePeriodoStore } from '@/stores/periodoStore'
-import { SAIDA_TIPO_COR, SAIDA_TIPO_LABEL } from '@/types/saida'
+import { usePeriodStore } from '@/stores/periodStore'
+import { EXPENSE_TYPE_COLOR, EXPENSE_TYPE_LABEL } from '@/types/expense'
 import { formatCurrency, formatPercent } from '@/utils/currencyFormatter'
-import { formatDate, formatPeriodo } from '@/utils/dateFormatter'
+import { formatDate, formatPeriod } from '@/utils/dateFormatter'
 
 const authStore = useAuthStore()
-const periodoStore = usePeriodoStore()
+const periodStore = usePeriodStore()
 const dashboardStore = useDashboardStore()
 
 /**
  * Nome do cadastro; se não houver (login em modo mock ou conta antiga), usa o trecho do
  * e-mail antes do `@`, capitalizado — o endereço completo nunca aparece na saudação.
  */
-const nomeUsuario = computed(() => {
-  const nome = authStore.usuario?.nome?.trim()
-  if (nome) return nome
+const userName = computed(() => {
+  const name = authStore.user?.name?.trim()
+  if (name) return name
 
-  const local = authStore.usuario?.email?.split('@')[0]?.split(/[._\-+\d]/)[0] ?? ''
+  const local = authStore.user?.email?.split('@')[0]?.split(/[._\-+\d]/)[0] ?? ''
   return local ? local.charAt(0).toUpperCase() + local.slice(1) : ''
 })
 
-const SAUDACAO = 'Olá, seja bem-vindo'
-const INTERVALO_DIGITACAO_MS = 45
+const GREETING = 'Olá, seja bem-vindo'
+const TYPING_INTERVAL_MS = 45
 
 /** Quantos caracteres de "saudação + espaço + nome" já foram "digitados". */
-const digitados = ref(0)
-let timerDigitacao: ReturnType<typeof setInterval> | undefined
+const typedCount = ref(0)
+let typingTimer: ReturnType<typeof setInterval> | undefined
 
-const textoCompleto = computed(() =>
-  nomeUsuario.value ? `${SAUDACAO} ${nomeUsuario.value}` : SAUDACAO,
+const fullText = computed(() =>
+  userName.value ? `${GREETING} ${userName.value}` : GREETING,
 )
-const saudacaoVisivel = computed(() => textoCompleto.value.slice(0, digitados.value).slice(0, SAUDACAO.length))
+const visibleGreeting = computed(() => fullText.value.slice(0, typedCount.value).slice(0, GREETING.length))
 // O espaço separador fica no início do trecho do nome, fora do texto da saudação.
-const nomeVisivel = computed(() => textoCompleto.value.slice(SAUDACAO.length, digitados.value))
-const digitando = computed(() => digitados.value < textoCompleto.value.length)
+const visibleName = computed(() => fullText.value.slice(GREETING.length, typedCount.value))
+const isTyping = computed(() => typedCount.value < fullText.value.length)
 
-function pararDigitacao(): void {
-  clearInterval(timerDigitacao)
-  timerDigitacao = undefined
+function stopTyping(): void {
+  clearInterval(typingTimer)
+  typingTimer = undefined
 }
 
 /** Efeito de máquina de escrever a cada abertura do painel; sem animação se o usuário pediu menos movimento. */
-function iniciarDigitacao(): void {
-  pararDigitacao()
+function startTyping(): void {
+  stopTyping()
 
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-    digitados.value = textoCompleto.value.length
+    typedCount.value = fullText.value.length
     return
   }
 
-  digitados.value = 0
-  timerDigitacao = setInterval(() => {
-    digitados.value += 1
-    if (!digitando.value) pararDigitacao()
-  }, INTERVALO_DIGITACAO_MS)
+  typedCount.value = 0
+  typingTimer = setInterval(() => {
+    typedCount.value += 1
+    if (!isTyping.value) stopTyping()
+  }, TYPING_INTERVAL_MS)
 }
 
-watch(nomeUsuario, iniciarDigitacao)
+watch(userName, startTyping)
 onBeforeUnmount(() => {
-  pararDigitacao()
-  window.removeEventListener('keydown', fecharComEsc)
+  stopTyping()
+  window.removeEventListener('keydown', closeOnEscape)
 })
 
-const exportando = ref(false)
+const exporting = ref(false)
 
 /**
  * O SVG tem `fill` fixo, então vira máscara: a cor vem de `bg-current` e acompanha o tema.
  * A URL vai entre aspas porque o Vite pode inlinar o arquivo como data URI.
  */
-const estiloIconeTransacoes = {
-  maskImage: `url("${iconeUltimasTransacoes}")`,
-  WebkitMaskImage: `url("${iconeUltimasTransacoes}")`,
+const recentTransactionsIconStyle = {
+  maskImage: `url("${recentTransactionsIcon}")`,
+  WebkitMaskImage: `url("${recentTransactionsIcon}")`,
   maskRepeat: 'no-repeat',
   WebkitMaskRepeat: 'no-repeat',
   maskPosition: 'center',
@@ -99,155 +99,154 @@ const estiloIconeTransacoes = {
 }
 
 /** Painel lateral de últimas transações: oculto por padrão, aberto sob demanda. */
-const transacoesAbertas = ref(false)
+const transactionsOpen = ref(false)
 
-function fecharComEsc(evento: KeyboardEvent): void {
-  if (evento.key === 'Escape') transacoesAbertas.value = false
+function closeOnEscape(event: KeyboardEvent): void {
+  if (event.key === 'Escape') transactionsOpen.value = false
 }
 
-async function exportarDados(): Promise<void> {
-  exportando.value = true
+async function exportData(): Promise<void> {
+  exporting.value = true
   try {
-    await exportarRelatorioPdf(periodoStore.periodo)
-    notificar.sucesso('Relatório exportado', formatPeriodo(periodoStore.periodo))
-  } catch (erro) {
-    notificar.erro(mensagemDeErro(erro, 'Não foi possível gerar o PDF do relatório.'))
+    await exportPdfReport(periodStore.period)
+    notify.success('Relatório exportado', formatPeriod(periodStore.period))
+  } catch (error) {
+    notify.error(getErrorMessage(error, 'Não foi possível gerar o PDF do relatório.'))
   } finally {
-    exportando.value = false
+    exporting.value = false
   }
 }
 
-const resumo = computed(() => dashboardStore.resumo)
-const carregandoInicial = computed(() => dashboardStore.loading && !resumo.value)
+const summary = computed(() => dashboardStore.summary)
+const initialLoading = computed(() => dashboardStore.loading && !summary.value)
 
-const labelsHistorico = computed(() => resumo.value?.serieEntradas.map((p) => p.label) ?? [])
+const historyLabels = computed(() => summary.value?.incomeSeries.map((p) => p.label) ?? [])
 
-const seriesHistorico = computed(() => [
+const historySeries = computed(() => [
   {
-    nome: 'Entradas',
-    dados: resumo.value?.serieEntradas.map((p) => p.valor) ?? [],
-    cor: '#10b981',
+    name: 'Entradas',
+    data: summary.value?.incomeSeries.map((p) => p.value) ?? [],
+    color: '#10b981',
   },
-  { nome: 'Saídas', dados: resumo.value?.serieSaidas.map((p) => p.valor) ?? [], cor: '#f43f5e' },
+  { name: 'Saídas', data: summary.value?.expenseSeries.map((p) => p.value) ?? [], color: '#f43f5e' },
 ])
 
 /**
  * O gráfico de barras separa as saídas em "sem cartão" e "cartões": a fatura já está
- * somada em `serieSaidas`, então é subtraída para não aparecer duas vezes.
+ * somada em `expenseSeries`, então é subtraída para não aparecer duas vezes.
  */
-const seriesBarras = computed(() => {
-  const saidas = resumo.value?.serieSaidas ?? []
-  const faturas = resumo.value?.serieFaturas ?? []
-  const faturaDoMes = (indice: number) => faturas[indice]?.valor ?? 0
+const barSeries = computed(() => {
+  const expenses = summary.value?.expenseSeries ?? []
+  const invoices = summary.value?.invoiceSeries ?? []
+  const monthInvoice = (index: number) => invoices[index]?.value ?? 0
 
   return [
-    { nome: 'Entradas', dados: resumo.value?.serieEntradas.map((p) => p.valor) ?? [], cor: '#10b981' },
+    { name: 'Entradas', data: summary.value?.incomeSeries.map((p) => p.value) ?? [], color: '#10b981' },
     {
-      nome: 'Saídas',
-      dados: saidas.map((p, indice) => Math.max(0, p.valor - faturaDoMes(indice))),
-      cor: '#f43f5e',
+      name: 'Saídas',
+      data: expenses.map((p, index) => Math.max(0, p.value - monthInvoice(index))),
+      color: '#f43f5e',
     },
-    { nome: 'Cartões', dados: saidas.map((_, indice) => faturaDoMes(indice)), cor: '#f59e0b' },
+    { name: 'Cartões', data: expenses.map((_, index) => monthInvoice(index)), color: '#f59e0b' },
   ]
 })
 
 /**
- * `totalFaturas` é um recorte de `totalSaidas` (a fatura já está somada ali), não
+ * `totalInvoices` é um recorte de `totalExpenses` (a fatura já está somada ali), não
  * uma parcela a mais — o detalhe do card diz o peso dela pra não parecer que soma.
  */
-const detalheFaturas = computed(() => {
-  const total = resumo.value?.totalSaidas ?? 0
-  const faturas = resumo.value?.totalFaturas ?? 0
+const invoicesDetail = computed(() => {
+  const total = summary.value?.totalExpenses ?? 0
+  const invoices = summary.value?.totalInvoices ?? 0
 
-  if (!faturas) return 'nenhuma fatura vence neste mês'
-  return total > 0 ? `${formatPercent(faturas / total)} das saídas do mês` : 'incluído nas saídas do mês'
+  if (!invoices) return 'nenhuma fatura vence neste mês'
+  return total > 0 ? `${formatPercent(invoices / total)} das saídas do mês` : 'incluído nas saídas do mês'
 })
 
 /**
  * Quanto do que entrou no mês já foi consumido pelas saídas (mesmo cálculo do store,
  * limitado a 100%). Sem entradas não há base de comparação, então o texto explica o caso.
  */
-const detalheSaldo = computed(() => {
-  const entradas = resumo.value?.totalEntradas ?? 0
-  const saidas = resumo.value?.totalSaidas ?? 0
+const balanceDetail = computed(() => {
+  const income = summary.value?.totalIncome ?? 0
+  const expenses = summary.value?.totalExpenses ?? 0
 
-  if (!entradas) return saidas > 0 ? '100% consumido, sem entradas no mês' : 'sem movimentações no mês'
-  if (!saidas) return '0% consumido'
+  if (!income) return expenses > 0 ? '100% consumido, sem entradas no mês' : 'sem movimentações no mês'
+  if (!expenses) return '0% consumido'
 
-  return `${Math.round(dashboardStore.comprometimento)}% consumido`
+  return `${Math.round(dashboardStore.incomeCommitment)}% consumido`
 })
 
 /** Qual conjunto o gráfico "Gastos por categoria" plota — mesmo esquema de "Gastos por tipo". */
-const origemCategorias = ref<OrigemGastos>('saidas')
+const categorySource = ref<ExpenseSource>('expenses')
 
 /**
  * Saídas: a fatura entra inteira na categoria da saída derivada ("Despesa Variável").
  * Cartões: as transações dessas faturas, cada uma na sua categoria; `?? []` cobre um
  * backend que ainda não devolva `gastosCartoesPorCategoria`.
  */
-const gastos = computed(() =>
-  (origemCategorias.value === 'cartoes'
-    ? (resumo.value?.gastosCartoesPorCategoria ?? [])
-    : (resumo.value?.gastosPorCategoria ?? [])
+const spending = computed(() =>
+  (categorySource.value === 'cards'
+    ? (summary.value?.cardExpensesByCategory ?? [])
+    : (summary.value?.expensesByCategory ?? [])
   ).slice(0, 6),
 )
-const labelsGastos = computed(() => gastos.value.map((g) => g.nome))
-const seriesGastos = computed(() => [
-  { nome: 'Gastos', dados: gastos.value.map((g) => g.total), cor: '#6366f1' },
+const spendingLabels = computed(() => spending.value.map((item) => item.name))
+const spendingSeries = computed(() => [
+  { name: 'Gastos', data: spending.value.map((item) => item.total), color: '#6366f1' },
 ])
-const coresGastos = computed(() => gastos.value.map((g) => g.cor))
+const spendingColors = computed(() => spending.value.map((item) => item.color))
 
 /** Qual conjunto o gráfico "Gastos por tipo" plota — o gráfico é o mesmo, só os dados trocam. */
-const origemTipos = ref<OrigemGastos>('saidas')
+const typeSource = ref<ExpenseSource>('expenses')
 
 /**
- * Saídas: `porTipo` do resumo de saídas (`/saidas/resumo`) via dashboardStore — a fatura
+ * Saídas: `byType` do resumo de saídas (`/saidas/resumo`) via dashboardStore — a fatura
  * entra inteira como "Conta". Cartões: as transações dessas faturas, cada uma no seu tipo;
  * `?? []` cobre um backend que ainda não devolva `gastosCartoesPorTipo`.
  */
-const tipos = computed(() =>
-  (origemTipos.value === 'cartoes'
-    ? (resumo.value?.gastosCartoesPorTipo ?? [])
-    : dashboardStore.gastosPorTipo
+const types = computed(() =>
+  (typeSource.value === 'cards'
+    ? (summary.value?.cardExpensesByType ?? [])
+    : dashboardStore.expensesByType
   ).slice(0, 6),
 )
-const labelsTipos = computed(() => tipos.value.map((t) => SAIDA_TIPO_LABEL[t.tipo]))
-const seriesTipos = computed(() => [
-  { nome: 'Gastos', dados: tipos.value.map((t) => t.total), cor: '#6366f1' },
+const typeLabels = computed(() => types.value.map((item) => EXPENSE_TYPE_LABEL[item.type]))
+const typeSeries = computed(() => [
+  { name: 'Gastos', data: types.value.map((item) => item.total), color: '#6366f1' },
 ])
-const coresTipos = computed(() => tipos.value.map((t) => SAIDA_TIPO_COR[t.tipo]))
+const typeColors = computed(() => types.value.map((item) => EXPENSE_TYPE_COLOR[item.type]))
 
-// `?? []` cobre um backend que ainda não devolva `entradasPorCategoria`.
-const entradas = computed(() => resumo.value?.entradasPorCategoria?.slice(0, 6) ?? [])
-const labelsEntradas = computed(() => entradas.value.map((e) => e.nome))
-const seriesEntradas = computed(() => [
-  { nome: 'Entradas', dados: entradas.value.map((e) => e.total), cor: '#10b981' },
+const incomes = computed(() => summary.value?.incomeByCategory.slice(0, 6) ?? [])
+const incomeLabels = computed(() => incomes.value.map((item) => item.name))
+const incomeSeries = computed(() => [
+  { name: 'Entradas', data: incomes.value.map((item) => item.total), color: '#10b981' },
 ])
-const coresEntradas = computed(() => entradas.value.map((e) => e.cor))
+const incomeColors = computed(() => incomes.value.map((item) => item.color))
 
 onMounted(() => {
-  window.addEventListener('keydown', fecharComEsc)
-  iniciarDigitacao()
-  void dashboardStore.carregar()
+  window.addEventListener('keydown', closeOnEscape)
+  startTyping()
+  void dashboardStore.load()
 })
-watch(() => periodoStore.periodo, () => void dashboardStore.carregar(), { deep: true })
+watch(() => periodStore.period, () => void dashboardStore.load(), { deep: true })
 watch(
-  () => dashboardStore.erro,
-  (erro) => erro && notificar.erro(erro),
+  () => dashboardStore.error,
+  (error) => error && notify.error(error),
 )
 </script>
 
 <template>
   <div class="flex w-full flex-col gap-10 md:h-full md:min-h-0 md:gap-6">
   <h2
-    data-testid="saudacao"
-    :aria-label="textoCompleto"
+    data-testid="greeting"
+    :aria-label="fullText"
     class="text-foreground text-2xl font-extralight tracking-tight wrap-break-word whitespace-pre-wrap sm:text-4xl"
   >
-    <span aria-hidden="true">{{ saudacaoVisivel }}</span>
-    <span aria-hidden="true" class="text-success font-semibold">{{ nomeVisivel }}</span>
+    <span aria-hidden="true">{{ visibleGreeting }}</span>
+    <span aria-hidden="true" class="text-success font-semibold">{{ visibleName }}</span>
     <span
-      v-if="digitando"
+      v-if="isTyping"
       aria-hidden="true"
       class="bg-primary ml-1 inline-block h-[0.9em] w-0.5 translate-y-[0.1em] animate-pulse"
     />
@@ -255,31 +254,31 @@ watch(
 
   <PageLayout
     class="md:min-h-0 md:flex-1"
-    titulo="Visão geral"
-    :descricao="`Resumo financeiro de ${formatPeriodo(periodoStore.periodo)}`"
+    title="Visão geral"
+    :description="`Resumo financeiro de ${formatPeriod(periodStore.period)}`"
   >
-    <template #acoes>
+    <template #actions>
       <MonthPicker
-        v-model="periodoStore.periodo"
-        @hoje="periodoStore.irParaHoje()"
+        v-model="periodStore.period"
+        @today="periodStore.goToToday()"
       />
-      <BaseButton variante="outline" class="!h-11" :carregando="exportando" @click="exportarDados">
+      <BaseButton variant="outline" class="!h-11" :loading="exporting" @click="exportData">
         <Download class="size-4" aria-hidden="true" />
         Exportar dados
       </BaseButton>
       <BaseButton
-        variante="outline"
+        variant="outline"
         class="!h-11 !w-11 justify-center !px-0"
-        :class="transacoesAbertas ? '!bg-success !border-success !text-success-foreground hover:!bg-success/90' : ''"
+        :class="transactionsOpen ? '!bg-success !border-success !text-success-foreground hover:!bg-success/90' : ''"
         aria-label="Últimas transações"
         title="Últimas transações"
-        aria-controls="painel-ultimas-transacoes"
-        :aria-expanded="transacoesAbertas"
-        @click="transacoesAbertas = !transacoesAbertas"
+        aria-controls="recent-transactions-panel"
+        :aria-expanded="transactionsOpen"
+        @click="transactionsOpen = !transactionsOpen"
       >
         <span
           class="inline-block size-7 bg-current"
-          :style="estiloIconeTransacoes"
+          :style="recentTransactionsIconStyle"
           aria-hidden="true"
         />
       </BaseButton>
@@ -289,152 +288,152 @@ watch(
       <div class="@container flex min-w-0 flex-1 flex-col gap-4 md:min-h-0">
         <div class="grid shrink-0 grid-cols-1 gap-4 @lg:grid-cols-2 @3xl:grid-cols-4">
           <SummaryCard
-            rotulo="Entradas"
-            :valor="resumo?.totalEntradas ?? 0"
-            :icone="ArrowUpCircle"
-            tom="sucesso"
-            :variacao="resumo?.variacaoEntradas ?? null"
-            :carregando="carregandoInicial"
+            label="Entradas"
+            :value="summary?.totalIncome ?? 0"
+            :icon="ArrowUpCircle"
+            tone="success"
+            :change="summary?.incomeChange ?? null"
+            :loading="initialLoading"
           />
           <SummaryCard
-            rotulo="Saídas"
-            :valor="resumo?.totalSaidas ?? 0"
-            :icone="ArrowDownCircle"
-            tom="perigo"
-            :variacao="resumo?.variacaoSaidas ?? null"
-            variacao-invertida
-            :carregando="carregandoInicial"
+            label="Saídas"
+            :value="summary?.totalExpenses ?? 0"
+            :icon="ArrowDownCircle"
+            tone="danger"
+            :change="summary?.expenseChange ?? null"
+            inverted-change
+            :loading="initialLoading"
           />
           <SummaryCard
-            rotulo="Faturas de cartão"
-            :valor="resumo?.totalFaturas ?? 0"
-            :icone="CreditCard"
-            tom="aviso"
-            :variacao="null"
-            :detalhe="detalheFaturas"
-            :carregando="carregandoInicial"
+            label="Faturas de cartão"
+            :value="summary?.totalInvoices ?? 0"
+            :icon="CreditCard"
+            tone="warning"
+            :change="null"
+            :detail="invoicesDetail"
+            :loading="initialLoading"
           />
           <SummaryCard
-            rotulo="Saldo do mês"
-            :valor="resumo?.saldo ?? 0"
-            :icone="Wallet"
-            :tom="dashboardStore.saldoPositivo ? 'sucesso' : 'perigo'"
-            :variacao="null"
-            :detalhe="detalheSaldo"
-            :carregando="carregandoInicial"
+            label="Saldo do mês"
+            :value="summary?.balance ?? 0"
+            :icon="Wallet"
+            :tone="dashboardStore.isBalancePositive ? 'success' : 'danger'"
+            :change="null"
+            :detail="balanceDetail"
+            :loading="initialLoading"
           />
         </div>
 
         <div class="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:grid-rows-2">
           <div class="grid grid-cols-1 gap-4 md:min-h-0 md:grid-cols-2">
-            <BaseCard preencher titulo="Entradas x Saídas" descricao="Evolução dos últimos 6 meses">
-              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+            <BaseCard fill title="Entradas x Saídas" description="Evolução dos últimos 6 meses">
+              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
               <StatisticsChart
                 v-else
-                preencher
-                tipo="barra"
-                :labels="labelsHistorico"
-                :series="seriesBarras"
-                :altura="240"
+                fill
+                type="bar"
+                :labels="historyLabels"
+                :series="barSeries"
+                :height="240"
               />
             </BaseCard>
 
-            <BaseCard preencher titulo="Acompanhamento mensal" descricao="Entradas e saídas nos últimos 6 meses">
-              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+            <BaseCard fill title="Acompanhamento mensal" description="Entradas e saídas nos últimos 6 meses">
+              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
               <StatisticsChart
                 v-else
-                preencher
-                tipo="linha"
-                :labels="labelsHistorico"
-                :series="seriesHistorico"
-                :altura="240"
+                fill
+                type="line"
+                :labels="historyLabels"
+                :series="historySeries"
+                :height="240"
               />
             </BaseCard>
           </div>
 
           <div class="grid grid-cols-1 gap-4 md:min-h-0 md:grid-cols-3">
-            <BaseCard preencher titulo="Gastos por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
-              <template #acoes>
-                <SeletorOrigemGastos
-                  v-model="origemCategorias"
-                  rotulo="Dados do gráfico de gastos por categoria"
-                  data-testid="origem-gastos-por-categoria"
+            <BaseCard fill title="Gastos por categoria" :description="formatPeriod(periodStore.period)">
+              <template #actions>
+                <ExpenseSourceToggle
+                  v-model="categorySource"
+                  label="Dados do gráfico de gastos por categoria"
+                  data-testid="expense-source-by-category"
                 />
               </template>
 
-              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
               <EmptyState
-                compacto
-                v-else-if="!gastos.length && origemCategorias === 'cartoes'"
-                titulo="Sem gastos no cartão"
-                descricao="Nenhuma fatura de cartão vence neste mês."
+                compact
+                v-else-if="!spending.length && categorySource === 'cards'"
+                title="Sem gastos no cartão"
+                description="Nenhuma fatura de cartão vence neste mês."
               />
               <EmptyState
-                compacto
-                v-else-if="!gastos.length"
-                titulo="Sem gastos no período"
-                descricao="Nenhuma saída registrada para este mês."
+                compact
+                v-else-if="!spending.length"
+                title="Sem gastos no período"
+                description="Nenhuma saída registrada para este mês."
               />
               <StatisticsChart
                 v-else
-                preencher
-                tipo="rosca"
-                :labels="labelsGastos"
-                :series="seriesGastos"
-                :cores="coresGastos"
-                :altura="240"
+                fill
+                type="doughnut"
+                :labels="spendingLabels"
+                :series="spendingSeries"
+                :colors="spendingColors"
+                :height="240"
               />
             </BaseCard>
 
-            <BaseCard preencher titulo="Gastos por tipo" :descricao="formatPeriodo(periodoStore.periodo)">
-              <template #acoes>
-                <SeletorOrigemGastos
-                  v-model="origemTipos"
-                  rotulo="Dados do gráfico de gastos por tipo"
-                  data-testid="origem-gastos-por-tipo"
+            <BaseCard fill title="Gastos por tipo" :description="formatPeriod(periodStore.period)">
+              <template #actions>
+                <ExpenseSourceToggle
+                  v-model="typeSource"
+                  label="Dados do gráfico de gastos por tipo"
+                  data-testid="expense-source-by-type"
                 />
               </template>
 
-              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
               <EmptyState
-                compacto
-                v-else-if="!tipos.length && origemTipos === 'cartoes'"
-                titulo="Sem gastos no cartão"
-                descricao="Nenhuma fatura de cartão vence neste mês."
+                compact
+                v-else-if="!types.length && typeSource === 'cards'"
+                title="Sem gastos no cartão"
+                description="Nenhuma fatura de cartão vence neste mês."
               />
               <EmptyState
-                compacto
-                v-else-if="!tipos.length"
-                titulo="Sem gastos no período"
-                descricao="Nenhuma saída registrada para este mês."
+                compact
+                v-else-if="!types.length"
+                title="Sem gastos no período"
+                description="Nenhuma saída registrada para este mês."
               />
               <StatisticsChart
                 v-else
-                preencher
-                tipo="rosca"
-                :labels="labelsTipos"
-                :series="seriesTipos"
-                :cores="coresTipos"
-                :altura="240"
+                fill
+                type="doughnut"
+                :labels="typeLabels"
+                :series="typeSeries"
+                :colors="typeColors"
+                :height="240"
               />
             </BaseCard>
 
-            <BaseCard preencher titulo="Entradas por categoria" :descricao="formatPeriodo(periodoStore.periodo)">
-              <BaseSkeleton v-if="carregandoInicial" altura="h-64 md:h-full" />
+            <BaseCard fill title="Entradas por categoria" :description="formatPeriod(periodStore.period)">
+              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
               <EmptyState
-                compacto
-                v-else-if="!entradas.length"
-                titulo="Sem entradas no período"
-                descricao="Nenhuma entrada registrada para este mês."
+                compact
+                v-else-if="!incomes.length"
+                title="Sem entradas no período"
+                description="Nenhuma entrada registrada para este mês."
               />
               <StatisticsChart
                 v-else
-                preencher
-                tipo="rosca"
-                :labels="labelsEntradas"
-                :series="seriesEntradas"
-                :cores="coresEntradas"
-                :altura="240"
+                fill
+                type="doughnut"
+                :labels="incomeLabels"
+                :series="incomeSeries"
+                :colors="incomeColors"
+                :height="240"
               />
             </BaseCard>
           </div>
@@ -442,21 +441,21 @@ watch(
       </div>
 
       <div
-        :inert="!transacoesAbertas"
-        :aria-hidden="!transacoesAbertas"
+        :inert="!transactionsOpen"
+        :aria-hidden="!transactionsOpen"
         class="shrink-0 overflow-hidden transition-[width,opacity,margin] duration-300 ease-out motion-reduce:transition-none md:min-h-0"
         :class="
-          transacoesAbertas
+          transactionsOpen
             ? 'w-full opacity-100 md:ml-6 md:w-80 lg:w-96'
             : 'hidden w-0 opacity-0 md:ml-0 md:block'
         "
       >
         <aside
-          id="painel-ultimas-transacoes"
-          data-testid="painel-ultimas-transacoes"
+          id="recent-transactions-panel"
+          data-testid="recent-transactions-panel"
           aria-label="Últimas transações"
           class="bg-card border-border flex max-h-[70vh] w-full flex-col rounded-xl border shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none md:h-full md:max-h-none md:w-80 lg:w-96"
-          :class="transacoesAbertas ? 'translate-x-0' : 'md:translate-x-8'"
+          :class="transactionsOpen ? 'translate-x-0' : 'md:translate-x-8'"
         >
           <div class="border-border flex items-center justify-between border-b px-5 py-4">
             <div>
@@ -466,33 +465,33 @@ watch(
           </div>
 
           <div class="min-h-0 flex-1 overflow-y-auto">
-          <div v-if="carregandoInicial" class="flex flex-col gap-3 p-5">
-            <BaseSkeleton v-for="linha in 5" :key="linha" altura="h-9" />
+          <div v-if="initialLoading" class="flex flex-col gap-3 p-5">
+            <BaseSkeleton v-for="line in 5" :key="line" height="h-9" />
           </div>
 
           <EmptyState
-            v-else-if="!resumo?.transacoesRecentes.length"
-            titulo="Nenhuma movimentação"
-            descricao="Adicione entradas ou saídas para ver o histórico aqui."
+            v-else-if="!summary?.recentTransactions.length"
+            title="Nenhuma movimentação"
+            description="Adicione entradas ou saídas para ver o histórico aqui."
           />
 
           <ul v-else class="divide-border divide-y">
             <li
-              v-for="transacao in resumo.transacoesRecentes"
-              :key="`${transacao.tipo}-${transacao.id}`"
+              v-for="transaction in summary.recentTransactions"
+              :key="`${transaction.movement}-${transaction.id}`"
               class="flex items-center justify-between gap-3 px-5 py-3"
             >
               <div class="flex min-w-0 items-center gap-3">
                 <span
                   class="flex size-8 shrink-0 items-center justify-center rounded-full"
                   :class="
-                    transacao.tipo === 'ENTRADA'
+                    transaction.movement === 'ENTRADA'
                       ? 'bg-success-soft text-success'
                       : 'bg-danger-soft text-danger'
                   "
                 >
                   <ArrowUpCircle
-                    v-if="transacao.tipo === 'ENTRADA'"
+                    v-if="transaction.movement === 'ENTRADA'"
                     class="size-4"
                     aria-hidden="true"
                   />
@@ -500,19 +499,19 @@ watch(
                 </span>
 
                 <div class="min-w-0">
-                  <p class="truncate text-sm font-medium">{{ transacao.descricao }}</p>
+                  <p class="truncate text-sm font-medium">{{ transaction.description }}</p>
                   <div class="mt-0.5 flex items-center gap-2">
-                    <BaseBadge :cor="transacao.categoriaCor">{{ transacao.categoriaNome }}</BaseBadge>
-                    <span class="text-muted-foreground text-xs">{{ formatDate(transacao.data) }}</span>
+                    <BaseBadge :color="transaction.categoryColor">{{ transaction.categoryName }}</BaseBadge>
+                    <span class="text-muted-foreground text-xs">{{ formatDate(transaction.date) }}</span>
                   </div>
                 </div>
               </div>
 
               <p
-                class="numero-tabular shrink-0 text-sm font-semibold"
-                :class="transacao.tipo === 'ENTRADA' ? 'text-success' : 'text-danger'"
+                class="tabular-number shrink-0 text-sm font-semibold"
+                :class="transaction.movement === 'ENTRADA' ? 'text-success' : 'text-danger'"
               >
-                {{ transacao.tipo === 'ENTRADA' ? '+' : '−' }} {{ formatCurrency(transacao.valor) }}
+                {{ transaction.movement === 'ENTRADA' ? '+' : '−' }} {{ formatCurrency(transaction.amount) }}
               </p>
             </li>
           </ul>

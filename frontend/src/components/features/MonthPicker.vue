@@ -3,33 +3,33 @@ import { CalendarDays, ChevronLeft, ChevronRight } from '@lucide/vue'
 import { computed } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
-import type { Periodo } from '@/types/common'
-import { addMeses, MESES, mesmoPeriodo, periodoAtual } from '@/utils/dateFormatter'
+import type { Period } from '@/types/common'
+import { addMonths, currentPeriod, isSamePeriod, MONTHS } from '@/utils/dateFormatter'
 
-const props = withDefaults(defineProps<{ anosDisponiveis?: number }>(), { anosDisponiveis: 5 })
+const props = withDefaults(defineProps<{ availableYears?: number }>(), { availableYears: 5 })
 
-const modelo = defineModel<Periodo>({ required: true })
-const emit = defineEmits<{ hoje: [] }>()
+const model = defineModel<Period>({ required: true })
+const emit = defineEmits<{ today: [] }>()
 
-const hoje = periodoAtual()
+const today = currentPeriod()
 
-const anos = computed(() => {
-  const inicio = hoje.ano - props.anosDisponiveis + 1
-  return Array.from({ length: props.anosDisponiveis + 1 }, (_, i) => inicio + i)
+const years = computed(() => {
+  const start = today.year - props.availableYears + 1
+  return Array.from({ length: props.availableYears + 1 }, (_, i) => start + i)
 })
 
-const ehMesAtual = computed(() => mesmoPeriodo(modelo.value, hoje))
+const isCurrentMonth = computed(() => isSamePeriod(model.value, today))
 
-function mover(quantidade: number): void {
-  modelo.value = addMeses(modelo.value, quantidade)
+function move(amount: number): void {
+  model.value = addMonths(model.value, amount)
 }
 
-function definirMes(evento: Event): void {
-  modelo.value = { ...modelo.value, mes: Number((evento.target as HTMLSelectElement).value) }
+function setMonth(event: Event): void {
+  model.value = { ...model.value, month: Number((event.target as HTMLSelectElement).value) }
 }
 
-function definirAno(evento: Event): void {
-  modelo.value = { ...modelo.value, ano: Number((evento.target as HTMLSelectElement).value) }
+function setYear(event: Event): void {
+  model.value = { ...model.value, year: Number((event.target as HTMLSelectElement).value) }
 }
 </script>
 
@@ -39,51 +39,51 @@ function definirAno(evento: Event): void {
     role="group"
     aria-label="Selecionar período"
   >
-    <BaseButton variante="ghost" tamanho="icon" aria-label="Mês anterior" @click="mover(-1)">
+    <BaseButton variant="ghost" size="icon" aria-label="Mês anterior" @click="move(-1)">
       <ChevronLeft class="size-4" aria-hidden="true" />
     </BaseButton>
 
     <div class="flex items-center gap-1">
-      <label class="sr-only" for="seletor-mes">Mês</label>
+      <label class="sr-only" for="month-select">Mês</label>
       <select
-        id="seletor-mes"
+        id="month-select"
         class="focus-visible:outline-ring [color-scheme:dark] cursor-pointer rounded-md bg-transparent px-1 py-1 text-sm font-medium focus-visible:outline-2"
-        :value="modelo.mes"
-        @change="definirMes"
+        :value="model.month"
+        @change="setMonth"
       >
         <option
-          v-for="(nome, indice) in MESES"
-          :key="nome"
-          :value="indice + 1"
+          v-for="(name, index) in MONTHS"
+          :key="name"
+          :value="index + 1"
           class="bg-slate-800 text-white"
         >
-          {{ nome }}
+          {{ name }}
         </option>
       </select>
 
-      <label class="sr-only" for="seletor-ano">Ano</label>
+      <label class="sr-only" for="year-select">Ano</label>
       <select
-        id="seletor-ano"
+        id="year-select"
         class="focus-visible:outline-ring [color-scheme:dark] cursor-pointer rounded-md bg-transparent px-1 py-1 text-sm font-medium focus-visible:outline-2"
-        :value="modelo.ano"
-        @change="definirAno"
+        :value="model.year"
+        @change="setYear"
       >
-        <option v-for="ano in anos" :key="ano" :value="ano" class="bg-slate-800 text-white">
-          {{ ano }}
+        <option v-for="year in years" :key="year" :value="year" class="bg-slate-800 text-white">
+          {{ year }}
         </option>
       </select>
     </div>
 
-    <BaseButton variante="ghost" tamanho="icon" aria-label="Próximo mês" @click="mover(1)">
+    <BaseButton variant="ghost" size="icon" aria-label="Próximo mês" @click="move(1)">
       <ChevronRight class="size-4" aria-hidden="true" />
     </BaseButton>
 
     <BaseButton
-      v-if="!ehMesAtual"
-      variante="ghost"
-      tamanho="sm"
+      v-if="!isCurrentMonth"
+      variant="ghost"
+      size="sm"
       title="Voltar para o mês atual"
-      @click="emit('hoje')"
+      @click="emit('today')"
     >
       <CalendarDays class="size-3.5" aria-hidden="true" />
       Hoje

@@ -2,31 +2,33 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useAuthStore } from '@/stores/authStore'
-import type { SessaoUsuario, Usuario } from '@/types/auth'
+import type { UserSession, User } from '@/types/auth'
 
-const CHAVE_ACCESS_TOKEN = 'simpleflow.accessToken'
-const CHAVE_REFRESH_TOKEN = 'simpleflow.refreshToken'
-const CHAVE_USUARIO = 'simpleflow.usuario'
+const ACCESS_TOKEN_KEY = 'simpleflow.accessToken'
+const REFRESH_TOKEN_KEY = 'simpleflow.refreshToken'
+const USER_KEY = 'simpleflow.user'
+/** Chave antiga, com o usuário no formato da API (campos em português). */
+const LEGACY_USER_KEY = 'simpleflow.usuario'
 
-const usuario: Usuario = { id: 'usr_1', email: 'ana@exemplo.com', nome: 'Ana' }
+const user: User = { id: 'usr_1', email: 'ana@exemplo.com', name: 'Ana' }
 
-const sessao: SessaoUsuario = {
-  usuario,
+const session: UserSession = {
+  user,
   accessToken: 'access-123',
   refreshToken: 'refresh-456',
   expiresIn: 3600,
 }
 
 /** Simula um reload: novo Pinia, então o store é recriado e relê o `localStorage`. */
-function recriarStore() {
+function recreateStore() {
   setActivePinia(createPinia())
   return useAuthStore()
 }
 
-function salvarSessaoNoStorage(): void {
-  localStorage.setItem(CHAVE_ACCESS_TOKEN, sessao.accessToken)
-  localStorage.setItem(CHAVE_REFRESH_TOKEN, sessao.refreshToken)
-  localStorage.setItem(CHAVE_USUARIO, JSON.stringify(usuario))
+function saveSessionToStorage(): void {
+  localStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken)
+  localStorage.setItem(REFRESH_TOKEN_KEY, session.refreshToken)
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
 }
 
 beforeEach(() => {
@@ -35,178 +37,209 @@ beforeEach(() => {
 
 describe('sem dados salvos', () => {
   it('começa deslogado', () => {
-    const store = recriarStore()
+    const store = recreateStore()
 
-    expect(store.autenticado).toBe(false)
-    expect(store.usuario).toBeNull()
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.user).toBeNull()
     expect(store.accessToken).toBeNull()
     expect(store.refreshToken).toBeNull()
   })
 })
 
 describe('hidratação', () => {
+  it('migra o usuário salvo na chave antiga, com os campos da API, para o formato novo', () => {
+    localStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken)
+    localStorage.setItem(
+      LEGACY_USER_KEY,
+      JSON.stringify({ id: 'usr_1', email: 'ana@exemplo.com', nome: 'Ana', telefone: null, fotoUrl: null }),
+    )
+
+    const store = recreateStore()
+
+    expect(store.user).toEqual({ ...user, phone: null, photoUrl: null })
+    expect(JSON.parse(localStorage.getItem(USER_KEY)!)).toEqual({ ...user, phone: null, photoUrl: null })
+    expect(localStorage.getItem(LEGACY_USER_KEY)).toBeNull()
+  })
+
+  it('prefere a chave nova quando as duas existem', () => {
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
+    localStorage.setItem(LEGACY_USER_KEY, JSON.stringify({ id: 'usr_old', email: 'x@y.com', nome: 'Velho' }))
+
+    expect(recreateStore().user).toEqual(user)
+  })
+
   it('lê token e usuário salvos no localStorage ao ser criado', () => {
-    salvarSessaoNoStorage()
+    saveSessionToStorage()
 
-    const store = recriarStore()
+    const store = recreateStore()
 
-    expect(store.autenticado).toBe(true)
+    expect(store.isAuthenticated).toBe(true)
     expect(store.accessToken).toBe('access-123')
     expect(store.refreshToken).toBe('refresh-456')
-    expect(store.usuario).toEqual(usuario)
+    expect(store.user).toEqual(user)
   })
 
   it('JSON de usuário corrompido resulta em usuario null, sem lançar', () => {
-    salvarSessaoNoStorage()
-    localStorage.setItem(CHAVE_USUARIO, '{corrompido')
+    saveSessionToStorage()
+    localStorage.setItem(USER_KEY, '{corrompido')
 
-    const store = recriarStore()
+    const store = recreateStore()
 
-    expect(store.usuario).toBeNull()
+    expect(store.user).toBeNull()
     expect(store.accessToken).toBe('access-123')
-    expect(store.autenticado).toBe(true)
+    expect(store.isAuthenticated).toBe(true)
   })
 
   it('só o token salvo, sem usuário, continua autenticado', () => {
-    localStorage.setItem(CHAVE_ACCESS_TOKEN, 'so-token')
+    localStorage.setItem(ACCESS_TOKEN_KEY, 'so-token')
 
-    const store = recriarStore()
+    const store = recreateStore()
 
-    expect(store.autenticado).toBe(true)
-    expect(store.usuario).toBeNull()
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.user).toBeNull()
   })
 
   it('só o usuário salvo, sem token, não autentica', () => {
-    localStorage.setItem(CHAVE_USUARIO, JSON.stringify(usuario))
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
 
-    const store = recriarStore()
+    const store = recreateStore()
 
-    expect(store.autenticado).toBe(false)
-    expect(store.usuario).toEqual(usuario)
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.user).toEqual(user)
   })
 })
 
-describe('definirSessao', () => {
+describe('setSession', () => {
   it('atualiza o estado', () => {
-    const store = recriarStore()
+    const store = recreateStore()
 
-    store.definirSessao(sessao)
+    store.setSession(session)
 
-    expect(store.usuario).toEqual(usuario)
+    expect(store.user).toEqual(user)
     expect(store.accessToken).toBe('access-123')
     expect(store.refreshToken).toBe('refresh-456')
-    expect(store.autenticado).toBe(true)
+    expect(store.isAuthenticated).toBe(true)
   })
 
   it('grava as 3 chaves no localStorage', () => {
-    const store = recriarStore()
+    const store = recreateStore()
 
-    store.definirSessao(sessao)
+    store.setSession(session)
 
-    expect(localStorage.getItem(CHAVE_ACCESS_TOKEN)).toBe('access-123')
-    expect(localStorage.getItem(CHAVE_REFRESH_TOKEN)).toBe('refresh-456')
-    expect(JSON.parse(localStorage.getItem(CHAVE_USUARIO)!)).toEqual(usuario)
+    expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBe('access-123')
+    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('refresh-456')
+    expect(JSON.parse(localStorage.getItem(USER_KEY)!)).toEqual(user)
   })
 
   it('substitui uma sessão anterior', () => {
-    const store = recriarStore()
-    store.definirSessao(sessao)
+    const store = recreateStore()
+    store.setSession(session)
 
-    store.definirSessao({
-      usuario: { id: 'usr_2', email: 'bia@exemplo.com', nome: null },
+    store.setSession({
+      user: { id: 'usr_2', email: 'bia@exemplo.com', name: null },
       accessToken: 'novo-access',
       refreshToken: 'novo-refresh',
       expiresIn: 60,
     })
 
-    expect(store.usuario?.id).toBe('usr_2')
+    expect(store.user?.id).toBe('usr_2')
     expect(store.accessToken).toBe('novo-access')
-    expect(localStorage.getItem(CHAVE_ACCESS_TOKEN)).toBe('novo-access')
-    expect(localStorage.getItem(CHAVE_REFRESH_TOKEN)).toBe('novo-refresh')
+    expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBe('novo-access')
+    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('novo-refresh')
   })
 
   it('a sessão sobrevive a um reload', () => {
-    recriarStore().definirSessao(sessao)
+    recreateStore().setSession(session)
 
-    const recarregado = recriarStore()
+    const reloaded = recreateStore()
 
-    expect(recarregado.autenticado).toBe(true)
-    expect(recarregado.usuario).toEqual(usuario)
-    expect(recarregado.refreshToken).toBe('refresh-456')
+    expect(reloaded.isAuthenticated).toBe(true)
+    expect(reloaded.user).toEqual(user)
+    expect(reloaded.refreshToken).toBe('refresh-456')
   })
 })
 
-describe('limparSessao', () => {
+describe('clearSession', () => {
   it('zera o estado', () => {
-    const store = recriarStore()
-    store.definirSessao(sessao)
+    const store = recreateStore()
+    store.setSession(session)
 
-    store.limparSessao()
+    store.clearSession()
 
-    expect(store.usuario).toBeNull()
+    expect(store.user).toBeNull()
     expect(store.accessToken).toBeNull()
     expect(store.refreshToken).toBeNull()
-    expect(store.autenticado).toBe(false)
+    expect(store.isAuthenticated).toBe(false)
   })
 
   it('remove as 3 chaves do localStorage e preserva as demais', () => {
-    const store = recriarStore()
-    store.definirSessao(sessao)
+    const store = recreateStore()
+    store.setSession(session)
     localStorage.setItem('simpleflow.outra', 'mantida')
 
-    store.limparSessao()
+    store.clearSession()
 
-    expect(localStorage.getItem(CHAVE_ACCESS_TOKEN)).toBeNull()
-    expect(localStorage.getItem(CHAVE_REFRESH_TOKEN)).toBeNull()
-    expect(localStorage.getItem(CHAVE_USUARIO)).toBeNull()
+    expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull()
+    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull()
+    expect(localStorage.getItem(USER_KEY)).toBeNull()
     expect(localStorage.getItem('simpleflow.outra')).toBe('mantida')
   })
 
+  it('também remove a chave antiga do usuário, se ainda existir', () => {
+    const store = recreateStore()
+    store.setSession(session)
+    localStorage.setItem(LEGACY_USER_KEY, JSON.stringify({ id: 'usr_1', email: 'ana@exemplo.com', nome: 'Ana' }))
+
+    store.clearSession()
+
+    expect(localStorage.getItem(LEGACY_USER_KEY)).toBeNull()
+  })
+
   it('após o logout, um reload não restaura a sessão', () => {
-    recriarStore().definirSessao(sessao)
-    recriarStore().limparSessao()
+    recreateStore().setSession(session)
+    recreateStore().clearSession()
 
-    const recarregado = recriarStore()
+    const reloaded = recreateStore()
 
-    expect(recarregado.autenticado).toBe(false)
-    expect(recarregado.usuario).toBeNull()
+    expect(reloaded.isAuthenticated).toBe(false)
+    expect(reloaded.user).toBeNull()
   })
 
   it('não lança quando não há sessão', () => {
-    const store = recriarStore()
+    const store = recreateStore()
 
-    expect(() => store.limparSessao()).not.toThrow()
-    expect(store.autenticado).toBe(false)
+    expect(() => store.clearSession()).not.toThrow()
+    expect(store.isAuthenticated).toBe(false)
   })
 })
 
-describe('autenticado', () => {
+describe('isAuthenticated', () => {
   it('reflete a presença do accessToken', () => {
-    const store = recriarStore()
-    expect(store.autenticado).toBe(false)
+    const store = recreateStore()
+    expect(store.isAuthenticated).toBe(false)
 
-    store.definirSessao(sessao)
-    expect(store.autenticado).toBe(true)
+    store.setSession(session)
+    expect(store.isAuthenticated).toBe(true)
 
-    store.limparSessao()
-    expect(store.autenticado).toBe(false)
+    store.clearSession()
+    expect(store.isAuthenticated).toBe(false)
   })
 })
 
-describe('atualizarUsuario', () => {
+describe('updateUser', () => {
   it('troca os dados do usuário, persiste e mantém os tokens', () => {
-    const store = recriarStore()
-    store.definirSessao(sessao)
+    const store = recreateStore()
+    store.setSession(session)
 
-    store.atualizarUsuario({ ...usuario, nome: 'Ana Souza', telefone: '11999998888', fotoUrl: 'data:x' })
+    store.updateUser({ ...user, name: 'Ana Souza', phone: '11999998888', photoUrl: 'data:x' })
 
-    expect(store.usuario?.nome).toBe('Ana Souza')
+    expect(store.user?.name).toBe('Ana Souza')
     expect(store.accessToken).toBe('access-123')
-    expect(JSON.parse(localStorage.getItem(CHAVE_USUARIO)!)).toMatchObject({
-      nome: 'Ana Souza',
-      telefone: '11999998888',
-      fotoUrl: 'data:x',
+    expect(JSON.parse(localStorage.getItem(USER_KEY)!)).toMatchObject({
+      name: 'Ana Souza',
+      phone: '11999998888',
+      photoUrl: 'data:x',
     })
-    expect(recriarStore().usuario?.nome).toBe('Ana Souza')
+    expect(recreateStore().user?.name).toBe('Ana Souza')
   })
 })

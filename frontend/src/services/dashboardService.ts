@@ -1,140 +1,142 @@
-import type { Periodo, SeriePonto } from '@/types/common'
-import type { DashboardResumo, TransacaoRecente } from '@/types/dashboard'
-import type { SaidaTipo } from '@/types/saida'
-import { calcularVariacao } from '@/utils/currencyFormatter'
+import type { Period, SeriesPoint } from '@/types/common'
+import type { DashboardSummary, RecentTransaction } from '@/types/dashboard'
+import type { DashboardSummaryDto } from '@/types/dto'
+import type { ExpenseType } from '@/types/expense'
+import { calculateChange } from '@/utils/currencyFormatter'
 import {
-  dentroDoPeriodo,
-  labelCurtoPeriodo,
-  toCompetencia,
-  ultimosPeriodos,
+  isWithinPeriod,
+  lastPeriods,
+  shortPeriodLabel,
+  toReferenceMonth,
 } from '@/utils/dateFormatter'
 import { http, USE_MOCK } from './http'
+import { toDashboardSummary } from './mappers'
 import { delay, mockDb } from './mock'
 
-const MESES_NO_GRAFICO = 6
+const MONTHS_IN_CHART = 6
 
-function somar(valores: { valor: number }[]): number {
-  return valores.reduce((soma, item) => soma + item.valor, 0)
+function sum(values: { amount: number }[]): number {
+  return values.reduce((total, item) => total + item.amount, 0)
 }
 
-function serie(registros: { data: string; valor: number }[], periodo: Periodo): SeriePonto[] {
-  return ultimosPeriodos(periodo, MESES_NO_GRAFICO).map((mes) => ({
-    label: labelCurtoPeriodo(mes),
-    valor: somar(registros.filter((registro) => dentroDoPeriodo(registro.data, mes))),
+function series(records: { date: string; amount: number }[], period: Period): SeriesPoint[] {
+  return lastPeriods(period, MONTHS_IN_CHART).map((month) => ({
+    label: shortPeriodLabel(month),
+    value: sum(records.filter((record) => isWithinPeriod(record.date, month))),
   }))
 }
 
-function ehFatura(saida: { automatica?: boolean; formaPagamento?: string }): boolean {
-  return Boolean(saida.automatica) && saida.formaPagamento === 'CARTAO_CREDITO'
+function isInvoice(expense: { automatic?: boolean; paymentMethod?: string }): boolean {
+  return Boolean(expense.automatic) && expense.paymentMethod === 'CARTAO_CREDITO'
 }
 
 export const dashboardService = {
-  async resumo(periodo: Periodo): Promise<DashboardResumo> {
+  async summary(period: Period): Promise<DashboardSummary> {
     if (USE_MOCK) {
       const db = await mockDb()
 
-      const todasSaidas = db.saidasComFaturas()
-      const entradasDoMes = db.entradas.filter((entrada) => dentroDoPeriodo(entrada.data, periodo))
-      const saidasDoMes = todasSaidas.filter((saida) => dentroDoPeriodo(saida.data, periodo))
+      const allExpenses = db.expensesWithInvoices()
+      const monthIncomes = db.incomes.filter((income) => isWithinPeriod(income.date, period))
+      const monthExpenses = allExpenses.filter((expense) => isWithinPeriod(expense.date, period))
 
-      const totalEntradas = somar(entradasDoMes)
-      const totalSaidas = somar(saidasDoMes)
+      const totalIncome = sum(monthIncomes)
+      const totalExpenses = sum(monthExpenses)
 
-      const serieEntradas = serie(db.entradas, periodo)
-      const serieSaidas = serie(todasSaidas, periodo)
-      const serieFaturas = serie(todasSaidas.filter(ehFatura), periodo)
+      const incomeSeries = series(db.incomes, period)
+      const expenseSeries = series(allExpenses, period)
+      const invoiceSeries = series(allExpenses.filter(isInvoice), period)
 
       // Quanto das saídas do mês é fatura de cartão — sai do mesmo conjunto que alimenta
-      // totalSaidas (ver `faturasComoSaidas` em mock/db.ts), e não de uma busca própria
+      // totalExpenses (ver `invoicesAsExpenses` em mock/db.ts), e não de uma busca própria
       // por competência, que seria uma definição de mês diferente do resto do dashboard.
-      const totalFaturas = saidasDoMes
-        .filter(ehFatura)
-        .reduce((soma, saida) => soma + saida.valor, 0)
+      const totalInvoices = monthExpenses
+        .filter(isInvoice)
+        .reduce((total, expense) => total + expense.amount, 0)
 
-      const categoria = (id: string) => db.categorias.find((item) => item.id === id)
+      const category = (id: string) => db.categories.find((item) => item.id === id)
 
-      const porCategoria = (registros: { categoriaId: string; valor: number }[]) => {
-        const agrupado = new Map<string, number>()
-        for (const registro of registros) {
-          agrupado.set(registro.categoriaId, (agrupado.get(registro.categoriaId) ?? 0) + registro.valor)
+      const byCategory = (records: { categoryId: string; amount: number }[]) => {
+        const grouped = new Map<string, number>()
+        for (const record of records) {
+          grouped.set(record.categoryId, (grouped.get(record.categoryId) ?? 0) + record.amount)
         }
 
-        return [...agrupado.entries()]
-          .map(([categoriaId, total]) => ({
-            nome: categoria(categoriaId)?.nome ?? 'Outros',
-            cor: categoria(categoriaId)?.cor ?? '#94a3b8',
+        return [...grouped.entries()]
+          .map(([categoryId, total]) => ({
+            name: category(categoryId)?.name ?? 'Outros',
+            color: category(categoryId)?.color ?? '#94a3b8',
             total,
           }))
           .sort((a, b) => b.total - a.total)
       }
 
-      const gastosPorCategoria = porCategoria(saidasDoMes)
-      const entradasPorCategoria = porCategoria(entradasDoMes)
+      const expensesByCategory = byCategory(monthExpenses)
+      const incomeByCategory = byCategory(monthIncomes)
 
-      // Mesma regra de mês de `totalFaturas`: a fatura vira saída na data de vencimento
-      // (ver `faturasComoSaidas` em mock/db.ts), não pela competência.
-      const faturasDoMes = new Set(
-        db.faturas
-          .filter((fatura) => dentroDoPeriodo(fatura.vencimento, periodo))
-          .map((fatura) => fatura.id),
+      // Mesma regra de mês de `totalInvoices`: a fatura vira saída na data de vencimento
+      // (ver `invoicesAsExpenses` em mock/db.ts), não pela competência.
+      const monthInvoices = new Set(
+        db.invoices
+          .filter((invoice) => isWithinPeriod(invoice.dueDate, period))
+          .map((invoice) => invoice.id),
       )
-      const transacoesCartaoDoMes = db.transacoesCartao.filter((transacao) =>
-        faturasDoMes.has(transacao.faturaId),
+      const monthCardTransactions = db.cardTransactions.filter((transaction) =>
+        monthInvoices.has(transaction.invoiceId),
       )
 
-      const agrupadoPorTipo = new Map<SaidaTipo, number>()
-      for (const transacao of transacoesCartaoDoMes) {
-        agrupadoPorTipo.set(transacao.tipo, (agrupadoPorTipo.get(transacao.tipo) ?? 0) + transacao.valor)
+      const groupedByType = new Map<ExpenseType, number>()
+      for (const transaction of monthCardTransactions) {
+        groupedByType.set(transaction.type, (groupedByType.get(transaction.type) ?? 0) + transaction.amount)
       }
-      const gastosCartoesPorTipo = [...agrupadoPorTipo.entries()]
-        .map(([tipo, total]) => ({ tipo, total }))
+      const cardExpensesByType = [...groupedByType.entries()]
+        .map(([type, total]) => ({ type, total }))
         .sort((a, b) => b.total - a.total)
-      const gastosCartoesPorCategoria = porCategoria(transacoesCartaoDoMes)
+      const cardExpensesByCategory = byCategory(monthCardTransactions)
 
-      const transacoesRecentes: TransacaoRecente[] = [
-        ...entradasDoMes.map<TransacaoRecente>((entrada) => ({
-          id: entrada.id,
-          tipo: 'ENTRADA',
-          descricao: entrada.descricao,
-          valor: entrada.valor,
-          data: entrada.data,
-          categoriaNome: categoria(entrada.categoriaId)?.nome ?? 'Sem categoria',
-          categoriaCor: categoria(entrada.categoriaId)?.cor ?? '#94a3b8',
+      const recentTransactions: RecentTransaction[] = [
+        ...monthIncomes.map<RecentTransaction>((income) => ({
+          id: income.id,
+          movement: 'ENTRADA',
+          description: income.description,
+          amount: income.amount,
+          date: income.date,
+          categoryName: category(income.categoryId)?.name ?? 'Sem categoria',
+          categoryColor: category(income.categoryId)?.color ?? '#94a3b8',
         })),
-        ...saidasDoMes.map<TransacaoRecente>((saida) => ({
-          id: saida.id,
-          tipo: 'SAIDA',
-          descricao: saida.descricao,
-          valor: saida.valor,
-          data: saida.data,
-          categoriaNome: categoria(saida.categoriaId)?.nome ?? 'Sem categoria',
-          categoriaCor: categoria(saida.categoriaId)?.cor ?? '#94a3b8',
+        ...monthExpenses.map<RecentTransaction>((expense) => ({
+          id: expense.id,
+          movement: 'SAIDA',
+          description: expense.description,
+          amount: expense.amount,
+          date: expense.date,
+          categoryName: category(expense.categoryId)?.name ?? 'Sem categoria',
+          categoryColor: category(expense.categoryId)?.color ?? '#94a3b8',
         })),
       ]
-        .sort((a, b) => b.data.localeCompare(a.data))
+        .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 8)
 
       return delay({
-        totalEntradas,
-        totalSaidas,
-        saldo: totalEntradas - totalSaidas,
-        totalFaturas,
-        variacaoEntradas: calcularVariacao(totalEntradas, serieEntradas.at(-2)?.valor ?? 0),
-        variacaoSaidas: calcularVariacao(totalSaidas, serieSaidas.at(-2)?.valor ?? 0),
-        serieEntradas,
-        serieSaidas,
-        serieFaturas,
-        gastosPorCategoria,
-        entradasPorCategoria,
-        gastosCartoesPorTipo,
-        gastosCartoesPorCategoria,
-        transacoesRecentes,
+        totalIncome,
+        totalExpenses,
+        balance: totalIncome - totalExpenses,
+        totalInvoices,
+        incomeChange: calculateChange(totalIncome, incomeSeries.at(-2)?.value ?? 0),
+        expenseChange: calculateChange(totalExpenses, expenseSeries.at(-2)?.value ?? 0),
+        incomeSeries,
+        expenseSeries,
+        invoiceSeries,
+        expensesByCategory,
+        incomeByCategory,
+        cardExpensesByType,
+        cardExpensesByCategory,
+        recentTransactions,
       })
     }
 
-    const { data } = await http.get<DashboardResumo>('/dashboard/resumo', {
-      params: { competencia: toCompetencia(periodo) },
+    const { data } = await http.get<DashboardSummaryDto>('/dashboard/resumo', {
+      params: { competencia: toReferenceMonth(period) },
     })
-    return data
+    return toDashboardSummary(data)
   },
 }

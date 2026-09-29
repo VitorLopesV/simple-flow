@@ -1,63 +1,85 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import type { SessaoUsuario, Usuario } from '@/types/auth'
+import { toUser } from '@/services/mappers'
+import type { User, UserSession } from '@/types/auth'
+import type { UserDto } from '@/types/dto'
 
-const CHAVE_ACCESS_TOKEN = 'simpleflow.accessToken'
-const CHAVE_REFRESH_TOKEN = 'simpleflow.refreshToken'
-const CHAVE_USUARIO = 'simpleflow.usuario'
+// Os valores das chaves de token são os já gravados nos navegadores dos usuários:
+// mudar deslogaria todo mundo.
+const ACCESS_TOKEN_KEY = 'simpleflow.accessToken'
+const REFRESH_TOKEN_KEY = 'simpleflow.refreshToken'
+const USER_KEY = 'simpleflow.user'
+/**
+ * Chave antiga do usuário, que guardava os campos em português (formato da API).
+ * Só é lida para migrar sessões abertas antes da troca de nomes do frontend.
+ */
+const LEGACY_USER_KEY = 'simpleflow.usuario'
 
-function usuarioSalvo(): Usuario | null {
-  const bruto = localStorage.getItem(CHAVE_USUARIO)
-  if (!bruto) return null
+function parseJson<T>(raw: string | null): T | null {
+  if (!raw) return null
   try {
-    return JSON.parse(bruto) as Usuario
+    return JSON.parse(raw) as T
   } catch {
     return null
   }
 }
 
+function storedUser(): User | null {
+  const user = parseJson<User>(localStorage.getItem(USER_KEY))
+  if (user) return user
+
+  const legacy = parseJson<UserDto>(localStorage.getItem(LEGACY_USER_KEY))
+  if (!legacy) return null
+
+  const migrated = toUser(legacy)
+  localStorage.setItem(USER_KEY, JSON.stringify(migrated))
+  localStorage.removeItem(LEGACY_USER_KEY)
+  return migrated
+}
+
 /** Sessão do usuário autenticado, persistida em localStorage para sobreviver a reloads. */
 export const useAuthStore = defineStore('auth', () => {
-  const usuario = ref<Usuario | null>(usuarioSalvo())
-  const accessToken = ref<string | null>(localStorage.getItem(CHAVE_ACCESS_TOKEN))
-  const refreshToken = ref<string | null>(localStorage.getItem(CHAVE_REFRESH_TOKEN))
+  const user = ref<User | null>(storedUser())
+  const accessToken = ref<string | null>(localStorage.getItem(ACCESS_TOKEN_KEY))
+  const refreshToken = ref<string | null>(localStorage.getItem(REFRESH_TOKEN_KEY))
 
-  const autenticado = computed(() => !!accessToken.value)
+  const isAuthenticated = computed(() => !!accessToken.value)
 
-  function definirSessao(sessao: SessaoUsuario): void {
-    usuario.value = sessao.usuario
-    accessToken.value = sessao.accessToken
-    refreshToken.value = sessao.refreshToken
+  function setSession(session: UserSession): void {
+    user.value = session.user
+    accessToken.value = session.accessToken
+    refreshToken.value = session.refreshToken
 
-    localStorage.setItem(CHAVE_USUARIO, JSON.stringify(sessao.usuario))
-    localStorage.setItem(CHAVE_ACCESS_TOKEN, sessao.accessToken)
-    localStorage.setItem(CHAVE_REFRESH_TOKEN, sessao.refreshToken)
+    localStorage.setItem(USER_KEY, JSON.stringify(session.user))
+    localStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken)
+    localStorage.setItem(REFRESH_TOKEN_KEY, session.refreshToken)
   }
 
   /** Troca só os dados do usuário (perfil editado), mantendo os tokens da sessão. */
-  function atualizarUsuario(atualizado: Usuario): void {
-    usuario.value = atualizado
-    localStorage.setItem(CHAVE_USUARIO, JSON.stringify(atualizado))
+  function updateUser(updated: User): void {
+    user.value = updated
+    localStorage.setItem(USER_KEY, JSON.stringify(updated))
   }
 
-  function limparSessao(): void {
-    usuario.value = null
+  function clearSession(): void {
+    user.value = null
     accessToken.value = null
     refreshToken.value = null
 
-    localStorage.removeItem(CHAVE_USUARIO)
-    localStorage.removeItem(CHAVE_ACCESS_TOKEN)
-    localStorage.removeItem(CHAVE_REFRESH_TOKEN)
+    localStorage.removeItem(USER_KEY)
+    localStorage.removeItem(LEGACY_USER_KEY)
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
   }
 
   return {
-    usuario,
+    user,
     accessToken,
     refreshToken,
-    autenticado,
-    definirSessao,
-    atualizarUsuario,
-    limparSessao,
+    isAuthenticated,
+    setSession,
+    updateUser,
+    clearSession,
   }
 })

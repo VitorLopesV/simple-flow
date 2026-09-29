@@ -3,29 +3,29 @@ import { computed } from 'vue'
 
 import { cn } from '@/utils/cn'
 
-type Tom = 'neutro' | 'sucesso' | 'perigo' | 'aviso' | 'info'
+type Tone = 'neutral' | 'success' | 'danger' | 'warning' | 'info'
 
 const props = withDefaults(
   defineProps<{
-    tom?: Tom
+    tone?: Tone
     /** Cor livre (hex) — usada para o ponto colorido das categorias. */
-    cor?: string | null
+    color?: string | null
   }>(),
-  { tom: 'neutro', cor: null },
+  { tone: 'neutral', color: null },
 )
 
-const TONS: Record<Tom, string> = {
-  neutro: 'bg-muted text-muted-foreground',
-  sucesso: 'bg-success-soft text-success',
-  perigo: 'bg-danger-soft text-danger',
-  aviso: 'bg-warning-soft text-warning',
+const TONES: Record<Tone, string> = {
+  neutral: 'bg-muted text-muted-foreground',
+  success: 'bg-success-soft text-success',
+  danger: 'bg-danger-soft text-danger',
+  warning: 'bg-warning-soft text-warning',
   info: 'bg-primary/10 text-primary',
 }
 
 const classes = computed(() =>
   cn(
     'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
-    TONS[props.tom],
+    TONES[props.tone],
   ),
 )
 </script>
@@ -33,9 +33,9 @@ const classes = computed(() =>
 <template>
   <span :class="classes">
     <span
-      v-if="cor"
+      v-if="color"
       class="size-2 shrink-0 rounded-full"
-      :style="{ backgroundColor: cor }"
+      :style="{ backgroundColor: color }"
       aria-hidden="true"
     />
     <slot />

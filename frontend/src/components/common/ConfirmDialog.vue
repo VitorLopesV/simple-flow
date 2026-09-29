@@ -6,54 +6,54 @@ import BaseModal from './BaseModal.vue'
 
 withDefaults(
   defineProps<{
-    titulo?: string
-    mensagem: string
-    textoConfirmar?: string
-    textoCancelar?: string
-    carregando?: boolean
-    destrutivo?: boolean
+    title?: string
+    message: string
+    confirmText?: string
+    cancelText?: string
+    loading?: boolean
+    destructive?: boolean
   }>(),
   {
-    titulo: 'Confirmar ação',
-    textoConfirmar: 'Confirmar',
-    textoCancelar: 'Cancelar',
-    carregando: false,
-    destrutivo: true,
+    title: 'Confirmar ação',
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar',
+    loading: false,
+    destructive: true,
   },
 )
 
-const aberto = defineModel<boolean>('aberto', { default: false })
-const emit = defineEmits<{ confirmar: []; cancelar: [] }>()
+const open = defineModel<boolean>('open', { default: false })
+const emit = defineEmits<{ confirm: []; cancel: [] }>()
 
-function cancelar(): void {
-  aberto.value = false
-  emit('cancelar')
+function cancel(): void {
+  open.value = false
+  emit('cancel')
 }
 </script>
 
 <template>
-  <BaseModal v-model:aberto="aberto" :titulo="titulo" largura="sm">
+  <BaseModal v-model:open="open" :title="title" width="sm">
     <div class="flex gap-3">
       <div
         class="flex size-10 shrink-0 items-center justify-center rounded-full"
-        :class="destrutivo ? 'bg-danger-soft text-danger' : 'bg-warning-soft text-warning'"
+        :class="destructive ? 'bg-danger-soft text-danger' : 'bg-warning-soft text-warning'"
       >
         <TriangleAlert class="size-5" aria-hidden="true" />
       </div>
-      <p class="text-muted-foreground pt-2 text-sm">{{ mensagem }}</p>
+      <p class="text-muted-foreground pt-2 text-sm">{{ message }}</p>
     </div>
 
-    <template #rodape>
+    <template #footer>
       <div class="flex justify-end gap-2">
-        <BaseButton variante="outline" :desabilitado="carregando" @click="cancelar">
-          {{ textoCancelar }}
+        <BaseButton variant="outline" :disabled="loading" @click="cancel">
+          {{ cancelText }}
         </BaseButton>
         <BaseButton
-          :variante="destrutivo ? 'danger' : 'primary'"
-          :carregando="carregando"
-          @click="emit('confirmar')"
+          :variant="destructive ? 'danger' : 'primary'"
+          :loading="loading"
+          @click="emit('confirm')"
         >
-          {{ textoConfirmar }}
+          {{ confirmText }}
         </BaseButton>
       </div>
     </template>

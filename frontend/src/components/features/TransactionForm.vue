@@ -10,331 +10,331 @@ import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import BaseTextarea from '@/components/common/BaseTextarea.vue'
 import CurrencyInput from '@/components/common/CurrencyInput.vue'
 import DateInput from '@/components/common/DateInput.vue'
-import type { TransacaoCartao, TransacaoCartaoPayload } from '@/types/cartao'
-import type { OpcaoSelect } from '@/types/common'
-import type { Movimento } from '@/types/categoria'
-import type { Entrada, EntradaPayload } from '@/types/entrada'
-import type { FormaPagamento, Saida, SaidaPayload, SaidaStatus, SaidaTipo } from '@/types/saida'
-import { FORMA_PAGAMENTO_OPCOES, SAIDA_STATUS_OPCOES, SAIDA_TIPO_OPCOES } from '@/types/saida'
+import type { CardTransaction, CardTransactionPayload } from '@/types/creditCard'
+import type { SelectOption } from '@/types/common'
+import type { Movement } from '@/types/category'
+import type { Income, IncomePayload } from '@/types/income'
+import type { Expense, ExpensePayload, ExpenseStatus, ExpenseType, PaymentMethod } from '@/types/expense'
+import { EXPENSE_STATUS_OPTIONS, EXPENSE_TYPE_OPTIONS, PAYMENT_METHOD_OPTIONS } from '@/types/expense'
 import { toISODate } from '@/utils/dateFormatter'
 import {
-  compor,
-  dataISO,
-  maximoCaracteres,
-  minimoCaracteres,
-  numeroEntre,
-  obrigatorio,
-  valorMonetarioPositivo,
+  compose,
+  isoDate,
+  maxLength,
+  minLength,
+  numberBetween,
+  positiveAmount,
+  required,
 } from '@/utils/validators'
 
-interface Valores {
-  descricao: string
-  valor: number
-  data: string
-  categoriaId: string | null
-  recorrente: boolean
-  observacao: string
-  status: SaidaStatus
-  vencimento: string
-  formaPagamento: FormaPagamento
-  tipo: SaidaTipo
-  quantidadeParcelas: number
+interface FormValues {
+  description: string
+  amount: number
+  date: string
+  categoryId: string | null
+  recurring: boolean
+  notes: string
+  status: ExpenseStatus
+  dueDate: string
+  paymentMethod: PaymentMethod
+  type: ExpenseType
+  installmentCount: number
 }
 
 const props = withDefaults(
   defineProps<{
     /** Define quais campos aparecem e o formato do payload emitido. */
-    tipo: Movimento
+    kind: Movement
     /**
-     * `CARTAO` = débito lançado direto num cartão: mesmos campos de uma saída, sem
+     * `card` = débito lançado direto num cartão: mesmos campos de uma saída, sem
      * forma de pagamento (é sempre o cartão) e sem situação (quem é paga é a fatura).
      */
-    contexto?: 'PADRAO' | 'CARTAO'
-    transacao?: Entrada | Saida | TransacaoCartao | null
-    categorias: OpcaoSelect<string>[]
-    salvando?: boolean
+    context?: 'default' | 'card'
+    transaction?: Income | Expense | CardTransaction | null
+    categories: SelectOption<string>[]
+    saving?: boolean
   }>(),
-  { contexto: 'PADRAO', transacao: null, salvando: false },
+  { context: 'default', transaction: null, saving: false },
 )
 
 const emit = defineEmits<{
-  salvar: [payload: EntradaPayload | SaidaPayload | TransacaoCartaoPayload]
-  cancelar: []
+  save: [payload: IncomePayload | ExpensePayload | CardTransactionPayload]
+  cancel: []
 }>()
 
-const ehCartao = computed(() => props.contexto === 'CARTAO')
-const ehSaida = computed(() => props.tipo === 'SAIDA')
-const ehEdicao = computed(() => Boolean(props.transacao))
+const isCard = computed(() => props.context === 'card')
+const isExpense = computed(() => props.kind === 'SAIDA')
+const isEditing = computed(() => Boolean(props.transaction))
 
 // Nome de um lançamento recorrente é o que liga suas ocorrências na mesma série
 // (backend casa por descrição + categoria) — travado na edição para não divergir
 // entre os meses.
-const nomeBloqueado = computed(() => ehEdicao.value && Boolean(props.transacao?.recorrente))
+const nameLocked = computed(() => isEditing.value && Boolean(props.transaction?.recurring))
 
-function valoresIniciais(): Valores {
-  const transacao = props.transacao
-  const saida = transacao as Saida | null
+function initialValues(): FormValues {
+  const transaction = props.transaction
+  const expense = transaction as Expense | null
 
   return {
-    descricao: transacao?.descricao ?? '',
-    valor: transacao?.valor ?? 0,
-    data: transacao?.data ?? toISODate(new Date()),
-    categoriaId: transacao?.categoriaId ?? null,
-    recorrente: transacao?.recorrente ?? false,
-    observacao: transacao?.observacao ?? '',
-    status: saida?.status ?? 'PENDENTE',
-    vencimento: saida?.vencimento ?? '',
-    formaPagamento: saida?.formaPagamento ?? 'PIX',
-    tipo: saida?.tipo ?? 'OUTROS',
+    description: transaction?.description ?? '',
+    amount: transaction?.amount ?? 0,
+    date: transaction?.date ?? toISODate(new Date()),
+    categoryId: transaction?.categoryId ?? null,
+    recurring: transaction?.recurring ?? false,
+    notes: transaction?.notes ?? '',
+    status: expense?.status ?? 'PENDENTE',
+    dueDate: expense?.dueDate ?? '',
+    paymentMethod: expense?.paymentMethod ?? 'PIX',
+    type: expense?.type ?? 'OUTROS',
     // No cartão, a edição mostra o parcelamento já existente (somente leitura).
-    quantidadeParcelas: (transacao as TransacaoCartao | null)?.totalParcelas ?? 1,
+    installmentCount: (transaction as CardTransaction | null)?.totalInstallments ?? 1,
   }
 }
 
-const { handleSubmit, resetForm } = useForm<Valores>({
-  initialValues: valoresIniciais(),
+const { handleSubmit, resetForm } = useForm<FormValues>({
+  initialValues: initialValues(),
   validationSchema: {
-    descricao: compor(
-      obrigatorio('Descrição'),
-      minimoCaracteres(3, 'Descrição'),
-      maximoCaracteres(80, 'Descrição'),
+    description: compose(
+      required('Descrição'),
+      minLength(3, 'Descrição'),
+      maxLength(80, 'Descrição'),
     ),
-    valor: valorMonetarioPositivo('Valor'),
-    data: compor(obrigatorio('Data'), dataISO('Data')),
-    categoriaId: obrigatorio('Categoria'),
+    amount: positiveAmount('Valor'),
+    date: compose(required('Data'), isoDate('Data')),
+    categoryId: required('Categoria'),
     // Vencimento é opcional: só valida o formato quando o usuário preenche algo.
-    vencimento: (valor: unknown) => (String(valor ?? '').trim() === '' ? true : dataISO('Vencimento')(valor)),
-    observacao: maximoCaracteres(280, 'Observação'),
-    quantidadeParcelas: numeroEntre(1, 30, 'Parcelas'),
+    dueDate: (value: unknown) => (String(value ?? '').trim() === '' ? true : isoDate('Vencimento')(value)),
+    notes: maxLength(280, 'Observação'),
+    installmentCount: numberBetween(1, 30, 'Parcelas'),
   },
 })
 
-const { value: descricao, errorMessage: erroDescricao } = useField<string>('descricao')
-const { value: valor, errorMessage: erroValor } = useField<number>('valor')
-const { value: categoriaId, errorMessage: erroCategoria } = useField<string | null>('categoriaId')
-const { value: recorrente } = useField<boolean>('recorrente')
-const { value: observacao, errorMessage: erroObservacao } = useField<string>('observacao')
-const { value: status } = useField<SaidaStatus>('status')
-const { value: vencimento, errorMessage: erroVencimento } = useField<string>('vencimento')
-const { value: formaPagamento } = useField<FormaPagamento>('formaPagamento')
-const { value: tipo } = useField<SaidaTipo>('tipo')
-const { value: quantidadeParcelas, errorMessage: erroParcelas } = useField<number>('quantidadeParcelas')
+const { value: description, errorMessage: descriptionError } = useField<string>('description')
+const { value: amount, errorMessage: amountError } = useField<number>('amount')
+const { value: categoryId, errorMessage: categoryError } = useField<string | null>('categoryId')
+const { value: recurring } = useField<boolean>('recurring')
+const { value: notes, errorMessage: notesError } = useField<string>('notes')
+const { value: status } = useField<ExpenseStatus>('status')
+const { value: dueDate, errorMessage: dueDateError } = useField<string>('dueDate')
+const { value: paymentMethod } = useField<PaymentMethod>('paymentMethod')
+const { value: type } = useField<ExpenseType>('type')
+const { value: installmentCount, errorMessage: installmentsError } = useField<number>('installmentCount')
 
 // Compra parcelada e lançamento recorrente são conceitos diferentes (fim previsto x
 // repetição infinita) — não fazem sentido juntos, então desligamos um ao ligar o outro.
-const mostrarRecorrente = computed(() => !ehCartao.value || ehEdicao.value || Number(quantidadeParcelas.value) <= 1)
+const showRecurring = computed(() => !isCard.value || isEditing.value || Number(installmentCount.value) <= 1)
 
 // Lançamento recorrente não tem quantidade de parcelas: trava o campo em 1 e ignora
 // o que estiver nele ao salvar.
 // Na edição o parcelamento é fixo (não recria parcelas), então o campo fica travado.
-const parcelasBloqueadas = computed(() => ehCartao.value && (ehEdicao.value || recorrente.value))
+const installmentsLocked = computed(() => isCard.value && (isEditing.value || recurring.value))
 
-watch(quantidadeParcelas, (valorAtual) => {
-  if (!ehEdicao.value && Number(valorAtual) > 1) recorrente.value = false
+watch(installmentCount, (current) => {
+  if (!isEditing.value && Number(current) > 1) recurring.value = false
 })
 
-watch(recorrente, (valorAtual) => {
-  if (ehCartao.value && !ehEdicao.value && valorAtual) quantidadeParcelas.value = 1
+watch(recurring, (current) => {
+  if (isCard.value && !isEditing.value && current) installmentCount.value = 1
 })
 
 // Reabrir o modal com outra transação recarrega o formulário.
 watch(
-  () => props.transacao,
-  () => resetForm({ values: valoresIniciais() }),
+  () => props.transaction,
+  () => resetForm({ values: initialValues() }),
 )
 
 /**
  * Sem campo "Data" visível no formulário de entrada/saída: usa a data em que o
  * registro foi criado, independente do vencimento (que é só informativo). Exceção:
- * uma ocorrência projetada de recorrência (`origemRecorrenciaId` presente) já vem
- * com `data` recalculada para o mês projetado (ver `projetarRecorrencias` no
- * backend), enquanto `criadoEm` continua sendo o do lançamento original — usar
- * `criadoEm` aqui materializaria a edição no mês do lançamento original em vez do
+ * uma ocorrência projetada de recorrência (`recurrenceOriginId` presente) já vem
+ * com `date` recalculada para o mês projetado (ver `projetarRecorrencias` no
+ * backend), enquanto `createdAt` continua sendo o do lançamento original — usar
+ * `createdAt` aqui materializaria a edição no mês do lançamento original em vez do
  * mês projetado que o usuário está de fato editando.
  */
-function dataDoLancamento(): string {
-  const transacao = props.transacao as (Entrada | Saida | TransacaoCartao) | null
-  if (!transacao) return toISODate(new Date())
-  return transacao.origemRecorrenciaId ? transacao.data : toISODate(new Date(transacao.criadoEm))
+function entryDate(): string {
+  const transaction = props.transaction as (Income | Expense | CardTransaction) | null
+  if (!transaction) return toISODate(new Date())
+  return transaction.recurrenceOriginId ? transaction.date : toISODate(new Date(transaction.createdAt))
 }
 
-const confirmacaoPendenteAberta = ref(false)
-const formularioAguardando = ref<Valores | null>(null)
+const pendingConfirmationOpen = ref(false)
+const waitingForm = ref<FormValues | null>(null)
 
 /** Editar uma saída paga para pendente exige confirmação, para evitar alteração acidental. */
-function voltariaParaPendente(formulario: Valores): boolean {
-  const original = props.transacao as Saida | null
-  return ehSaida.value && !ehCartao.value && original?.status === 'PAGO' && formulario.status === 'PENDENTE'
+function wouldBecomePending(form: FormValues): boolean {
+  const original = props.transaction as Expense | null
+  return isExpense.value && !isCard.value && original?.status === 'PAGO' && form.status === 'PENDENTE'
 }
 
-const aoSubmeter = handleSubmit((formulario) => {
-  if (voltariaParaPendente(formulario)) {
-    formularioAguardando.value = { ...formulario }
-    confirmacaoPendenteAberta.value = true
+const onSubmit = handleSubmit((form) => {
+  if (wouldBecomePending(form)) {
+    waitingForm.value = { ...form }
+    pendingConfirmationOpen.value = true
     return
   }
-  emitirSalvar(formulario)
+  emitSave(form)
 })
 
-function confirmarPendente(): void {
-  const formulario = formularioAguardando.value
-  confirmacaoPendenteAberta.value = false
-  formularioAguardando.value = null
-  if (formulario) emitirSalvar(formulario)
+function confirmPending(): void {
+  const form = waitingForm.value
+  pendingConfirmationOpen.value = false
+  waitingForm.value = null
+  if (form) emitSave(form)
 }
 
-function cancelarPendente(): void {
-  formularioAguardando.value = null
+function cancelPending(): void {
+  waitingForm.value = null
 }
 
-function emitirSalvar(formulario: Valores): void {
+function emitSave(form: FormValues): void {
   const base = {
-    descricao: formulario.descricao.trim(),
-    valor: Number(formulario.valor),
-    data: formulario.data,
-    categoriaId: formulario.categoriaId as string,
-    recorrente: formulario.recorrente,
-    observacao: formulario.observacao.trim() || undefined,
+    description: form.description.trim(),
+    amount: Number(form.amount),
+    date: form.date,
+    categoryId: form.categoryId as string,
+    recurring: form.recurring,
+    notes: form.notes.trim() || undefined,
   }
 
-  if (!ehSaida.value) {
-    emit('salvar', {
+  if (!isExpense.value) {
+    emit('save', {
       ...base,
-      data: dataDoLancamento(),
-    } satisfies EntradaPayload)
+      date: entryDate(),
+    } satisfies IncomePayload)
     return
   }
 
-  if (ehCartao.value) {
+  if (isCard.value) {
     // Parcelamento não é editável por aqui: preserva o que a transação já tinha.
-    // Numa transação nova, a quantidade de parcelas escolhida vira totalParcelas —
-    // é quem chama (cartaoStore) que divide o valor e lança uma por fatura futura.
-    const atual = props.transacao as TransacaoCartao | null
+    // Numa transação nova, a quantidade de parcelas escolhida vira totalInstallments —
+    // é quem chama (creditCardStore) que divide o valor e lança uma por fatura futura.
+    const current = props.transaction as CardTransaction | null
 
-    emit('salvar', {
+    emit('save', {
       ...base,
-      tipo: formulario.tipo,
-      parcelaAtual: atual?.parcelaAtual ?? 1,
-      totalParcelas: atual?.totalParcelas ?? (formulario.recorrente ? 1 : Number(formulario.quantidadeParcelas)),
-    } satisfies TransacaoCartaoPayload)
+      type: form.type,
+      installment: current?.installment ?? 1,
+      totalInstallments: current?.totalInstallments ?? (form.recurring ? 1 : Number(form.installmentCount)),
+    } satisfies CardTransactionPayload)
     return
   }
 
-  emit('salvar', {
+  emit('save', {
     ...base,
-    data: dataDoLancamento(),
-    tipo: formulario.tipo,
-    status: formulario.status,
-    vencimento: formulario.vencimento || null,
-    formaPagamento: formulario.formaPagamento,
-    cartaoId: null,
-  } satisfies SaidaPayload)
+    date: entryDate(),
+    type: form.type,
+    status: form.status,
+    dueDate: form.dueDate || null,
+    paymentMethod: form.paymentMethod,
+    cardId: null,
+  } satisfies ExpensePayload)
 }
 </script>
 
 <template>
-  <form class="flex flex-col gap-4" novalidate @submit="aoSubmeter">
+  <form class="flex flex-col gap-4" novalidate @submit="onSubmit">
     <BaseInput
-      v-model="descricao"
+      v-model="description"
       label="Descrição"
       :placeholder="
-        ehCartao ? 'Ex.: Supermercado' : ehSaida ? 'Ex.: Conta de energia' : 'Ex.: Salário mensal'
+        isCard ? 'Ex.: Supermercado' : isExpense ? 'Ex.: Conta de energia' : 'Ex.: Salário mensal'
       "
-      :erro="erroDescricao"
-      :dica="nomeBloqueado ? 'Lançamento recorrente: o nome é o mesmo em todas as ocorrências.' : ''"
-      obrigatorio
+      :error="descriptionError"
+      :hint="nameLocked ? 'Lançamento recorrente: o nome é o mesmo em todas as ocorrências.' : ''"
+      required
       :maxlength="80"
-      :desabilitado="nomeBloqueado"
+      :disabled="nameLocked"
       autocomplete="off"
     />
 
-    <CurrencyInput v-model="valor" label="Valor" :erro="erroValor" obrigatorio />
+    <CurrencyInput v-model="amount" label="Valor" :error="amountError" required />
 
-    <div class="grid gap-4" :class="ehSaida ? 'sm:grid-cols-2' : ''">
+    <div class="grid gap-4" :class="isExpense ? 'sm:grid-cols-2' : ''">
       <BaseSelect
-        v-model="categoriaId"
+        v-model="categoryId"
         label="Categoria"
         placeholder="Selecione uma categoria"
-        :opcoes="categorias"
-        :erro="erroCategoria"
-        obrigatorio
+        :options="categories"
+        :error="categoryError"
+        required
       />
-      <BaseSelect v-if="ehSaida" v-model="tipo" label="Tipo" :opcoes="SAIDA_TIPO_OPCOES" />
+      <BaseSelect v-if="isExpense" v-model="type" label="Tipo" :options="EXPENSE_TYPE_OPTIONS" />
     </div>
 
-    <div v-if="ehSaida && !ehCartao" class="grid gap-4 sm:grid-cols-2">
+    <div v-if="isExpense && !isCard" class="grid gap-4 sm:grid-cols-2">
       <BaseSelect
-        v-model="formaPagamento"
+        v-model="paymentMethod"
         label="Forma de pagamento"
-        :opcoes="FORMA_PAGAMENTO_OPCOES"
+        :options="PAYMENT_METHOD_OPTIONS"
       />
-      <BaseSelect v-model="status" label="Situação" :opcoes="SAIDA_STATUS_OPCOES" />
+      <BaseSelect v-model="status" label="Situação" :options="EXPENSE_STATUS_OPTIONS" />
     </div>
 
     <DateInput
-      v-if="ehSaida && !ehCartao"
-      v-model="vencimento"
+      v-if="isExpense && !isCard"
+      v-model="dueDate"
       label="Data de vencimento"
-      :erro="erroVencimento"
-      dica="Opcional. A data de pagamento é registrada automaticamente quando a situação muda para Pago."
+      :error="dueDateError"
+      hint="Opcional. A data de pagamento é registrada automaticamente quando a situação muda para Pago."
     />
 
     <BaseInput
-      v-if="ehCartao"
-      v-model="quantidadeParcelas"
+      v-if="isCard"
+      v-model="installmentCount"
       label="Quantidade de parcelas"
       type="number"
       min="1"
       max="30"
-      :erro="erroParcelas"
-      :desabilitado="parcelasBloqueadas"
-      :dica="
-        ehEdicao
+      :error="installmentsError"
+      :disabled="installmentsLocked"
+      :hint="
+        isEditing
           ? 'O parcelamento não pode ser alterado depois de lançado.'
-          : parcelasBloqueadas
+          : installmentsLocked
           ? 'Lançamento recorrente não tem parcelas.'
           : 'Divide o valor em parcelas iguais, uma lançada em cada fatura.'
       "
-      obrigatorio
+      required
     />
 
     <BaseSwitch
-      v-if="mostrarRecorrente"
-      v-model="recorrente"
+      v-if="showRecurring"
+      v-model="recurring"
       label="Lançamento recorrente"
-      :descricao="
-        ehCartao
+      :description="
+        isCard
           ? 'Repete todo mês na fatura (assinatura, mensalidade...)'
-          : ehSaida
+          : isExpense
             ? 'Repete todo mês (aluguel, assinatura...)'
             : 'Receita fixa mensal'
       "
     />
 
     <BaseTextarea
-      v-model="observacao"
+      v-model="notes"
       label="Observação"
       placeholder="Anotações opcionais"
-      :erro="erroObservacao"
+      :error="notesError"
     />
 
     <div class="flex justify-end gap-2 pt-2">
-      <BaseButton variante="outline" :desabilitado="salvando" @click="emit('cancelar')">
+      <BaseButton variant="outline" :disabled="saving" @click="emit('cancel')">
         Cancelar
       </BaseButton>
-      <BaseButton tipo="submit" :carregando="salvando">
-        {{ ehEdicao ? 'Salvar alterações' : 'Adicionar' }}
+      <BaseButton type="submit" :loading="saving">
+        {{ isEditing ? 'Salvar alterações' : 'Adicionar' }}
       </BaseButton>
     </div>
 
     <ConfirmDialog
-      v-model:aberto="confirmacaoPendenteAberta"
-      titulo="Alterar para pendente"
-      :mensagem="`Deseja realmente alterar “${transacao?.descricao ?? ''}” de pago para pendente?`"
-      texto-confirmar="Alterar para pendente"
-      :destrutivo="false"
-      @confirmar="confirmarPendente"
-      @cancelar="cancelarPendente"
+      v-model:open="pendingConfirmationOpen"
+      title="Alterar para pendente"
+      :message="`Deseja realmente alterar “${transaction?.description ?? ''}” de pago para pendente?`"
+      confirm-text="Alterar para pendente"
+      :destructive="false"
+      @confirm="confirmPending"
+      @cancel="cancelPending"
     />
   </form>
 </template>

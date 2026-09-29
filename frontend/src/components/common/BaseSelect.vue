@@ -2,72 +2,72 @@
 import { ChevronDown } from '@lucide/vue'
 import { computed, useId } from 'vue'
 
-import type { OpcaoSelect } from '@/types/common'
+import type { SelectOption } from '@/types/common'
 import { cn } from '@/utils/cn'
 
 withDefaults(
   defineProps<{
-    opcoes: OpcaoSelect<string>[]
+    options: SelectOption<string>[]
     label?: string
     placeholder?: string
-    erro?: string
-    dica?: string
-    obrigatorio?: boolean
-    desabilitado?: boolean
+    error?: string
+    hint?: string
+    required?: boolean
+    disabled?: boolean
     /** Exibe a opção vazia (ex.: "Todas as categorias"). */
-    permiteVazio?: boolean
+    allowEmpty?: boolean
   }>(),
   {
     label: '',
     placeholder: 'Selecione',
-    erro: '',
-    dica: '',
-    obrigatorio: false,
-    desabilitado: false,
-    permiteVazio: false,
+    error: '',
+    hint: '',
+    required: false,
+    disabled: false,
+    allowEmpty: false,
   },
 )
 
-const modelo = defineModel<string | null>({ default: null })
+const model = defineModel<string | null>({ default: null })
 
 const id = useId()
-const idErro = computed(() => `${id}-erro`)
+const errorId = computed(() => `${id}-error`)
 </script>
 
 <template>
   <div class="flex flex-col gap-1.5">
     <label v-if="label" :for="id" class="text-sm font-medium">
       {{ label }}
-      <span v-if="obrigatorio" class="text-danger" aria-hidden="true">*</span>
+      <span v-if="required" class="text-danger" aria-hidden="true">*</span>
     </label>
 
     <div class="relative">
       <select
         :id="id"
-        v-model="modelo"
-        :disabled="desabilitado"
-        :required="obrigatorio"
-        :aria-invalid="Boolean(erro) || undefined"
-        :aria-describedby="erro ? idErro : undefined"
+        v-model="model"
+        :disabled="disabled"
+        :required="required"
+        :aria-invalid="Boolean(error) || undefined"
+        :aria-describedby="error ? errorId : undefined"
         :class="
           cn(
             'bg-card border-input h-10 w-full appearance-none rounded-lg border pl-3 pr-9 text-sm transition-colors',
             'focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30',
             'disabled:cursor-not-allowed disabled:opacity-60',
-            !modelo && 'text-muted-foreground',
-            erro && 'border-danger focus:border-danger focus:ring-danger/30',
+            !model && 'text-muted-foreground',
+            error && 'border-danger focus:border-danger focus:ring-danger/30',
           )
         "
       >
-        <option v-if="permiteVazio || !modelo" :value="null">{{ placeholder }}</option>
+        <option v-if="allowEmpty || !model" :value="null">{{ placeholder }}</option>
         <option
-          v-for="opcao in opcoes"
-          :key="String(opcao.value)"
-          :value="opcao.value"
-          :disabled="opcao.disabled"
+          v-for="option in options"
+          :key="String(option.value)"
+          :value="option.value"
+          :disabled="option.disabled"
           class="text-foreground"
         >
-          {{ opcao.label }}
+          {{ option.label }}
         </option>
       </select>
 
@@ -77,7 +77,7 @@ const idErro = computed(() => `${id}-erro`)
       />
     </div>
 
-    <p v-if="erro" :id="idErro" class="text-danger text-xs" role="alert">{{ erro }}</p>
-    <p v-else-if="dica" class="text-muted-foreground text-xs">{{ dica }}</p>
+    <p v-if="error" :id="errorId" class="text-danger text-xs" role="alert">{{ error }}</p>
+    <p v-else-if="hint" class="text-muted-foreground text-xs">{{ hint }}</p>
   </div>
 </template>

@@ -7,38 +7,38 @@ const brl = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 })
 
-const brlCompacto = new Intl.NumberFormat('pt-BR', {
+const brlCompact = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
   notation: 'compact',
   maximumFractionDigits: 1,
 })
 
-const percentual = new Intl.NumberFormat('pt-BR', {
+const percent = new Intl.NumberFormat('pt-BR', {
   style: 'percent',
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 })
 
 /** `1234.5` -> `R$ 1.234,50` */
-export function formatCurrency(valor: number | null | undefined): string {
-  return brl.format(Number(valor ?? 0))
+export function formatCurrency(value: number | null | undefined): string {
+  return brl.format(Number(value ?? 0))
 }
 
 /** `1234567` -> `R$ 1,2 mi`. Usado em eixos de gráfico e cards estreitos. */
-export function formatCurrencyCompact(valor: number | null | undefined): string {
-  return brlCompacto.format(Number(valor ?? 0))
+export function formatCurrencyCompact(value: number | null | undefined): string {
+  return brlCompact.format(Number(value ?? 0))
 }
 
 /** `0.1234` -> `12,3%`. Recebe a fração, não o percentual. */
-export function formatPercent(fracao: number | null | undefined): string {
-  return percentual.format(Number(fracao ?? 0))
+export function formatPercent(fraction: number | null | undefined): string {
+  return percent.format(Number(fraction ?? 0))
 }
 
 /** Variação percentual entre dois valores, protegida contra divisão por zero. */
-export function calcularVariacao(atual: number, anterior: number): number {
-  if (!anterior) return atual > 0 ? 1 : 0
-  return (atual - anterior) / Math.abs(anterior)
+export function calculateChange(current: number, previous: number): number {
+  if (!previous) return current > 0 ? 1 : 0
+  return (current - previous) / Math.abs(previous)
 }
 
 /**
@@ -46,35 +46,35 @@ export function calcularVariacao(atual: number, anterior: number): number {
  * Aceita `1.234,56`, `1234,56`, `1234.56` e `R$ 1.234,56`.
  * Ponto sem vírgula em grupos de 3 dígitos é milhar (`1.234` -> `1234`).
  */
-export function parseCurrency(texto: string | number | null | undefined): number {
-  if (typeof texto === 'number') return texto
-  if (!texto) return 0
+export function parseCurrency(text: string | number | null | undefined): number {
+  if (typeof text === 'number') return text
+  if (!text) return 0
 
-  const limpo = String(texto).replace(/[^\d,.-]/g, '')
-  if (!limpo) return 0
+  const clean = String(text).replace(/[^\d,.-]/g, '')
+  if (!clean) return 0
 
-  const ultimaVirgula = limpo.lastIndexOf(',')
-  const ultimoPonto = limpo.lastIndexOf('.')
+  const lastComma = clean.lastIndexOf(',')
+  const lastDot = clean.lastIndexOf('.')
 
-  let normalizado: string
-  if (ultimaVirgula > ultimoPonto) {
+  let normalized: string
+  if (lastComma > lastDot) {
     // Formato pt-BR: ponto é separador de milhar, vírgula é decimal.
-    normalizado = limpo.replace(/\./g, '').replace(',', '.')
-  } else if (ultimaVirgula === -1 && /^-?\d{1,3}(\.\d{3})+$/.test(limpo)) {
+    normalized = clean.replace(/\./g, '').replace(',', '.')
+  } else if (lastComma === -1 && /^-?\d{1,3}(\.\d{3})+$/.test(clean)) {
     // Só pontos em grupos de 3 dígitos (`1.234`, `1.234.567`): milhar, não decimal.
-    normalizado = limpo.replace(/\./g, '')
+    normalized = clean.replace(/\./g, '')
   } else {
-    normalizado = limpo.replace(/,/g, '')
+    normalized = clean.replace(/,/g, '')
   }
 
-  const numero = Number.parseFloat(normalizado)
-  return Number.isFinite(numero) ? numero : 0
+  const number = Number.parseFloat(normalized)
+  return Number.isFinite(number) ? number : 0
 }
 
 /** Número puro com 2 casas, para preencher inputs de edição (`1234.5` -> `1.234,50`). */
-export function formatDecimal(valor: number | null | undefined): string {
+export function formatDecimal(value: number | null | undefined): string {
   return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(Number(valor ?? 0))
+  }).format(Number(value ?? 0))
 }

@@ -1,6 +1,8 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios'
 
 import { useAuthStore } from '@/stores/authStore'
+import type { UserSessionDto } from '@/types/dto'
+import { toUserSession } from './mappers'
 
 /** Liga a camada de mock quando não há backend disponível. */
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
@@ -33,44 +35,43 @@ http.interceptors.request.use((config) => {
   return config
 })
 
-type ConfigComRetry = InternalAxiosRequestConfig & { _retry?: boolean }
+type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean }
 
 /** Evita disparar várias renovações de token em paralelo quando várias chamadas recebem 401 juntas. */
-let renovacaoEmAndamento: Promise<void> | null = null
+let refreshInProgress: Promise<void> | null = null
 
 http.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<{ message?: string }>) => {
-    const config = error.config as ConfigComRetry | undefined
+    const config = error.config as RetryableConfig | undefined
     const status = error.response?.status
     const authStore = useAuthStore()
-    const ehRotaDeAuth = config?.url?.startsWith('/auth/')
+    const isAuthRoute = config?.url?.startsWith('/auth/')
 
-    if (status === 401 && config && !config._retry && !ehRotaDeAuth && authStore.refreshToken) {
+    if (status === 401 && config && !config._retry && !isAuthRoute && authStore.refreshToken) {
       config._retry = true
 
       try {
-        renovacaoEmAndamento ??= (async () => {
-          const { data } = await http.post<{ accessToken: string; refreshToken: string; expiresIn: number; usuario: unknown }>(
-            '/auth/refresh',
-            { refreshToken: authStore.refreshToken },
-          )
-          authStore.definirSessao(data as Parameters<typeof authStore.definirSessao>[0])
+        refreshInProgress ??= (async () => {
+          const { data } = await http.post<UserSessionDto>('/auth/refresh', {
+            refreshToken: authStore.refreshToken,
+          })
+          authStore.setSession(toUserSession(data))
         })().finally(() => {
-          renovacaoEmAndamento = null
+          refreshInProgress = null
         })
 
-        await renovacaoEmAndamento
+        await refreshInProgress
         config.headers.set('Authorization', `Bearer ${authStore.accessToken}`)
         return await http.request(config)
       } catch {
-        authStore.limparSessao()
+        authStore.clearSession()
         window.location.assign('/auth/login')
         return Promise.reject(new ApiError('Sessão expirada. Faça login novamente.', 401))
       }
     }
 
-    const mensagem =
+    const message =
       error.response?.data?.message ??
       (status === 404
         ? 'Registro não encontrado.'
@@ -84,13 +85,13 @@ http.interceptors.response.use(
                 ? 'A solicitação demorou demais e foi cancelada.'
                 : 'Não foi possível conectar ao servidor.')
 
-    return Promise.reject(new ApiError(mensagem, status))
+    return Promise.reject(new ApiError(message, status))
   },
 )
 
 /** Normaliza qualquer erro em uma mensagem exibível. */
-export function mensagemDeErro(erro: unknown, padrao = 'Algo deu errado.'): string {
-  if (erro instanceof ApiError) return erro.message
-  if (erro instanceof Error && erro.message) return erro.message
-  return padrao
+export function getErrorMessage(error: unknown, fallback = 'Algo deu errado.'): string {
+  if (error instanceof ApiError) return error.message
+  if (error instanceof Error && error.message) return error.message
+  return fallback
 }

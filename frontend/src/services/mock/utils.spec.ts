@@ -1,83 +1,83 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { contemBusca, delay, normalizar, paginar } from '@/services/mock/utils'
+import { delay, matchesSearch, normalize, paginate } from '@/services/mock/utils'
 
 afterEach(() => {
   vi.useRealTimers()
 })
 
-const itens = Array.from({ length: 20 }, (_, i) => i + 1)
+const items = Array.from({ length: 20 }, (_, i) => i + 1)
 
-describe('paginar', () => {
+describe('paginate', () => {
   it('devolve a primeira página cheia', () => {
-    const resultado = paginar(itens, { page: 1, pageSize: 8 })
-    expect(resultado.items).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
-    expect(resultado.page).toBe(1)
-    expect(resultado.pageSize).toBe(8)
-    expect(resultado.total).toBe(20)
-    expect(resultado.totalPages).toBe(3)
+    const result = paginate(items, { page: 1, pageSize: 8 })
+    expect(result.items).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(result.page).toBe(1)
+    expect(result.pageSize).toBe(8)
+    expect(result.total).toBe(20)
+    expect(result.totalPages).toBe(3)
   })
 
   it('devolve a última página parcial', () => {
-    const resultado = paginar(itens, { page: 3, pageSize: 8 })
-    expect(resultado.items).toEqual([17, 18, 19, 20])
-    expect(resultado.totalPages).toBe(3)
+    const result = paginate(items, { page: 3, pageSize: 8 })
+    expect(result.items).toEqual([17, 18, 19, 20])
+    expect(result.totalPages).toBe(3)
   })
 
   it.each([0, -3])('trata a página %d como 1', (page) => {
-    const resultado = paginar(itens, { page, pageSize: 8 })
-    expect(resultado.page).toBe(1)
-    expect(resultado.items).toHaveLength(8)
+    const result = paginate(items, { page, pageSize: 8 })
+    expect(result.page).toBe(1)
+    expect(result.items).toHaveLength(8)
   })
 
   it('limita página acima do total à última', () => {
-    const resultado = paginar(itens, { page: 99, pageSize: 8 })
-    expect(resultado.page).toBe(3)
-    expect(resultado.items).toEqual([17, 18, 19, 20])
+    const result = paginate(items, { page: 99, pageSize: 8 })
+    expect(result.page).toBe(3)
+    expect(result.items).toEqual([17, 18, 19, 20])
   })
 
   it('lida com lista vazia', () => {
-    const resultado = paginar([], { page: 5, pageSize: 8 })
-    expect(resultado.items).toEqual([])
-    expect(resultado.totalPages).toBe(1)
-    expect(resultado.total).toBe(0)
-    expect(resultado.page).toBe(1)
+    const result = paginate([], { page: 5, pageSize: 8 })
+    expect(result.items).toEqual([])
+    expect(result.totalPages).toBe(1)
+    expect(result.total).toBe(0)
+    expect(result.page).toBe(1)
   })
 })
 
-describe('normalizar', () => {
+describe('normalize', () => {
   it('remove acentos, caixa e espaços das pontas', () => {
-    expect(normalizar('  AÇÃO  ')).toBe('acao')
+    expect(normalize('  AÇÃO  ')).toBe('acao')
   })
 })
 
-describe('contemBusca', () => {
-  it.each(['', '   ', null, undefined])('aceita busca vazia %j', (busca) => {
-    expect(contemBusca('qualquer texto', busca)).toBe(true)
+describe('matchesSearch', () => {
+  it.each(['', '   ', null, undefined])('aceita busca vazia %j', (search) => {
+    expect(matchesSearch('qualquer texto', search)).toBe(true)
   })
 
   it('ignora acento e caixa', () => {
-    expect(contemBusca('Alimentação', 'alimentacao')).toBe(true)
-    expect(contemBusca('alimentacao', 'ALIMENTAÇÃO')).toBe(true)
-    expect(contemBusca('Supermercado Extra', 'merc')).toBe(true)
+    expect(matchesSearch('Alimentação', 'alimentacao')).toBe(true)
+    expect(matchesSearch('alimentacao', 'ALIMENTAÇÃO')).toBe(true)
+    expect(matchesSearch('Supermercado Extra', 'merc')).toBe(true)
   })
 
   it('devolve false sem ocorrência', () => {
-    expect(contemBusca('Alimentação', 'transporte')).toBe(false)
+    expect(matchesSearch('Alimentação', 'transporte')).toBe(false)
   })
 })
 
 describe('delay', () => {
   it('resolve o valor somente após o tempo informado', async () => {
     vi.useFakeTimers()
-    const resolvido = vi.fn()
-    const promessa = delay('x', 100).then(resolvido)
+    const resolved = vi.fn()
+    const promise = delay('x', 100).then(resolved)
 
     await vi.advanceTimersByTimeAsync(99)
-    expect(resolvido).not.toHaveBeenCalled()
+    expect(resolved).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(1)
-    await promessa
-    expect(resolvido).toHaveBeenCalledWith('x')
+    await promise
+    expect(resolved).toHaveBeenCalledWith('x')
   })
 })

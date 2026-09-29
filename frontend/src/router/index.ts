@@ -7,6 +7,9 @@ import { useAuthStore } from '@/stores/authStore'
 /**
  * Todas as páginas são carregadas sob demanda: o Vite gera um chunk por rota
  * automaticamente (code splitting), mantendo o bundle inicial enxuto.
+ *
+ * Os `path` continuam em português porque aparecem na barra de endereço do
+ * usuário (e em links e favoritos já salvos); os `name` são código e ficam em inglês.
  */
 const routes: RouteRecordRaw[] = [
   {
@@ -22,25 +25,25 @@ const routes: RouteRecordRaw[] = [
         path: 'dashboard',
         name: 'dashboard',
         component: () => import('@/pages/Dashboard.vue'),
-        meta: { titulo: 'Dashboard', descricao: 'Visão geral das suas finanças', semScroll: true },
+        meta: { title: 'Dashboard', description: 'Visão geral das suas finanças', noScroll: true },
       },
       {
         path: 'entradas',
-        name: 'entradas',
-        component: () => import('@/pages/Entradas.vue'),
-        meta: { titulo: 'Entradas', descricao: 'Receitas registradas no período' },
+        name: 'incomes',
+        component: () => import('@/pages/Incomes.vue'),
+        meta: { title: 'Entradas', description: 'Receitas registradas no período' },
       },
       {
         path: 'saidas',
-        name: 'saidas',
-        component: () => import('@/pages/Saidas.vue'),
-        meta: { titulo: 'Saídas', descricao: 'Despesas registradas no período' },
+        name: 'expenses',
+        component: () => import('@/pages/Expenses.vue'),
+        meta: { title: 'Saídas', description: 'Despesas registradas no período' },
       },
       {
         path: 'cartoes',
-        name: 'cartoes',
-        component: () => import('@/pages/Cartoes.vue'),
-        meta: { titulo: 'Cartões de Crédito', descricao: 'Cartões, faturas e transações' },
+        name: 'cards',
+        component: () => import('@/pages/CreditCards.vue'),
+        meta: { title: 'Cartões de Crédito', description: 'Cartões, faturas e transações' },
       },
     ],
   },
@@ -52,19 +55,19 @@ const routes: RouteRecordRaw[] = [
         path: 'login',
         name: 'login',
         component: () => import('@/pages/Login.vue'),
-        meta: { titulo: 'Login', descricao: 'Faça login na sua conta' },
+        meta: { title: 'Login', description: 'Faça login na sua conta' },
       },
       {
         path: 'registro',
-        name: 'registro',
+        name: 'register',
         component: () => import('@/pages/Register.vue'),
-        meta: { titulo: 'Registro', descricao: 'Crie uma nova conta' },
+        meta: { title: 'Registro', description: 'Crie uma nova conta' },
       },
     ],
   },
   {
     path: '/:pathMatch(.*)*',
-    name: 'nao-encontrado',
+    name: 'not-found',
     component: () => import('@/pages/NotFound.vue'),
   },
 ]
@@ -76,12 +79,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const { autenticado } = useAuthStore()
-  const exigeAuth = to.path.startsWith('/app')
-  const ehRotaDeAuth = to.path.startsWith('/auth')
+  const { isAuthenticated } = useAuthStore()
+  const requiresAuth = to.path.startsWith('/app')
+  const isAuthRoute = to.path.startsWith('/auth')
 
-  if (exigeAuth && !autenticado) return { name: 'login' }
-  if (ehRotaDeAuth && autenticado) return { name: 'dashboard' }
+  if (requiresAuth && !isAuthenticated) return { name: 'login' }
+  if (isAuthRoute && isAuthenticated) return { name: 'dashboard' }
 })
 
 router.afterEach(() => {

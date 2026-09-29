@@ -145,7 +145,7 @@
 
 @layer components {
   /* Área rolável com barra discreta, usada em tabelas e listas longas. */
-  .scroll-suave {
+  .thin-scroll {
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
@@ -194,7 +194,7 @@ html {
 }
 
 @layer utilities {
-  .numero-tabular {
+  .tabular-number {
     font-variant-numeric: tabular-nums;
   }
 }

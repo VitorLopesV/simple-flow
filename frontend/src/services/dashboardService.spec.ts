@@ -8,152 +8,152 @@ vi.hoisted(() => {
 
 import { dashboardService } from '@/services/dashboardService'
 import { mockDb } from '@/services/mock'
-import type { Cartao, TransacaoCartao } from '@/types/cartao'
-import type { Entrada } from '@/types/entrada'
-import type { Saida } from '@/types/saida'
+import type { CreditCard, CardTransaction } from '@/types/creditCard'
+import type { Income } from '@/types/income'
+import type { Expense } from '@/types/expense'
 
 type Db = Awaited<ReturnType<typeof mockDb>>
 
-const AGOSTO = { mes: 8, ano: 2026 }
-const COR_PADRAO = '#94a3b8'
+const AUGUST = { month: 8, year: 2026 }
+const DEFAULT_COLOR = '#94a3b8'
 
 let db: Db
-let catA: { id: string; nome: string; cor: string }
-let catB: { id: string; nome: string; cor: string }
+let catA: { id: string; name: string; color: string }
+let catB: { id: string; name: string; color: string }
 
-let sequencia = 0
+let sequence = 0
 
-function entrada(sobrescritas: Partial<Entrada> = {}): Entrada {
-  sequencia += 1
+function income(overrides: Partial<Income> = {}): Income {
+  sequence += 1
   return {
-    id: `ent_teste_${sequencia}`,
-    descricao: 'Salário',
-    valor: 100,
-    data: '2026-08-05',
-    categoriaId: catA.id,
-    recorrente: false,
-    criadoEm: '',
-    atualizadoEm: '',
-    ...sobrescritas,
+    id: `ent_teste_${sequence}`,
+    description: 'Salário',
+    amount: 100,
+    date: '2026-08-05',
+    categoryId: catA.id,
+    recurring: false,
+    createdAt: '',
+    updatedAt: '',
+    ...overrides,
   }
 }
 
-function saida(sobrescritas: Partial<Saida> = {}): Saida {
-  sequencia += 1
+function expense(overrides: Partial<Expense> = {}): Expense {
+  sequence += 1
   return {
-    id: `sai_teste_${sequencia}`,
-    descricao: 'Conta',
-    valor: 100,
-    data: '2026-08-10',
-    categoriaId: catA.id,
-    tipo: 'CONTA',
+    id: `sai_teste_${sequence}`,
+    description: 'Conta',
+    amount: 100,
+    date: '2026-08-10',
+    categoryId: catA.id,
+    type: 'CONTA',
     status: 'PENDENTE',
-    vencimento: null,
-    pagoEm: null,
-    formaPagamento: 'PIX',
-    cartaoId: null,
-    recorrente: false,
-    criadoEm: '',
-    atualizadoEm: '',
-    ...sobrescritas,
+    dueDate: null,
+    paidAt: null,
+    paymentMethod: 'PIX',
+    cardId: null,
+    recurring: false,
+    createdAt: '',
+    updatedAt: '',
+    ...overrides,
   }
 }
 
-function cartao(): Cartao {
+function card(): CreditCard {
   return {
     id: 'car_a',
-    nome: 'Alfa',
-    bandeira: 'VISA',
-    ultimosDigitos: '1111',
-    limite: 1000,
-    diaFechamento: 20,
-    diaVencimento: 27,
-    cor: '#000000',
-    ativo: true,
-    criadoEm: '',
+    name: 'Alfa',
+    brand: 'VISA',
+    lastDigits: '1111',
+    limit: 1000,
+    closingDay: 20,
+    dueDay: 27,
+    color: '#000000',
+    active: true,
+    createdAt: '',
   }
 }
 
 beforeEach(async () => {
   db = await mockDb()
-  db.entradas.length = 0
-  db.saidas.length = 0
-  db.faturas.length = 0
-  db.transacoesCartao.length = 0
-  db.cartoes.length = 0
-  db.cartoes.push(cartao())
-  catA = db.categorias[0]!
-  catB = db.categorias[1]!
+  db.incomes.length = 0
+  db.expenses.length = 0
+  db.invoices.length = 0
+  db.cardTransactions.length = 0
+  db.cards.length = 0
+  db.cards.push(card())
+  catA = db.categories[0]!
+  catB = db.categories[1]!
 })
 
 describe('totais do período', () => {
-  it('calcula totalEntradas, totalSaidas e saldo apenas do mês', async () => {
-    db.entradas.push(
-      entrada({ valor: 1000 }),
-      entrada({ valor: 500 }),
-      entrada({ valor: 999, data: '2026-07-31' }),
-      entrada({ valor: 999, data: '2026-09-01' }),
+  it('calcula totalIncome, totalExpenses e saldo apenas do mês', async () => {
+    db.incomes.push(
+      income({ amount: 1000 }),
+      income({ amount: 500 }),
+      income({ amount: 999, date: '2026-07-31' }),
+      income({ amount: 999, date: '2026-09-01' }),
     )
-    db.saidas.push(
-      saida({ valor: 300 }),
-      saida({ valor: 200 }),
-      saida({ valor: 700, categoriaId: catB.id }),
-      saida({ valor: 999, data: '2026-07-31' }),
+    db.expenses.push(
+      expense({ amount: 300 }),
+      expense({ amount: 200 }),
+      expense({ amount: 700, categoryId: catB.id }),
+      expense({ amount: 999, date: '2026-07-31' }),
     )
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.totalEntradas).toBe(1500)
-    expect(resumo.totalSaidas).toBe(1200)
-    expect(resumo.saldo).toBe(300)
+    expect(summary.totalIncome).toBe(1500)
+    expect(summary.totalExpenses).toBe(1200)
+    expect(summary.balance).toBe(300)
   })
 
   it('saldo negativo quando as saídas superam as entradas', async () => {
-    db.entradas.push(entrada({ valor: 100 }))
-    db.saidas.push(saida({ valor: 350 }))
+    db.incomes.push(income({ amount: 100 }))
+    db.expenses.push(expense({ amount: 350 }))
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.saldo).toBe(-250)
+    expect(summary.balance).toBe(-250)
   })
 })
 
 describe('séries', () => {
   beforeEach(() => {
-    db.entradas.push(
-      entrada({ valor: 1000 }),
-      entrada({ valor: 500 }),
-      entrada({ valor: 600, data: '2026-07-10' }),
-      entrada({ valor: 200, data: '2026-03-15' }),
-      entrada({ valor: 999, data: '2026-02-28' }),
+    db.incomes.push(
+      income({ amount: 1000 }),
+      income({ amount: 500 }),
+      income({ amount: 600, date: '2026-07-10' }),
+      income({ amount: 200, date: '2026-03-15' }),
+      income({ amount: 999, date: '2026-02-28' }),
     )
-    db.saidas.push(
-      saida({ valor: 1200 }),
-      saida({ valor: 400, data: '2026-07-20' }),
-      saida({ valor: 50, data: '2026-06-01' }),
-      saida({ valor: 999, data: '2026-02-28' }),
+    db.expenses.push(
+      expense({ amount: 1200 }),
+      expense({ amount: 400, date: '2026-07-20' }),
+      expense({ amount: 50, date: '2026-06-01' }),
+      expense({ amount: 999, date: '2026-02-28' }),
     )
   })
 
   it('tem 6 pontos, do mais antigo ao atual, com labels mmm/aa', async () => {
-    const { serieEntradas, serieSaidas } = await dashboardService.resumo(AGOSTO)
+    const { incomeSeries, expenseSeries } = await dashboardService.summary(AUGUST)
 
     const labels = ['mar/26', 'abr/26', 'mai/26', 'jun/26', 'jul/26', 'ago/26']
-    expect(serieEntradas.map((p) => p.label)).toEqual(labels)
-    expect(serieSaidas.map((p) => p.label)).toEqual(labels)
+    expect(incomeSeries.map((p) => p.label)).toEqual(labels)
+    expect(expenseSeries.map((p) => p.label)).toEqual(labels)
   })
 
   it('soma cada mês e usa 0 nos meses sem movimento', async () => {
-    const { serieEntradas, serieSaidas } = await dashboardService.resumo(AGOSTO)
+    const { incomeSeries, expenseSeries } = await dashboardService.summary(AUGUST)
 
-    expect(serieEntradas.map((p) => p.valor)).toEqual([200, 0, 0, 0, 600, 1500])
-    expect(serieSaidas.map((p) => p.valor)).toEqual([0, 0, 0, 50, 400, 1200])
+    expect(incomeSeries.map((p) => p.value)).toEqual([200, 0, 0, 0, 600, 1500])
+    expect(expenseSeries.map((p) => p.value)).toEqual([0, 0, 0, 50, 400, 1200])
   })
 
   it('atravessa a virada de ano', async () => {
-    const { serieEntradas } = await dashboardService.resumo({ mes: 2, ano: 2027 })
+    const { incomeSeries } = await dashboardService.summary({ month: 2, year: 2027 })
 
-    expect(serieEntradas.map((p) => p.label)).toEqual([
+    expect(incomeSeries.map((p) => p.label)).toEqual([
       'set/26',
       'out/26',
       'nov/26',
@@ -166,236 +166,236 @@ describe('séries', () => {
 
 describe('variação', () => {
   it('compara com o mês anterior', async () => {
-    db.entradas.push(entrada({ valor: 1500 }), entrada({ valor: 600, data: '2026-07-10' }))
-    db.saidas.push(saida({ valor: 1200 }), saida({ valor: 400, data: '2026-07-20' }))
+    db.incomes.push(income({ amount: 1500 }), income({ amount: 600, date: '2026-07-10' }))
+    db.expenses.push(expense({ amount: 1200 }), expense({ amount: 400, date: '2026-07-20' }))
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.variacaoEntradas).toBe(1.5)
-    expect(resumo.variacaoSaidas).toBe(2)
+    expect(summary.incomeChange).toBe(1.5)
+    expect(summary.expenseChange).toBe(2)
   })
 
   it('variação negativa quando o mês cai', async () => {
-    db.entradas.push(entrada({ valor: 300 }), entrada({ valor: 600, data: '2026-07-10' }))
+    db.incomes.push(income({ amount: 300 }), income({ amount: 600, date: '2026-07-10' }))
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.variacaoEntradas).toBe(-0.5)
+    expect(summary.incomeChange).toBe(-0.5)
   })
 
   it('mês anterior zerado vira 1 se houve movimento e 0 se não houve', async () => {
-    db.entradas.push(entrada({ valor: 100 }))
+    db.incomes.push(income({ amount: 100 }))
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.variacaoEntradas).toBe(1)
-    expect(resumo.variacaoSaidas).toBe(0)
+    expect(summary.incomeChange).toBe(1)
+    expect(summary.expenseChange).toBe(0)
   })
 })
 
-describe('totalFaturas', () => {
+describe('totalInvoices', () => {
   it('soma só as saídas automáticas de cartão do mês', async () => {
-    const faturaAgo = db.garantirFatura('car_a', '2026-08')
-    faturaAgo.total = 450
-    const faturaSet = db.garantirFatura('car_a', '2026-09')
-    faturaSet.total = 999
-    db.saidas.push(
-      saida({ valor: 200 }),
-      // Cartão de crédito, mas não é fatura derivada: não entra em totalFaturas.
-      saida({ valor: 80, formaPagamento: 'CARTAO_CREDITO' }),
+    const augustInvoice = db.ensureInvoice('car_a', '2026-08')
+    augustInvoice.total = 450
+    const septemberInvoice = db.ensureInvoice('car_a', '2026-09')
+    septemberInvoice.total = 999
+    db.expenses.push(
+      expense({ amount: 200 }),
+      // Cartão de crédito, mas não é fatura derivada: não entra em totalInvoices.
+      expense({ amount: 80, paymentMethod: 'CARTAO_CREDITO' }),
     )
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.totalFaturas).toBe(450)
-    expect(resumo.totalSaidas).toBe(200 + 80 + 450)
+    expect(summary.totalInvoices).toBe(450)
+    expect(summary.totalExpenses).toBe(200 + 80 + 450)
   })
 
   it('é 0 sem faturas no mês', async () => {
-    db.saidas.push(saida({ valor: 200 }))
+    db.expenses.push(expense({ amount: 200 }))
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.totalFaturas).toBe(0)
+    expect(summary.totalInvoices).toBe(0)
   })
 })
 
-describe('serieFaturas', () => {
-  it('traz só as faturas de cada mês, como recorte de serieSaidas', async () => {
-    db.garantirFatura('car_a', '2026-08').total = 450
-    db.garantirFatura('car_a', '2026-07').total = 300
-    db.saidas.push(
-      saida({ valor: 200 }),
-      saida({ valor: 100, data: '2026-07-20' }),
+describe('invoiceSeries', () => {
+  it('traz só as faturas de cada mês, como recorte de expenseSeries', async () => {
+    db.ensureInvoice('car_a', '2026-08').total = 450
+    db.ensureInvoice('car_a', '2026-07').total = 300
+    db.expenses.push(
+      expense({ amount: 200 }),
+      expense({ amount: 100, date: '2026-07-20' }),
       // Cartão de crédito, mas não é fatura derivada: fica só nas saídas.
-      saida({ valor: 80, formaPagamento: 'CARTAO_CREDITO' }),
+      expense({ amount: 80, paymentMethod: 'CARTAO_CREDITO' }),
     )
 
-    const { serieFaturas, serieSaidas } = await dashboardService.resumo(AGOSTO)
+    const { invoiceSeries, expenseSeries } = await dashboardService.summary(AUGUST)
 
-    expect(serieFaturas?.map((p) => p.label)).toEqual(serieSaidas.map((p) => p.label))
-    expect(serieFaturas?.map((p) => p.valor)).toEqual([0, 0, 0, 0, 300, 450])
-    expect(serieSaidas.at(-1)?.valor).toBe(200 + 80 + 450)
+    expect(invoiceSeries?.map((p) => p.label)).toEqual(expenseSeries.map((p) => p.label))
+    expect(invoiceSeries?.map((p) => p.value)).toEqual([0, 0, 0, 0, 300, 450])
+    expect(expenseSeries.at(-1)?.value).toBe(200 + 80 + 450)
   })
 
   it('é zerada sem faturas', async () => {
-    db.saidas.push(saida({ valor: 200 }))
+    db.expenses.push(expense({ amount: 200 }))
 
-    const { serieFaturas } = await dashboardService.resumo(AGOSTO)
+    const { invoiceSeries } = await dashboardService.summary(AUGUST)
 
-    expect(serieFaturas?.every((p) => p.valor === 0)).toBe(true)
+    expect(invoiceSeries?.every((p) => p.value === 0)).toBe(true)
   })
 })
 
 describe('gastos de cartão', () => {
-  function transacao(
-    faturaId: string,
-    tipo: TransacaoCartao['tipo'],
-    valor: number,
-    categoriaId = catA.id,
-  ): TransacaoCartao {
-    sequencia += 1
+  function transaction(
+    invoiceId: string,
+    type: CardTransaction['type'],
+    amount: number,
+    categoryId = catA.id,
+  ): CardTransaction {
+    sequence += 1
     return {
-      id: `tra_teste_${sequencia}`,
-      cartaoId: 'car_a',
-      faturaId,
-      descricao: 'Compra',
-      valor,
-      data: '2026-08-01',
-      categoriaId,
-      tipo,
-      parcelaAtual: 1,
-      totalParcelas: 1,
-      recorrente: false,
-      criadoEm: '',
-      atualizadoEm: '',
+      id: `tra_teste_${sequence}`,
+      cardId: 'car_a',
+      invoiceId,
+      description: 'Compra',
+      amount,
+      date: '2026-08-01',
+      categoryId,
+      type,
+      installment: 1,
+      totalInstallments: 1,
+      recurring: false,
+      createdAt: '',
+      updatedAt: '',
     }
   }
 
-  it('agrupa as transações das faturas do mês por tipo, do maior para o menor, somando totalFaturas', async () => {
-    const faturaAgo = db.garantirFatura('car_a', '2026-08')
-    const faturaSet = db.garantirFatura('car_a', '2026-09')
-    db.transacoesCartao.push(
-      transacao(faturaAgo.id, 'LAZER', 50),
-      transacao(faturaAgo.id, 'ALIMENTACAO', 120),
-      transacao(faturaAgo.id, 'LAZER', 30),
+  it('agrupa as transações das faturas do mês por tipo, do maior para o menor, somando totalInvoices', async () => {
+    const augustInvoice = db.ensureInvoice('car_a', '2026-08')
+    const septemberInvoice = db.ensureInvoice('car_a', '2026-09')
+    db.cardTransactions.push(
+      transaction(augustInvoice.id, 'LAZER', 50),
+      transaction(augustInvoice.id, 'ALIMENTACAO', 120),
+      transaction(augustInvoice.id, 'LAZER', 30),
       // Fatura que vence em outro mês: fica de fora.
-      transacao(faturaSet.id, 'COMPRAS', 999),
+      transaction(septemberInvoice.id, 'COMPRAS', 999),
     )
-    db.recalcularTotalFatura(faturaAgo.id)
-    db.recalcularTotalFatura(faturaSet.id)
+    db.recalculateInvoiceTotal(augustInvoice.id)
+    db.recalculateInvoiceTotal(septemberInvoice.id)
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.gastosCartoesPorTipo).toEqual([
-      { tipo: 'ALIMENTACAO', total: 120 },
-      { tipo: 'LAZER', total: 80 },
+    expect(summary.cardExpensesByType).toEqual([
+      { type: 'ALIMENTACAO', total: 120 },
+      { type: 'LAZER', total: 80 },
     ])
-    expect(resumo.totalFaturas).toBe(200)
+    expect(summary.totalInvoices).toBe(200)
   })
 
   it('agrupa as mesmas transações por categoria, com nome e cor, e "Outros" para categoria desconhecida', async () => {
-    const faturaAgo = db.garantirFatura('car_a', '2026-08')
-    const faturaSet = db.garantirFatura('car_a', '2026-09')
-    db.transacoesCartao.push(
-      transacao(faturaAgo.id, 'LAZER', 50, catA.id),
-      transacao(faturaAgo.id, 'ALIMENTACAO', 120, catB.id),
-      transacao(faturaAgo.id, 'LAZER', 30, catA.id),
-      transacao(faturaAgo.id, 'OUTROS', 10, 'cat_inexistente'),
-      transacao(faturaSet.id, 'COMPRAS', 999, catA.id),
+    const augustInvoice = db.ensureInvoice('car_a', '2026-08')
+    const septemberInvoice = db.ensureInvoice('car_a', '2026-09')
+    db.cardTransactions.push(
+      transaction(augustInvoice.id, 'LAZER', 50, catA.id),
+      transaction(augustInvoice.id, 'ALIMENTACAO', 120, catB.id),
+      transaction(augustInvoice.id, 'LAZER', 30, catA.id),
+      transaction(augustInvoice.id, 'OUTROS', 10, 'cat_inexistente'),
+      transaction(septemberInvoice.id, 'COMPRAS', 999, catA.id),
     )
     // Saída comum: fica em gastosPorCategoria, nunca nos gastos de cartão.
-    db.saidas.push(saida({ valor: 500, categoriaId: catB.id }))
+    db.expenses.push(expense({ amount: 500, categoryId: catB.id }))
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.gastosCartoesPorCategoria).toEqual([
-      { nome: catB.nome, cor: catB.cor, total: 120 },
-      { nome: catA.nome, cor: catA.cor, total: 80 },
-      { nome: 'Outros', cor: COR_PADRAO, total: 10 },
+    expect(summary.cardExpensesByCategory).toEqual([
+      { name: catB.name, color: catB.color, total: 120 },
+      { name: catA.name, color: catA.color, total: 80 },
+      { name: 'Outros', color: DEFAULT_COLOR, total: 10 },
     ])
   })
 
   it('devolve listas vazias sem fatura no mês', async () => {
-    db.saidas.push(saida({ valor: 200, tipo: 'LAZER' }))
+    db.expenses.push(expense({ amount: 200, type: 'LAZER' }))
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo.gastosCartoesPorTipo).toEqual([])
-    expect(resumo.gastosCartoesPorCategoria).toEqual([])
+    expect(summary.cardExpensesByType).toEqual([])
+    expect(summary.cardExpensesByCategory).toEqual([])
   })
 })
 
-describe('entradasPorCategoria', () => {
+describe('incomeByCategory', () => {
   it('agrupa entradas do período por categoria, ordena por total e ignora outros meses', async () => {
-    db.entradas.push(
-      entrada({ valor: 300, categoriaId: catA.id }),
-      entrada({ valor: 200, categoriaId: catA.id }),
-      entrada({ valor: 700, categoriaId: catB.id }),
-      entrada({ valor: 999, categoriaId: catB.id, data: '2026-07-10' }),
+    db.incomes.push(
+      income({ amount: 300, categoryId: catA.id }),
+      income({ amount: 200, categoryId: catA.id }),
+      income({ amount: 700, categoryId: catB.id }),
+      income({ amount: 999, categoryId: catB.id, date: '2026-07-10' }),
     )
 
-    const { entradasPorCategoria } = await dashboardService.resumo(AGOSTO)
+    const { incomeByCategory } = await dashboardService.summary(AUGUST)
 
-    expect(entradasPorCategoria).toEqual([
-      { nome: catB.nome, cor: catB.cor, total: 700 },
-      { nome: catA.nome, cor: catA.cor, total: 500 },
+    expect(incomeByCategory).toEqual([
+      { name: catB.name, color: catB.color, total: 700 },
+      { name: catA.name, color: catA.color, total: 500 },
     ])
   })
 
   it('devolve lista vazia sem entradas no período', async () => {
-    const { entradasPorCategoria } = await dashboardService.resumo(AGOSTO)
-    expect(entradasPorCategoria).toEqual([])
+    const { incomeByCategory } = await dashboardService.summary(AUGUST)
+    expect(incomeByCategory).toEqual([])
   })
 })
 
-describe('gastosPorCategoria', () => {
+describe('expensesByCategory', () => {
   it('agrupa por categoria, ordena do maior para o menor e cai em "Outros" para categoria desconhecida', async () => {
-    db.saidas.push(
-      saida({ valor: 300, categoriaId: catA.id }),
-      saida({ valor: 200, categoriaId: catA.id }),
-      saida({ valor: 700, categoriaId: catB.id }),
-      saida({ valor: 100, categoriaId: 'cat_inexistente' }),
-      saida({ valor: 999, categoriaId: catB.id, data: '2026-07-10' }),
+    db.expenses.push(
+      expense({ amount: 300, categoryId: catA.id }),
+      expense({ amount: 200, categoryId: catA.id }),
+      expense({ amount: 700, categoryId: catB.id }),
+      expense({ amount: 100, categoryId: 'cat_inexistente' }),
+      expense({ amount: 999, categoryId: catB.id, date: '2026-07-10' }),
     )
 
-    const { gastosPorCategoria } = await dashboardService.resumo(AGOSTO)
+    const { expensesByCategory } = await dashboardService.summary(AUGUST)
 
-    expect(gastosPorCategoria).toEqual([
-      { nome: catB.nome, cor: catB.cor, total: 700 },
-      { nome: catA.nome, cor: catA.cor, total: 500 },
-      { nome: 'Outros', cor: COR_PADRAO, total: 100 },
+    expect(expensesByCategory).toEqual([
+      { name: catB.name, color: catB.color, total: 700 },
+      { name: catA.name, color: catA.color, total: 500 },
+      { name: 'Outros', color: DEFAULT_COLOR, total: 100 },
     ])
   })
 
   it('soma dos gastos por categoria é igual ao total de saídas', async () => {
-    db.saidas.push(saida({ valor: 300 }), saida({ valor: 700, categoriaId: catB.id }))
-    db.garantirFatura('car_a', '2026-08').total = 450
+    db.expenses.push(expense({ amount: 300 }), expense({ amount: 700, categoryId: catB.id }))
+    db.ensureInvoice('car_a', '2026-08').total = 450
 
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    const soma = resumo.gastosPorCategoria.reduce((acc, g) => acc + g.total, 0)
-    expect(soma).toBe(resumo.totalSaidas)
-    expect(resumo.totalSaidas).toBe(1450)
+    const sum = summary.expensesByCategory.reduce((acc, g) => acc + g.total, 0)
+    expect(sum).toBe(summary.totalExpenses)
+    expect(summary.totalExpenses).toBe(1450)
   })
 })
 
-describe('transacoesRecentes', () => {
+describe('recentTransactions', () => {
   it('mistura entradas e saídas do mês, da data mais recente para a mais antiga, no máximo 8', async () => {
-    for (let dia = 1; dia <= 5; dia += 1) {
-      db.entradas.push(entrada({ id: `e${dia}`, data: `2026-08-0${dia}` }))
+    for (let day = 1; day <= 5; day += 1) {
+      db.incomes.push(income({ id: `e${day}`, date: `2026-08-0${day}` }))
     }
-    for (let dia = 6; dia <= 10; dia += 1) {
-      const data = dia === 10 ? '2026-08-10' : `2026-08-0${dia}`
-      db.saidas.push(saida({ id: `s${dia}`, data }))
+    for (let day = 6; day <= 10; day += 1) {
+      const date = day === 10 ? '2026-08-10' : `2026-08-0${day}`
+      db.expenses.push(expense({ id: `s${day}`, date }))
     }
-    db.entradas.push(entrada({ id: 'fora', data: '2026-07-31' }))
+    db.incomes.push(income({ id: 'fora', date: '2026-07-31' }))
 
-    const { transacoesRecentes } = await dashboardService.resumo(AGOSTO)
+    const { recentTransactions } = await dashboardService.summary(AUGUST)
 
-    expect(transacoesRecentes).toHaveLength(8)
-    expect(transacoesRecentes.map((t) => t.id)).toEqual(['s10', 's9', 's8', 's7', 's6', 'e5', 'e4', 'e3'])
-    expect(transacoesRecentes.map((t) => t.tipo)).toEqual([
+    expect(recentTransactions).toHaveLength(8)
+    expect(recentTransactions.map((t) => t.id)).toEqual(['s10', 's9', 's8', 's7', 's6', 'e5', 'e4', 'e3'])
+    expect(recentTransactions.map((t) => t.movement)).toEqual([
       'SAIDA',
       'SAIDA',
       'SAIDA',
@@ -408,53 +408,53 @@ describe('transacoesRecentes', () => {
   })
 
   it('traz nome e cor da categoria, com "Sem categoria" e cor padrão para desconhecida', async () => {
-    db.entradas.push(entrada({ id: 'e1', categoriaId: catA.id, data: '2026-08-02' }))
-    db.saidas.push(saida({ id: 's1', categoriaId: 'cat_inexistente', data: '2026-08-01' }))
+    db.incomes.push(income({ id: 'e1', categoryId: catA.id, date: '2026-08-02' }))
+    db.expenses.push(expense({ id: 's1', categoryId: 'cat_inexistente', date: '2026-08-01' }))
 
-    const { transacoesRecentes } = await dashboardService.resumo(AGOSTO)
+    const { recentTransactions } = await dashboardService.summary(AUGUST)
 
-    expect(transacoesRecentes[0]).toMatchObject({
+    expect(recentTransactions[0]).toMatchObject({
       id: 'e1',
-      tipo: 'ENTRADA',
-      categoriaNome: catA.nome,
-      categoriaCor: catA.cor,
+      movement: 'ENTRADA',
+      categoryName: catA.name,
+      categoryColor: catA.color,
     })
-    expect(transacoesRecentes[1]).toMatchObject({
+    expect(recentTransactions[1]).toMatchObject({
       id: 's1',
-      tipo: 'SAIDA',
-      categoriaNome: 'Sem categoria',
-      categoriaCor: COR_PADRAO,
+      movement: 'SAIDA',
+      categoryName: 'Sem categoria',
+      categoryColor: DEFAULT_COLOR,
     })
   })
 
   it('inclui a fatura de cartão do mês como saída', async () => {
-    db.garantirFatura('car_a', '2026-08').total = 450
+    db.ensureInvoice('car_a', '2026-08').total = 450
 
-    const { transacoesRecentes } = await dashboardService.resumo(AGOSTO)
+    const { recentTransactions } = await dashboardService.summary(AUGUST)
 
-    expect(transacoesRecentes).toHaveLength(1)
-    expect(transacoesRecentes[0]).toMatchObject({ tipo: 'SAIDA', valor: 450, descricao: 'Fatura – Alfa' })
+    expect(recentTransactions).toHaveLength(1)
+    expect(recentTransactions[0]).toMatchObject({ movement: 'SAIDA', amount: 450, description: 'Fatura – Alfa' })
   })
 })
 
 describe('período sem dados', () => {
   it('devolve zeros e listas vazias, sem lançar', async () => {
-    const resumo = await dashboardService.resumo(AGOSTO)
+    const summary = await dashboardService.summary(AUGUST)
 
-    expect(resumo).toMatchObject({
-      totalEntradas: 0,
-      totalSaidas: 0,
-      saldo: 0,
-      totalFaturas: 0,
-      variacaoEntradas: 0,
-      variacaoSaidas: 0,
-      gastosPorCategoria: [],
-      entradasPorCategoria: [],
-      transacoesRecentes: [],
+    expect(summary).toMatchObject({
+      totalIncome: 0,
+      totalExpenses: 0,
+      balance: 0,
+      totalInvoices: 0,
+      incomeChange: 0,
+      expenseChange: 0,
+      expensesByCategory: [],
+      incomeByCategory: [],
+      recentTransactions: [],
     })
-    expect(resumo.serieEntradas).toHaveLength(6)
-    expect(resumo.serieSaidas).toHaveLength(6)
-    expect(resumo.serieEntradas.every((p) => p.valor === 0)).toBe(true)
-    expect(resumo.serieSaidas.every((p) => p.valor === 0)).toBe(true)
+    expect(summary.incomeSeries).toHaveLength(6)
+    expect(summary.expenseSeries).toHaveLength(6)
+    expect(summary.incomeSeries.every((p) => p.value === 0)).toBe(true)
+    expect(summary.expenseSeries.every((p) => p.value === 0)).toBe(true)
   })
 })

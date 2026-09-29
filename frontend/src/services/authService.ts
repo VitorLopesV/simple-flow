@@ -1,11 +1,13 @@
-import type { LoginPayload, PerfilPayload, RegistroPayload, SessaoUsuario, Usuario } from '@/types/auth'
+import type { LoginPayload, ProfilePayload, RegisterPayload, User, UserSession } from '@/types/auth'
+import type { UserDto, UserSessionDto } from '@/types/dto'
 import { http, USE_MOCK } from './http'
+import { toLoginDto, toProfileDto, toRegisterDto, toUser, toUserSession } from './mappers'
 import { delay } from './mock'
 
 /** Sessão fake usada em modo demonstração (sem backend real). */
-function sessaoMock(email: string, nome: string | null = null): SessaoUsuario {
+function mockSession(email: string, name: string | null = null): UserSession {
   return {
-    usuario: { id: 'mock-user', email, nome },
+    user: { id: 'mock-user', email, name },
     accessToken: 'mock-access-token',
     refreshToken: 'mock-refresh-token',
     expiresIn: 3600,
@@ -13,38 +15,38 @@ function sessaoMock(email: string, nome: string | null = null): SessaoUsuario {
 }
 
 export const authService = {
-  async login(payload: LoginPayload): Promise<SessaoUsuario> {
-    if (USE_MOCK) return delay(sessaoMock(payload.email))
+  async login(payload: LoginPayload): Promise<UserSession> {
+    if (USE_MOCK) return delay(mockSession(payload.email))
 
-    const { data } = await http.post<SessaoUsuario>('/auth/login', payload)
-    return data
+    const { data } = await http.post<UserSessionDto>('/auth/login', toLoginDto(payload))
+    return toUserSession(data)
   },
 
-  async registrar(payload: RegistroPayload): Promise<SessaoUsuario> {
-    if (USE_MOCK) return delay(sessaoMock(payload.email, payload.nome ?? null))
+  async register(payload: RegisterPayload): Promise<UserSession> {
+    if (USE_MOCK) return delay(mockSession(payload.email, payload.name ?? null))
 
-    const { data } = await http.post<SessaoUsuario>('/auth/registro', payload)
-    return data
+    const { data } = await http.post<UserSessionDto>('/auth/registro', toRegisterDto(payload))
+    return toUserSession(data)
   },
 
-  async renovar(refreshToken: string): Promise<SessaoUsuario> {
-    if (USE_MOCK) return delay(sessaoMock('demo@simpleflow.app'))
+  async refresh(refreshToken: string): Promise<UserSession> {
+    if (USE_MOCK) return delay(mockSession('demo@simpleflow.app'))
 
-    const { data } = await http.post<SessaoUsuario>('/auth/refresh', { refreshToken })
-    return data
+    const { data } = await http.post<UserSessionDto>('/auth/refresh', { refreshToken })
+    return toUserSession(data)
   },
 
-  async me(): Promise<Usuario> {
-    if (USE_MOCK) return delay(sessaoMock('demo@simpleflow.app').usuario)
+  async me(): Promise<User> {
+    if (USE_MOCK) return delay(mockSession('demo@simpleflow.app').user)
 
-    const { data } = await http.get<Usuario>('/auth/me')
-    return data
+    const { data } = await http.get<UserDto>('/auth/me')
+    return toUser(data)
   },
 
-  async atualizarPerfil(payload: PerfilPayload): Promise<Usuario> {
+  async updateProfile(payload: ProfilePayload): Promise<User> {
     if (USE_MOCK) return delay({ id: 'mock-user', ...payload })
 
-    const { data } = await http.patch<Usuario>('/auth/me', payload)
-    return data
+    const { data } = await http.patch<UserDto>('/auth/me', toProfileDto(payload))
+    return toUser(data)
   },
 }

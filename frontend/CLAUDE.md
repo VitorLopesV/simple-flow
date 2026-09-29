@@ -10,6 +10,20 @@
 - **Sem ESLint/Prettier configurados.** Consistência é só por convenção — siga o código existente à risca.
 - **Testes com Vitest** (`@vue/test-utils` + `happy-dom`): rode `npm run test` (raiz ou `frontend`). Arquivos `*.spec.ts` ficam ao lado do código testado; sem pasta `__tests__`, sem helpers globais, sem snapshots. Valide também manualmente via `npm run dev` quando a mudança for visual.
 
+## Idioma do código — regra obrigatória
+
+**Todo código deve estar em inglês.** Isso vale para nomes de arquivos, componentes, variáveis, funções, classes, tipos, interfaces, props, eventos, slots, stores, services, rotas (`name`), `id`s, `data-testid`s, classes CSS próprias e nomes de chaves de objetos do domínio — tanto no código de produção quanto nos testes. Não crie nenhum identificador novo em português.
+
+Ficam em **português**, e só eles:
+- **Textos exibidos ao usuário**: rótulos, mensagens, toasts, placeholders, `aria-label`, títulos, nome do arquivo PDF exportado.
+- **Comentários e JSDoc** (continuam em português, explicando o "porquê").
+- **Descrições de teste** (`describe`/`it`).
+- **Contrato com a API e o banco** — ver a seção "Comunicação com backend": campos do JSON (`types/dto.ts`), parâmetros de query (`mes`, `ano`, `busca`, `competencia`...), rotas da API (`/saidas`, `/cartoes/faturas`...) e valores de enum gravados no banco (`'PENDENTE'`, `'CARTAO_CREDITO'`, `'ALIMENTACAO'`...). O tipo e a constante são em inglês (`ExpenseStatus`, `EXPENSE_STATUS_LABEL`), o valor continua o da API.
+- **URLs das telas** (`path` das rotas, como `/app/saidas`), porque aparecem para o usuário e em links salvos.
+- **Chaves já persistidas no `localStorage`** (`simpleflow.accessToken`, `fc:pasta-relatorios`...): trocar o valor apagaria dados dos usuários. A constante que guarda a chave é em inglês.
+
+Glossário do domínio, para manter os nomes consistentes: entrada → `Income`, saída → `Expense`, cartão → `CreditCard`/`card`, fatura → `Invoice`, transação do cartão → `CardTransaction`, categoria → `Category`, período → `Period` (`{ month, year }`), competência → `referenceMonth`, resumo → `Summary`, valor → `amount`, descrição → `description`, vencimento → `dueDate`, pago em → `paidAt`, observação → `notes`, recorrente → `recurring`, parcela → `installment`.
+
 ## Estrutura
 
 Organização por camada técnica (não por feature, não atomic design):
@@ -18,53 +32,54 @@ Organização por camada técnica (não por feature, não atomic design):
 src/
 ├── components/
 │   ├── common/     # design system genérico — prefixo Base* (BaseButton, BaseInput, BaseModal...)
-│   ├── features/   # componentes de domínio (CartaoForm, TransactionForm, PerfilUsuario...)
+│   ├── features/   # componentes de domínio (CreditCardForm, TransactionForm, UserMenu...)
 │   └── layouts/    # chrome da aplicação — prefixo App* (AppLayout, AppHeader, AppSidebar)
 ├── pages/          # uma página por rota
-├── composables/    # usePreferencias, useNotify — estado singleton fora do Pinia
+├── composables/    # usePreferences, useNotify — estado singleton fora do Pinia
 ├── stores/         # Pinia setup stores, um por domínio + index.ts barrel
-├── services/       # um arquivo por domínio (axios OU mock) + http.ts + mock/
-├── types/          # um arquivo por domínio + common.ts + index.ts barrel
+├── services/       # um arquivo por domínio (axios OU mock) + http.ts + mappers.ts + mock/
+├── types/          # um arquivo por domínio + common.ts + dto.ts (formato da API) + index.ts barrel
 └── utils/          # cn, currencyFormatter, dateFormatter, validators + index.ts barrel
 ```
 
-Ao adicionar um recurso novo, crie o arquivo correspondente em cada camada (`types/x.ts`, `services/xService.ts`, `stores/xStore.ts`), seguindo o padrão de `cartao`/`entrada`/`saida` — não agrupe tudo numa pasta por feature.
+Ao adicionar um recurso novo, crie o arquivo correspondente em cada camada (`types/x.ts`, `services/xService.ts`, `stores/xStore.ts`), seguindo o padrão de `creditCard`/`income`/`expense` — não agrupe tudo numa pasta por feature.
 
 ## Componentes
 
 - Nome de arquivo em PascalCase. Prefixo `Base` = design system genérico; prefixo `App` = chrome/layout.
 - Props via `defineProps<{...}>()` + `withDefaults`; `v-model` via `defineModel()`.
 - `defineOptions({ inheritAttrs: false })` em componentes de input que repassam atributos para o elemento nativo.
-- Props, variáveis e nomes de domínio em **português** (`variante`, `tamanho`, `desabilitado`, `carregando`, `obrigatorio`). Nomes técnicos genéricos em inglês.
+- Props, eventos e slots em inglês, seguindo o padrão dos componentes base (`variant`, `size`, `disabled`, `loading`, `required`, `error`, `hint`; slots `header`, `actions`, `footer`; `v-model:open` em modais) — ver "Idioma do código".
 - Acessibilidade é levada a sério neste projeto: `aria-invalid`, `aria-describedby`, `role="alert"`/`"dialog"`, `aria-modal`, foco preso em modais, skip-link, respeito a `prefers-reduced-motion`. Mantenha esse padrão em componentes novos.
 - Sem lib de terceiros para popover/modal/focus-trap — tudo implementado manualmente (`BaseModal.vue` faz focus-trap e scroll-lock na mão, com `Teleport to="body"`). Siga esse padrão em vez de introduzir uma lib nova.
 - Comentários JSDoc curtos em português acima de funções não triviais, explicando o "porquê" — padrão recorrente em quase todo arquivo.
 
 ## Estado
 
-- **Pinia (setup store)** para estado de domínio/negócio: um store por domínio em `src/stores/`, com `loading`/`salvando`/`erro`, `computed` derivados, e ações assíncronas (`carregar`, `criar`, `atualizar`, `remover`) que chamam o `service`, capturam erro com `mensagemDeErro()` e retornam `boolean` de sucesso.
-- **Composable singleton fora do Pinia** (`usePreferencias`) para preferências de UI puramente locais/de dispositivo, persistidas em `localStorage`. Regra: se é dado de negócio do usuário → Pinia; se é preferência de UI/dispositivo → composable singleton.
-- `periodoStore` (mês de competência selecionado) é compartilhado entre páginas — não recriar esse estado localmente numa página nova.
+- **Pinia (setup store)** para estado de domínio/negócio: um store por domínio em `src/stores/`, com `loading`/`saving`/`error`, `computed` derivados, e ações assíncronas (`load`, `create`, `update`, `remove`) que chamam o `service`, capturam erro com `getErrorMessage()` e retornam `boolean` de sucesso.
+- **Composable singleton fora do Pinia** (`usePreferences`) para preferências de UI puramente locais/de dispositivo, persistidas em `localStorage`. Regra: se é dado de negócio do usuário → Pinia; se é preferência de UI/dispositivo → composable singleton.
+- `periodStore` (mês de competência selecionado) é compartilhado entre páginas — não recriar esse estado localmente numa página nova.
 
 ## Roteamento
 
 - Duas árvores de layout: `/app/*` (autenticado, `AppLayout`) e `/auth/*` (público, `AuthLayout`).
 - Toda página é lazy-loaded: `component: () => import('@/pages/X.vue')`.
-- Guard global em `router.beforeEach` bloqueia `/app/*` sem sessão e redireciona usuário autenticado para fora de `/auth/*`. Cada rota tem `meta: { titulo, descricao }`, usado por `router.afterEach` para setar `document.title`.
+- Guard global em `router.beforeEach` bloqueia `/app/*` sem sessão e redireciona usuário autenticado para fora de `/auth/*`. Cada rota tem `meta: { title, description }`. Os `name` das rotas são em inglês (`incomes`, `expenses`, `cards`, `register`); os `path` continuam em português (`/app/entradas`...).
 
 ## Comunicação com backend
 
 - Serviço por domínio em `src/services/`, cliente axios único em `services/http.ts`.
+- **O JSON da API é em português e o frontend é em inglês.** Os tipos em `types/dto.ts` descrevem o formato da API (campos em português) e `services/mappers.ts` converte nos dois sentidos (`toExpense`, `toExpensePayloadDto`...). A conversão acontece **só na chamada HTTP dos services** — stores, componentes e o mock já trabalham com os tipos de domínio em inglês. Ao adicionar ou mudar um campo da API, atualize o DTO, o mapper e o teste do mapper (`mappers.spec.ts`) juntos.
 - **Todo método de service segue o padrão duplo mock/real**: checa `if (USE_MOCK) { ...; return delay(...) }` antes de cair na chamada axios real. Ao adicionar um endpoint novo, implemente os dois lados (mock em `services/mock/db.ts` + chamada real).
 - `http.ts`: injeta `Authorization: Bearer <token>` via interceptor de request; interceptor de response faz **refresh automático em 401** (com flag de promise compartilhada para evitar refreshes concorrentes) e força hard redirect (`window.location.assign`, não `router.push`) para `/auth/login` se o refresh falhar.
-- Erros são normalizados em `ApiError` com mensagens em pt-BR por status. Use sempre `mensagemDeErro(erro, padrao)` para extrair a mensagem a exibir em toast — não trate erro axios cru nos componentes.
-- Modo mock é infraestrutura de primeira classe, não hack de teste: `VITE_USE_MOCK=true` roda o frontend inteiro sem backend. `mock/db.ts` usa faker com seed fixa; `mock/index.ts` importa o db **dinamicamente** para não entrar no bundle de produção — preserve esse `import()` dinâmico ao mexer ali.
+- Erros são normalizados em `ApiError` com mensagens em pt-BR por status. Use sempre `getErrorMessage(error, fallback)` para extrair a mensagem a exibir em toast — não trate erro axios cru nos componentes.
+- Modo mock é infraestrutura de primeira classe, não hack de teste: `VITE_USE_MOCK=true` roda o frontend inteiro sem backend. `mock/db.ts` usa faker com seed fixa e guarda os dados já no formato de domínio (não passa pelos mappers); `mock/index.ts` importa o db **dinamicamente** para não entrar no bundle de produção — preserve esse `import()` dinâmico ao mexer ali.
 
 ## Autenticação
 
-- Token JWT (access + refresh) persistido em **`localStorage`** (`simpleflow.accessToken`, `simpleflow.refreshToken`, `simpleflow.usuario`) — não em cookies. Trade-off consciente (simplicidade vs. exposição a XSS), não é bug.
-- Fluxo: `Login.vue` → `authService.login` → `authStore.definirSessao` → guard de rota libera `/app/*`.
-- Logout: `authStore.limparSessao()` (limpa localStorage) + `router.push({ name: 'login' })`, feito pelo item "Sair" do menu do usuário (`PerfilUsuario.vue`, no `AppHeader`), que também abre o `PerfilModal.vue` em "Meu perfil".
+- Token JWT (access + refresh) persistido em **`localStorage`** (`simpleflow.accessToken`, `simpleflow.refreshToken`, `simpleflow.user`) — não em cookies. A chave antiga `simpleflow.usuario` (usuário no formato da API) só é lida para migrar sessões abertas antes da troca de nomes. Trade-off consciente (simplicidade vs. exposição a XSS), não é bug.
+- Fluxo: `Login.vue` → `authService.login` → `authStore.setSession` → guard de rota libera `/app/*`.
+- Logout: `authStore.clearSession()` (limpa localStorage) + `router.push({ name: 'login' })`, feito pelo item "Sair" do menu do usuário (`UserMenu.vue`, no `AppHeader`), que também abre o `ProfileModal.vue` em "Meu perfil".
 
 ## Estilização e tema
 
@@ -75,7 +90,7 @@ Ao adicionar um recurso novo, crie o arquivo correspondente em cada camada (`typ
 
 ## Formulários
 
-Padrão a seguir para telas novas: `vee-validate` (`useForm`/`useField`) + regras de `src/utils/validators.ts` (`obrigatorio`, `minimoCaracteres`, `valorMonetarioPositivo`, `dataISO`, etc., combináveis via `compor(...)`) — é o padrão usado em `CartaoForm.vue`/`TransactionForm.vue`. As telas de login/registro ainda validam manualmente (divergência histórica, não copie esse padrão em telas novas).
+Padrão a seguir para telas novas: `vee-validate` (`useForm`/`useField`) + regras de `src/utils/validators.ts` (`required`, `minLength`, `positiveAmount`, `isoDate`, etc., combináveis via `compose(...)`) — é o padrão usado em `CreditCardForm.vue`/`TransactionForm.vue`. As telas de login/registro ainda validam manualmente (divergência histórica, não copie esse padrão em telas novas).
 
 Para campos monetários, reutilize `CurrencyInput.vue` (aceita `1.234,56`, `1234.56`, `R$ 1.234,56` via `utils/currencyFormatter.ts`).
 

@@ -1,24 +1,24 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-import type { PageRequest, Paginated, Periodo } from '@/types/common'
-import { FATURA_STATUS_LABEL } from '@/types/cartao'
-import { FORMA_PAGAMENTO_LABEL, SAIDA_STATUS_LABEL } from '@/types/saida'
-import { cartaoService } from './cartaoService'
-import { categoriaService } from './categoriaService'
-import { entradaService } from './entradaService'
+import type { PageRequest, Paginated, Period } from '@/types/common'
+import { INVOICE_STATUS_LABEL } from '@/types/creditCard'
+import { EXPENSE_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '@/types/expense'
+import { categoryService } from './categoryService'
+import { creditCardService } from './creditCardService'
+import { expenseService } from './expenseService'
+import { incomeService } from './incomeService'
 import { formatCurrency } from '@/utils/currencyFormatter'
-import { formatDate, formatPeriodo, toCompetencia } from '@/utils/dateFormatter'
-import { saidaService } from './saidaService'
+import { formatDate, formatPeriod, toReferenceMonth } from '@/utils/dateFormatter'
 
-const MARGEM = 40
+const MARGIN = 40
 /*
  * Decisão (issue #81): o PDF mantém a Helvetica embutida do jsPDF em vez de Montserrat.
  * Usar Montserrat exigiria embutir os arquivos TTF convertidos em base64 (addFileToVFS/addFont),
  * aumentando o bundle em centenas de KB por peso, por ganho apenas estético num relatório.
  */
 /** Maior `pageSize` aceito pela API (`max(100)` nos schemas de listagem do backend). */
-const TAMANHO_PAGINA = 100
+const PAGE_SIZE = 100
 
 /** jspdf-autotable amplia `doc` em tempo de execução, mas não expõe o tipo. */
 function finalY(doc: jsPDF): number {
@@ -30,91 +30,91 @@ function finalY(doc: jsPDF): number {
  * inteiro, mas a API rejeita (400) `pageSize` acima de 100 — pedir tudo de uma vez
  * fazia a exportação falhar com o backend real.
  */
-async function listarTodas<T>(
-  listar: (pagina: PageRequest) => Promise<Paginated<T>>,
+async function listAll<T>(
+  list: (page: PageRequest) => Promise<Paginated<T>>,
 ): Promise<T[]> {
-  const primeira = await listar({ page: 1, pageSize: TAMANHO_PAGINA })
-  const restantes = await Promise.all(
-    Array.from({ length: Math.max(0, primeira.totalPages - 1) }, (_, i) =>
-      listar({ page: i + 2, pageSize: TAMANHO_PAGINA }),
+  const first = await list({ page: 1, pageSize: PAGE_SIZE })
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, i) =>
+      list({ page: i + 2, pageSize: PAGE_SIZE }),
     ),
   )
-  return [primeira, ...restantes].flatMap((pagina) => pagina.items)
+  return [first, ...rest].flatMap((page) => page.items)
 }
 
 /** Gera e baixa um PDF com entradas, saídas e cartões do período informado. */
-export async function exportarRelatorioPdf(periodo: Periodo): Promise<void> {
-  const [entradas, saidas, cartoes, categorias] = await Promise.all([
-    listarTodas((pagina) => entradaService.listar({ periodo, ...pagina })),
-    listarTodas((pagina) => saidaService.listar({ periodo, ...pagina })),
-    cartaoService.listarComFaturas({ periodo }),
-    categoriaService.listar(),
+export async function exportPdfReport(period: Period): Promise<void> {
+  const [incomes, expenses, cards, categories] = await Promise.all([
+    listAll((page) => incomeService.list({ period, ...page })),
+    listAll((page) => expenseService.list({ period, ...page })),
+    creditCardService.listWithInvoices({ period }),
+    categoryService.list(),
   ])
 
-  const nomeCategoria = (id: string): string =>
-    categorias.find((categoria) => categoria.id === id)?.nome ?? 'Sem categoria'
+  const categoryName = (id: string): string =>
+    categories.find((category) => category.id === id)?.name ?? 'Sem categoria'
 
-  const totalEntradas = entradas.reduce((soma, item) => soma + item.valor, 0)
-  const totalSaidas = saidas.reduce((soma, item) => soma + item.valor, 0)
+  const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0)
+  const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0)
 
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
-  const alturaPagina = doc.internal.pageSize.getHeight()
-  let y = MARGEM
+  const pageHeight = doc.internal.pageSize.getHeight()
+  let y = MARGIN
 
-  function garantirEspaco(alturaNecessaria: number): void {
-    if (y + alturaNecessaria > alturaPagina - MARGEM) {
+  function ensureSpace(requiredHeight: number): void {
+    if (y + requiredHeight > pageHeight - MARGIN) {
       doc.addPage()
-      y = MARGEM
+      y = MARGIN
     }
   }
 
-  function tituloSecao(texto: string): void {
-    garantirEspaco(30)
+  function sectionTitle(text: string): void {
+    ensureSpace(30)
     doc.setFontSize(13)
     doc.setFont('helvetica', 'bold')
-    doc.text(texto, MARGEM, y)
+    doc.text(text, MARGIN, y)
     y += 18
   }
 
   doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
-  doc.text('SimpleFlow — Relatório financeiro', MARGEM, y)
+  doc.text('SimpleFlow — Relatório financeiro', MARGIN, y)
   y += 22
 
   doc.setFontSize(11)
   doc.setFont('helvetica', 'normal')
-  doc.text(formatPeriodo(periodo), MARGEM, y)
+  doc.text(formatPeriod(period), MARGIN, y)
   y += 14
   doc.setTextColor(120)
-  doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, MARGEM, y)
+  doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, MARGIN, y)
   doc.setTextColor(0)
   y += 26
 
-  tituloSecao('Resumo')
+  sectionTitle('Resumo')
   autoTable(doc, {
     startY: y,
-    margin: { left: MARGEM, right: MARGEM },
+    margin: { left: MARGIN, right: MARGIN },
     theme: 'plain',
     styles: { fontSize: 10 },
     body: [
-      ['Total de entradas', formatCurrency(totalEntradas)],
-      ['Total de saídas', formatCurrency(totalSaidas)],
-      ['Saldo do período', formatCurrency(totalEntradas - totalSaidas)],
+      ['Total de entradas', formatCurrency(totalIncome)],
+      ['Total de saídas', formatCurrency(totalExpenses)],
+      ['Saldo do período', formatCurrency(totalIncome - totalExpenses)],
     ],
   })
   y = finalY(doc) + 26
 
-  tituloSecao('Entradas')
-  if (entradas.length) {
+  sectionTitle('Entradas')
+  if (incomes.length) {
     autoTable(doc, {
       startY: y,
-      margin: { left: MARGEM, right: MARGEM },
+      margin: { left: MARGIN, right: MARGIN },
       head: [['Data', 'Descrição', 'Categoria', 'Valor']],
-      body: entradas.map((item) => [
-        formatDate(item.data),
-        item.descricao,
-        nomeCategoria(item.categoriaId),
-        formatCurrency(item.valor),
+      body: incomes.map((item) => [
+        formatDate(item.date),
+        item.description,
+        categoryName(item.categoryId),
+        formatCurrency(item.amount),
       ]),
       headStyles: { fillColor: [16, 185, 129] },
       styles: { fontSize: 9 },
@@ -124,24 +124,24 @@ export async function exportarRelatorioPdf(periodo: Periodo): Promise<void> {
   } else {
     doc.setFontSize(10)
     doc.setTextColor(120)
-    doc.text('Nenhuma entrada no período.', MARGEM, y)
+    doc.text('Nenhuma entrada no período.', MARGIN, y)
     doc.setTextColor(0)
     y += 26
   }
 
-  tituloSecao('Saídas')
-  if (saidas.length) {
+  sectionTitle('Saídas')
+  if (expenses.length) {
     autoTable(doc, {
       startY: y,
-      margin: { left: MARGEM, right: MARGEM },
+      margin: { left: MARGIN, right: MARGIN },
       head: [['Data', 'Descrição', 'Categoria', 'Pagamento', 'Situação', 'Valor']],
-      body: saidas.map((item) => [
-        formatDate(item.data),
-        item.descricao,
-        nomeCategoria(item.categoriaId),
-        FORMA_PAGAMENTO_LABEL[item.formaPagamento],
-        SAIDA_STATUS_LABEL[item.status],
-        formatCurrency(item.valor),
+      body: expenses.map((item) => [
+        formatDate(item.date),
+        item.description,
+        categoryName(item.categoryId),
+        PAYMENT_METHOD_LABEL[item.paymentMethod],
+        EXPENSE_STATUS_LABEL[item.status],
+        formatCurrency(item.amount),
       ]),
       headStyles: { fillColor: [244, 63, 94] },
       styles: { fontSize: 9 },
@@ -151,22 +151,22 @@ export async function exportarRelatorioPdf(periodo: Periodo): Promise<void> {
   } else {
     doc.setFontSize(10)
     doc.setTextColor(120)
-    doc.text('Nenhuma saída no período.', MARGEM, y)
+    doc.text('Nenhuma saída no período.', MARGIN, y)
     doc.setTextColor(0)
     y += 26
   }
 
-  tituloSecao('Cartões de crédito')
-  if (cartoes.length) {
+  sectionTitle('Cartões de crédito')
+  if (cards.length) {
     autoTable(doc, {
       startY: y,
-      margin: { left: MARGEM, right: MARGEM },
+      margin: { left: MARGIN, right: MARGIN },
       head: [['Cartão', 'Vencimento', 'Situação', 'Total da fatura']],
-      body: cartoes.map(({ cartao, fatura }) => [
-        `${cartao.nome} (•••• ${cartao.ultimosDigitos})`,
-        fatura ? formatDate(fatura.vencimento) : '—',
-        fatura ? FATURA_STATUS_LABEL[fatura.status] : 'Sem fatura no período',
-        fatura ? formatCurrency(fatura.total) : '—',
+      body: cards.map(({ card, invoice }) => [
+        `${card.name} (•••• ${card.lastDigits})`,
+        invoice ? formatDate(invoice.dueDate) : '—',
+        invoice ? INVOICE_STATUS_LABEL[invoice.status] : 'Sem fatura no período',
+        invoice ? formatCurrency(invoice.total) : '—',
       ]),
       headStyles: { fillColor: [99, 102, 241] },
       styles: { fontSize: 9 },
@@ -175,9 +175,10 @@ export async function exportarRelatorioPdf(periodo: Periodo): Promise<void> {
   } else {
     doc.setFontSize(10)
     doc.setTextColor(120)
-    doc.text('Nenhum cartão cadastrado.', MARGEM, y)
+    doc.text('Nenhum cartão cadastrado.', MARGIN, y)
     doc.setTextColor(0)
   }
 
-  doc.save(`relatorio-simpleflow-${toCompetencia(periodo)}.pdf`)
+  // O nome do arquivo aparece para o usuário, por isso continua em português.
+  doc.save(`relatorio-simpleflow-${toReferenceMonth(period)}.pdf`)
 }

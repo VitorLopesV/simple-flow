@@ -5,53 +5,53 @@ import { computed, ref, watch } from 'vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import type { OpcaoSelect } from '@/types/common'
+import type { SelectOption } from '@/types/common'
 
 const props = withDefaults(
   defineProps<{
-    categorias: OpcaoSelect<string>[]
-    categoriaId: string | null
-    busca: string
+    categories: SelectOption<string>[]
+    categoryId: string | null
+    search: string
     /** Filtro extra opcional (ex.: status de pagamento nas saídas). */
-    opcoesExtra?: OpcaoSelect<string>[] | null
-    valorExtra?: string | null
-    rotuloExtra?: string
-    temFiltroAtivo?: boolean
+    extraOptions?: SelectOption<string>[] | null
+    extraValue?: string | null
+    extraLabel?: string
+    hasActiveFilter?: boolean
   }>(),
-  { opcoesExtra: null, valorExtra: null, rotuloExtra: 'Status', temFiltroAtivo: false },
+  { extraOptions: null, extraValue: null, extraLabel: 'Status', hasActiveFilter: false },
 )
 
 const emit = defineEmits<{
-  'update:categoriaId': [valor: string | null]
-  'update:busca': [valor: string]
-  'update:valorExtra': [valor: string | null]
-  limpar: []
+  'update:categoryId': [value: string | null]
+  'update:search': [value: string]
+  'update:extraValue': [value: string | null]
+  clear: []
 }>()
 
-const categoriaSelecionada = computed({
-  get: () => props.categoriaId,
-  set: (valor) => emit('update:categoriaId', valor),
+const selectedCategory = computed({
+  get: () => props.categoryId,
+  set: (value) => emit('update:categoryId', value),
 })
 
-const extraSelecionado = computed({
-  get: () => props.valorExtra,
-  set: (valor) => emit('update:valorExtra', valor),
+const selectedExtra = computed({
+  get: () => props.extraValue,
+  set: (value) => emit('update:extraValue', value),
 })
 
 // Busca com debounce para não disparar uma requisição por tecla digitada.
-const textoBusca = ref(props.busca)
-let temporizador: ReturnType<typeof setTimeout> | undefined
+const searchText = ref(props.search)
+let timer: ReturnType<typeof setTimeout> | undefined
 
 watch(
-  () => props.busca,
-  (valor) => {
-    if (valor !== textoBusca.value) textoBusca.value = valor
+  () => props.search,
+  (value) => {
+    if (value !== searchText.value) searchText.value = value
   },
 )
 
-watch(textoBusca, (valor) => {
-  clearTimeout(temporizador)
-  temporizador = setTimeout(() => emit('update:busca', String(valor ?? '')), 350)
+watch(searchText, (value) => {
+  clearTimeout(timer)
+  timer = setTimeout(() => emit('update:search', String(value ?? '')), 350)
 })
 </script>
 
@@ -59,13 +59,13 @@ watch(textoBusca, (valor) => {
   <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
     <div class="sm:max-w-xs sm:flex-1">
       <BaseInput
-        v-model="textoBusca"
+        v-model="searchText"
         label="Buscar"
         placeholder="Descrição ou observação"
         inputmode="search"
         type="search"
       >
-        <template #prefixo>
+        <template #prefix>
           <Search class="size-4" aria-hidden="true" />
         </template>
       </BaseInput>
@@ -73,25 +73,25 @@ watch(textoBusca, (valor) => {
 
     <div class="sm:w-56">
       <BaseSelect
-        v-model="categoriaSelecionada"
+        v-model="selectedCategory"
         label="Categoria"
         placeholder="Todas as categorias"
-        permite-vazio
-        :opcoes="categorias"
+        allow-empty
+        :options="categories"
       />
     </div>
 
-    <div v-if="opcoesExtra" class="sm:w-44">
+    <div v-if="extraOptions" class="sm:w-44">
       <BaseSelect
-        v-model="extraSelecionado"
-        :label="rotuloExtra"
+        v-model="selectedExtra"
+        :label="extraLabel"
         placeholder="Todos"
-        permite-vazio
-        :opcoes="opcoesExtra"
+        allow-empty
+        :options="extraOptions"
       />
     </div>
 
-    <BaseButton v-if="temFiltroAtivo" variante="ghost" class="sm:mb-0.5" @click="emit('limpar')">
+    <BaseButton v-if="hasActiveFilter" variant="ghost" class="sm:mb-0.5" @click="emit('clear')">
       <X class="size-4" aria-hidden="true" />
       Limpar filtros
     </BaseButton>

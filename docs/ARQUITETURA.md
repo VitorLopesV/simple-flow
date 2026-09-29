@@ -14,7 +14,7 @@ Detalhes de implementação do frontend. Para visão geral do projeto e instruç
 | `/pages/saidas`     | Idem entradas + filtro por status (Pago/Pendente) e forma de pagamento; a fatura de cada cartão entra como uma saída só de leitura (editável na aba Cartões) |
 | `/pages/cartoes`    | Cartões cadastrados, uso do limite, fatura da competência, lançamento/edição/remoção de débitos do cartão e baixa de pagamento |
 
-O mês selecionado é global (store `periodo`) e se mantém ao navegar entre as páginas.
+O mês selecionado é global (store `period`) e se mantém ao navegar entre as páginas.
 
 ---
 
@@ -27,15 +27,16 @@ frontend/src/
 │   ├── common/        # átomos/moléculas: BaseButton, BaseInput, BaseModal, CurrencyInput...
 │   ├── features/      # organismos de domínio: TransactionForm, TransactionList,
 │   │                  # CategoryFilter, MonthPicker, SummaryCard, StatisticsChart,
-│   │                  # CartaoCard, CartaoForm, FaturaDetalhe
+│   │                  # CreditCardItem, CreditCardForm, InvoiceDetails
 │   └── layouts/       # AppLayout, AppHeader, AppSidebar, PageLayout
-├── composables/       # usePreferencias, useNotify
-├── pages/             # Dashboard, Entradas, Saidas, Cartoes, NotFound
+├── composables/       # usePreferences, useNotify
+├── pages/             # Dashboard, Incomes, Expenses, CreditCards, NotFound
 ├── router/            # rotas com lazy loading, títulos por rota e guarda de autenticação
-├── services/          # auth/entrada/saida/cartao/categoria/dashboard + http (Axios)
+├── services/          # auth/income/expense/creditCard/category/dashboard + http (Axios)
+│   │                  # + mappers (JSON da API em português ⇄ tipos em inglês)
 │   └── mock/          # base em memória gerada com faker (import dinâmico)
-├── stores/            # Pinia: auth, periodo, categoria, entrada, saida, cartao, dashboard
-├── types/             # auth, entrada, saida, cartao, categoria, dashboard, common
+├── stores/            # Pinia: auth, period, category, income, expense, creditCard, dashboard, profile
+├── types/             # auth, income, expense, creditCard, category, dashboard, common, dto
 ├── utils/             # currencyFormatter, dateFormatter, validators, cn
 ├── App.vue
 └── main.ts
@@ -44,12 +45,15 @@ frontend/src/
 Fluxo de dados: **página → store (Pinia) → service → mock ou Axios**. Componentes não chamam
 serviços diretamente; toda a orquestração (filtros, paginação, loading, erro) fica nas stores.
 
+Todo o código do frontend é em inglês. O contrato da API continua em português: os services
+convertem o JSON (`types/dto.ts`) para os tipos de domínio em `services/mappers.ts`, na chamada HTTP.
+
 ### Decisões
 
 - **Componentes de UI escritos à mão** no estilo shadcn em vez de instalar shadcn/vue (reka-ui) ou
   PrimeVue — atende ao requisito de não adicionar bibliotecas desnecessárias e mantém controle
   total sobre acessibilidade e tokens de tema.
-- **Validação com funções puras** (`utils/validators.ts`) compostas via `compor()`, evitando um
+- **Validação com funções puras** (`utils/validators.ts`) compostas via `compose()`, evitando um
   schema validator extra.
 - **Chart.js** com componentes registrados individualmente, isolado em um chunk `charts`.
 

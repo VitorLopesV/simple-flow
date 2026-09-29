@@ -14,4 +14,4 @@ export function mockDb(): Promise<Db> {
   return cache
 }
 
-export { contemBusca, delay, normalizar, paginar } from './utils'
+export { delay, matchesSearch, normalize, paginate } from './utils'
