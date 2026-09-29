@@ -326,3 +326,29 @@ describe('refresh em 401', () => {
     expect(callsTo('/auth/refresh')).toHaveLength(2)
   })
 })
+
+describe('USE_MOCK', () => {
+  /** A constante é lida na importação: recarrega o módulo com a variável de ambiente pedida. */
+  async function useMockWith(value: string | undefined): Promise<boolean> {
+    vi.stubEnv('VITE_USE_MOCK', value as string)
+    vi.resetModules()
+    const module = await import('@/services/http')
+    return module.USE_MOCK
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it("só liga o mock com 'true' explícito", async () => {
+    expect(await useMockWith('true')).toBe(true)
+  })
+
+  it.each([undefined, '', 'false', 'TRUE', '1', 'yes'])(
+    'usa o backend real quando a variável vale %j (padrão seguro para deploy)',
+    async (value) => {
+      expect(await useMockWith(value)).toBe(false)
+    },
+  )
+})
