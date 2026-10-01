@@ -260,6 +260,8 @@ watch(
     <template #actions>
       <MonthPicker
         v-model="periodStore.period"
+        :min="periodStore.minPeriod"
+        :max="periodStore.maxPeriod"
         @today="periodStore.goToToday()"
       />
       <BaseButton variant="outline" class="!h-11" :loading="exporting" @click="exportData">

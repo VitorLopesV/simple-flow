@@ -10,6 +10,7 @@ import {
   toExpensePayloadDto,
   toExpenseSummary,
   toIncome,
+  toNavigationLimits,
   toIncomePayloadDto,
   toIncomeSummary,
   toLoginDto,
@@ -81,6 +82,15 @@ describe('auth', () => {
       email: 'a@b.com',
       telefone: null,
       fotoUrl: 'data:x',
+    })
+  })
+})
+
+describe('competências', () => {
+  it('converte os limites de navegação de YYYY-MM para período', () => {
+    expect(toNavigationLimits({ primeiroMes: '2026-01', ultimoMes: '2026-10' })).toEqual({
+      firstMonth: { month: 1, year: 2026 },
+      lastMonth: { month: 10, year: 2026 },
     })
   })
 })

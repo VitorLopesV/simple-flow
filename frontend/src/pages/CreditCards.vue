@@ -137,6 +137,8 @@ async function saveDebit(payload: IncomePayload | ExpensePayload | CardTransacti
   if (!success) return
 
   notify.success(current ? 'Débito atualizado' : 'Débito lançado', debit.description)
+  // Um lançamento pode antecipar o primeiro mês com dados (limite do seletor de mês).
+  void periodStore.loadLimits()
   debitModalOpen.value = false
   debitEditing.value = null
 }
@@ -166,6 +168,8 @@ async function confirmDeleteDebit(): Promise<void> {
     <template #actions>
       <MonthPicker
         v-model="periodStore.period"
+        :min="periodStore.minPeriod"
+        :max="periodStore.maxPeriod"
         @today="periodStore.goToToday()"
       />
       <BaseButton variant="success" class="!h-11" @click="openNew">

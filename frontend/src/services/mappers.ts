@@ -35,6 +35,7 @@ import type {
   IncomePayloadDto,
   IncomeSummaryDto,
   LoginDto,
+  NavigationLimitsDto,
   ProfileDto,
   RecentTransactionDto,
   RegisterDto,
@@ -44,6 +45,8 @@ import type {
 } from '@/types/dto'
 import type { Expense, ExpensePayload, ExpenseSummary } from '@/types/expense'
 import type { Income, IncomePayload, IncomeSummary } from '@/types/income'
+import type { NavigationLimits } from '@/types/period'
+import { fromReferenceMonth } from '@/utils/dateFormatter'
 
 export function mapPage<TDto, T>(page: Paginated<TDto>, map: (dto: TDto) => T): Paginated<T> {
   return { ...page, items: page.items.map(map) }
@@ -290,6 +293,15 @@ export function toCreditCardWithInvoice(dto: CreditCardWithInvoiceDto): CreditCa
     card: toCreditCard(dto.cartao),
     invoice: dto.fatura ? toDetailedInvoice(dto.fatura) : null,
     limitUsage: dto.usoLimite,
+  }
+}
+
+// -------------------------------------------------------------- competências
+
+export function toNavigationLimits(dto: NavigationLimitsDto): NavigationLimits {
+  return {
+    firstMonth: fromReferenceMonth(dto.primeiroMes),
+    lastMonth: fromReferenceMonth(dto.ultimoMes),
   }
 }
 

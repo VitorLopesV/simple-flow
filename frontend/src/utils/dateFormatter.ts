@@ -120,6 +120,18 @@ export function isSamePeriod(a: Period, b: Period): boolean {
   return a.month === b.month && a.year === b.year
 }
 
+/** Negativo se `a` vem antes de `b`, zero se é o mesmo mês, positivo se vem depois. */
+export function comparePeriods(a: Period, b: Period): number {
+  return a.year * 12 + a.month - (b.year * 12 + b.month)
+}
+
+/** Limita o período ao intervalo `[min, max]`; um limite ausente não restringe aquele lado. */
+export function clampPeriod(period: Period, min?: Period | null, max?: Period | null): Period {
+  if (min && comparePeriods(period, min) < 0) return { ...min }
+  if (max && comparePeriods(period, max) > 0) return { ...max }
+  return { ...period }
+}
+
 /** Verdadeiro se a data ISO cai dentro do período informado. */
 export function isWithinPeriod(iso: string, period: Period): boolean {
   const date = toDate(iso)

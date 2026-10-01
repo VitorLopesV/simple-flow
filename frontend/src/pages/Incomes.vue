@@ -64,6 +64,8 @@ async function save(
   if (!success) return
 
   notify.success(current ? 'Entrada atualizada' : 'Entrada adicionada', income.description)
+  // Um lançamento pode antecipar o primeiro mês com dados (limite do seletor de mês).
+  void periodStore.loadLimits()
   modalOpen.value = false
   editing.value = null
 }
@@ -90,6 +92,8 @@ async function confirmDelete(): Promise<void> {
     <template #actions>
       <MonthPicker
         v-model="periodStore.period"
+        :min="periodStore.minPeriod"
+        :max="periodStore.maxPeriod"
         @today="periodStore.goToToday()"
       />
       <BaseButton variant="success" class="!h-11" @click="openNew">

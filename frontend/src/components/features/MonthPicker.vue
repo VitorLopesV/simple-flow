@@ -4,9 +4,25 @@ import { computed } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
 import type { Period } from '@/types/common'
-import { addMonths, currentPeriod, isSamePeriod, MONTHS } from '@/utils/dateFormatter'
+import {
+  addMonths,
+  clampPeriod,
+  comparePeriods,
+  currentPeriod,
+  isSamePeriod,
+  MONTHS,
+} from '@/utils/dateFormatter'
 
-const props = withDefaults(defineProps<{ availableYears?: number }>(), { availableYears: 5 })
+const props = withDefaults(
+  defineProps<{
+    availableYears?: number
+    /** Primeiro mês navegável; ausente = sem limite no passado (além de `availableYears`). */
+    min?: Period | null
+    /** Último mês navegável; ausente = sem limite no futuro (além de `availableYears`). */
+    max?: Period | null
+  }>(),
+  { availableYears: 5, min: null, max: null },
+)
 
 const model = defineModel<Period>({ required: true })
 const emit = defineEmits<{ today: [] }>()
@@ -14,22 +30,40 @@ const emit = defineEmits<{ today: [] }>()
 const today = currentPeriod()
 
 const years = computed(() => {
-  const start = today.year - props.availableYears + 1
-  return Array.from({ length: props.availableYears + 1 }, (_, i) => start + i)
+  const start = props.min?.year ?? today.year - props.availableYears + 1
+  const end = props.max?.year ?? today.year + 1
+  return Array.from({ length: Math.max(0, end - start + 1) }, (_, i) => start + i)
 })
 
 const isCurrentMonth = computed(() => isSamePeriod(model.value, today))
 
+const canGoBack = computed(() => !props.min || comparePeriods(model.value, props.min) > 0)
+const canGoForward = computed(() => !props.max || comparePeriods(model.value, props.max) < 0)
+
+/** Mês fora do intervalo no ano selecionado: aparece na lista, mas não pode ser escolhido. */
+function isMonthOutOfRange(month: number): boolean {
+  const candidate = { month, year: model.value.year }
+  return (
+    (props.min !== null && comparePeriods(candidate, props.min) < 0) ||
+    (props.max !== null && comparePeriods(candidate, props.max) > 0)
+  )
+}
+
+function update(period: Period): void {
+  model.value = clampPeriod(period, props.min, props.max)
+}
+
 function move(amount: number): void {
-  model.value = addMonths(model.value, amount)
+  update(addMonths(model.value, amount))
 }
 
 function setMonth(event: Event): void {
-  model.value = { ...model.value, month: Number((event.target as HTMLSelectElement).value) }
+  update({ ...model.value, month: Number((event.target as HTMLSelectElement).value) })
 }
 
+/** Trocar o ano mantém o mês, ou o encaixa no limite mais próximo se ele ficar fora. */
 function setYear(event: Event): void {
-  model.value = { ...model.value, year: Number((event.target as HTMLSelectElement).value) }
+  update({ ...model.value, year: Number((event.target as HTMLSelectElement).value) })
 }
 </script>
 
@@ -39,7 +73,13 @@ function setYear(event: Event): void {
     role="group"
     aria-label="Selecionar período"
   >
-    <BaseButton variant="ghost" size="icon" aria-label="Mês anterior" @click="move(-1)">
+    <BaseButton
+      variant="ghost"
+      size="icon"
+      aria-label="Mês anterior"
+      :disabled="!canGoBack"
+      @click="move(-1)"
+    >
       <ChevronLeft class="size-4" aria-hidden="true" />
     </BaseButton>
 
@@ -55,7 +95,8 @@ function setYear(event: Event): void {
           v-for="(name, index) in MONTHS"
           :key="name"
           :value="index + 1"
-          class="bg-slate-800 text-white"
+          :disabled="isMonthOutOfRange(index + 1)"
+          class="bg-slate-800 text-white disabled:text-slate-500"
         >
           {{ name }}
         </option>
@@ -74,7 +115,13 @@ function setYear(event: Event): void {
       </select>
     </div>
 
-    <BaseButton variant="ghost" size="icon" aria-label="Próximo mês" @click="move(1)">
+    <BaseButton
+      variant="ghost"
+      size="icon"
+      aria-label="Próximo mês"
+      :disabled="!canGoForward"
+      @click="move(1)"
+    >
       <ChevronRight class="size-4" aria-hidden="true" />
     </BaseButton>
 

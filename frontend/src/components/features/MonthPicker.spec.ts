@@ -287,3 +287,65 @@ describe('o mês nunca sai do intervalo 1–12', () => {
     }
   })
 })
+
+describe('limites min/max', () => {
+  const MIN = { month: 1, year: 2026 }
+  const MAX = { month: 9, year: 2026 }
+
+  it('no mês máximo, o botão de avançar fica desabilitado e não emite', async () => {
+    const wrapper = mountComponent({ month: 9, year: 2026 }, { min: MIN, max: MAX })
+
+    expect(next(wrapper).attributes('disabled')).toBeDefined()
+    expect(previous(wrapper).attributes('disabled')).toBeUndefined()
+    await next(wrapper).trigger('click')
+    expect(emittedPeriods(wrapper)).toEqual([])
+  })
+
+  it('no mês mínimo, o botão de voltar fica desabilitado e não emite', async () => {
+    const wrapper = mountComponent({ month: 1, year: 2026 }, { min: MIN, max: MAX })
+
+    expect(previous(wrapper).attributes('disabled')).toBeDefined()
+    expect(next(wrapper).attributes('disabled')).toBeUndefined()
+    await previous(wrapper).trigger('click')
+    expect(emittedPeriods(wrapper)).toEqual([])
+  })
+
+  it('avança até o máximo e para', async () => {
+    const wrapper = mountComponent({ month: 8, year: 2026 }, { min: MIN, max: MAX })
+
+    await next(wrapper).trigger('click')
+    expect(lastPeriod(wrapper)).toEqual({ month: 9, year: 2026 })
+    expect(next(wrapper).attributes('disabled')).toBeDefined()
+  })
+
+  it('os anos listados vão do ano do mínimo ao ano do máximo', () => {
+    const wrapper = mountComponent({ month: 8, year: 2026 }, {
+      min: { month: 11, year: 2024 },
+      max: { month: 1, year: 2027 },
+    })
+
+    expect(listedYears(wrapper)).toEqual([2024, 2025, 2026, 2027])
+  })
+
+  it('meses fora do intervalo aparecem desabilitados no ano selecionado', () => {
+    const wrapper = mountComponent({ month: 8, year: 2026 }, { min: { month: 3, year: 2026 }, max: MAX })
+
+    const disabled = monthSelect(wrapper)
+      .findAll('option')
+      .filter((option) => option.attributes('disabled') !== undefined)
+      .map((option) => Number(option.attributes('value')))
+
+    expect(disabled).toEqual([1, 2, 10, 11, 12])
+  })
+
+  it('trocar o ano encaixa o mês no limite mais próximo', async () => {
+    const wrapper = mountComponent({ month: 5, year: 2027 }, {
+      min: { month: 9, year: 2026 },
+      max: { month: 6, year: 2027 },
+    })
+
+    await yearSelect(wrapper).setValue('2026')
+
+    expect(lastPeriod(wrapper)).toEqual({ month: 9, year: 2026 })
+  })
+})

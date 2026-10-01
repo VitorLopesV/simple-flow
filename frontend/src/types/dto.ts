@@ -187,6 +187,14 @@ export interface CreditCardWithInvoiceDto {
   usoLimite: number
 }
 
+// ---------------------------------------------------------------- competências
+
+/** `GET /competencias/limites` — meses no formato `YYYY-MM`. */
+export interface NavigationLimitsDto {
+  primeiroMes: string
+  ultimoMes: string
+}
+
 // ----------------------------------------------------------------- dashboard
 
 export interface RecentTransactionDto {

@@ -503,6 +503,18 @@ export function withRecurrences<
   return [...items, ...projected]
 }
 
+/**
+ * Primeiro mês com algum registro do usuário (entrada, saída ou transação de cartão) —
+ * espelha o endpoint de limites de navegação do backend. Sem registros, é o mês atual.
+ */
+export function firstRecordMonth(): Period {
+  const dates = [...incomes, ...expenses, ...cardTransactions].map((record) => record.date)
+  if (!dates.length) return currentPeriod()
+
+  const first = dates.reduce((earliest, date) => (date < earliest ? date : earliest))
+  return periodOfDate(first)
+}
+
 const PROJECTED_ID_REGEX = /^(.+)_(\d{4}-\d{2})$/
 
 /**
