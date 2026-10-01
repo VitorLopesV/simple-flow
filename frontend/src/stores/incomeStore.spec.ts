@@ -26,6 +26,7 @@ function income(id: string): Income {
     amount: 100,
     date: '2026-08-05',
     categoryId: 'cat_1',
+    type: 'SALARIO',
     recurring: false,
     createdAt: '',
     updatedAt: '',
@@ -41,6 +42,7 @@ const PAYLOAD: IncomePayload = {
   amount: 5000,
   date: '2026-08-05',
   categoryId: 'cat_1',
+  type: 'SALARIO',
   recurring: false,
 }
 
@@ -84,10 +86,11 @@ describe('estado inicial', () => {
 })
 
 describe('load', () => {
-  it('monta o filtro com período, categoria, busca, página e pageSize', async () => {
+  it('monta o filtro com período, categoria, tipo, busca, página e pageSize', async () => {
     usePeriodStore().set({ month: 3, year: 2025 })
     const store = useIncomeStore()
     store.categoryId = 'cat_9'
+    store.type = 'RENDIMENTOS'
     store.search = 'salário'
     store.page = 2
 
@@ -96,6 +99,7 @@ describe('load', () => {
     expect(service.list).toHaveBeenCalledWith({
       period: { month: 3, year: 2025 },
       categoryId: 'cat_9',
+      type: 'RENDIMENTOS',
       search: 'salário',
       page: 2,
       pageSize: 20,
@@ -372,6 +376,18 @@ describe('filtros', () => {
     expect(lastFilter()).toMatchObject({ categoryId: 'cat_7', page: 1 })
   })
 
+  it('filterByType volta à página 1 e recarrega com o tipo', async () => {
+    const store = useIncomeStore()
+    store.page = 3
+
+    store.filterByType('FREELANCE')
+    await flushPromises()
+
+    expect(store.type).toBe('FREELANCE')
+    expect(store.page).toBe(1)
+    expect(lastFilter()).toMatchObject({ type: 'FREELANCE', page: 1 })
+  })
+
   it('buscar volta à página 1 e recarrega', async () => {
     const store = useIncomeStore()
     store.page = 3
@@ -384,9 +400,10 @@ describe('filtros', () => {
     expect(lastFilter()).toMatchObject({ search: 'mercado', page: 1 })
   })
 
-  it('clearFilters zera categoria e busca, volta à página 1 e recarrega', async () => {
+  it('clearFilters zera categoria, tipo e busca, volta à página 1 e recarrega', async () => {
     const store = useIncomeStore()
     store.categoryId = 'cat_7'
+    store.type = 'SALARIO'
     store.search = 'mercado'
     store.page = 3
 
@@ -394,9 +411,10 @@ describe('filtros', () => {
     await flushPromises()
 
     expect(store.categoryId).toBeNull()
+    expect(store.type).toBeNull()
     expect(store.search).toBe('')
     expect(store.page).toBe(1)
-    expect(lastFilter()).toMatchObject({ categoryId: null, search: '', page: 1 })
+    expect(lastFilter()).toMatchObject({ categoryId: null, type: null, search: '', page: 1 })
   })
 })
 
@@ -409,6 +427,14 @@ describe('hasActiveFilter', () => {
     const store = useIncomeStore()
 
     store.categoryId = 'cat_1'
+
+    expect(store.hasActiveFilter).toBe(true)
+  })
+
+  it('é verdadeiro com tipo', () => {
+    const store = useIncomeStore()
+
+    store.type = 'REEMBOLSO'
 
     expect(store.hasActiveFilter).toBe(true)
   })

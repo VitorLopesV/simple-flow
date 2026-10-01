@@ -18,7 +18,8 @@ import { useIncomeStore } from '@/stores/incomeStore'
 import { usePeriodStore } from '@/stores/periodStore'
 import type { CardTransactionPayload } from '@/types/creditCard'
 import type { ExpensePayload } from '@/types/expense'
-import type { Income, IncomePayload } from '@/types/income'
+import type { Income, IncomePayload, IncomeType } from '@/types/income'
+import { INCOME_TYPE_OPTIONS } from '@/types/income'
 import { formatPeriod } from '@/utils/dateFormatter'
 
 const periodStore = usePeriodStore()
@@ -141,9 +142,13 @@ async function confirmDelete(): Promise<void> {
           :categories="categoryOptions"
           :category-id="incomeStore.categoryId"
           :search="incomeStore.search"
+          :extra-options="INCOME_TYPE_OPTIONS"
+          :extra-value="incomeStore.type"
+          extra-label="Tipo"
           :has-active-filter="incomeStore.hasActiveFilter"
           @update:category-id="incomeStore.filterByCategory($event)"
           @update:search="incomeStore.setSearch($event)"
+          @update:extra-value="incomeStore.filterByType($event as IncomeType | null)"
           @clear="incomeStore.clearFilters()"
         />
       </div>

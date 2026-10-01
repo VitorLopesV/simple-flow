@@ -13,6 +13,7 @@ import type { Movement } from '@/types/category'
 import type { Expense } from '@/types/expense'
 import { EXPENSE_STATUS_LABEL, EXPENSE_TYPE_LABEL, PAYMENT_METHOD_LABEL } from '@/types/expense'
 import type { Income } from '@/types/income'
+import { INCOME_TYPE_LABEL } from '@/types/income'
 import { formatCurrency } from '@/utils/currencyFormatter'
 import { formatDate } from '@/utils/dateFormatter'
 
@@ -53,6 +54,13 @@ const sign = computed(() => (isExpense.value ? '−' : '+'))
 
 function asExpense(transaction: Transaction): Expense {
   return transaction as Expense
+}
+
+/** Rótulo do tipo (detalhe dentro da categoria), conforme o movimento da lista. */
+function typeLabel(transaction: Transaction): string {
+  return isExpense.value
+    ? EXPENSE_TYPE_LABEL[asExpense(transaction).type]
+    : (INCOME_TYPE_LABEL[(transaction as Income).type] ?? '—')
 }
 
 /** Ocorrência projetada de uma recorrência, ainda sem lançamento próprio no mês. */
@@ -118,18 +126,19 @@ function canDelete(transaction: Transaction): boolean {
               <col class="w-[9%]" />
             </template>
             <template v-else>
-              <col class="w-[30%]" />
-              <col class="w-[25%]" />
-              <col class="w-[15%]" />
+              <col class="w-[26%]" />
               <col class="w-[18%]" />
-              <col class="w-[12%]" />
+              <col class="w-[13%]" />
+              <col class="w-[16%]" />
+              <col class="w-[17%]" />
+              <col class="w-[10%]" />
             </template>
           </colgroup>
           <thead>
             <tr class="text-muted-foreground border-border border-b text-left">
               <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Descrição</th>
               <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Categoria</th>
-              <th v-if="isExpense" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Tipo</th>
+              <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Tipo</th>
               <th scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Data</th>
               <th v-if="isExpense" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Vencimento</th>
               <th v-if="isExpense" scope="col" class="px-2 py-3 lg:px-3 xl:px-5 font-medium">Pagamento</th>
@@ -168,8 +177,8 @@ function canDelete(transaction: Transaction): boolean {
                 </BaseBadge>
               </td>
 
-              <td v-if="isExpense" class="text-muted-foreground px-2 py-3 lg:px-3 xl:px-5">
-                {{ EXPENSE_TYPE_LABEL[asExpense(transaction).type] }}
+              <td class="text-muted-foreground px-2 py-3 lg:px-3 xl:px-5">
+                {{ typeLabel(transaction) }}
               </td>
 
               <td class="text-muted-foreground tabular-number px-2 py-3 lg:px-3 xl:px-5">
@@ -263,8 +272,8 @@ function canDelete(transaction: Transaction): boolean {
             <BaseBadge :color="categoryStore.color(transaction.categoryId)">
               {{ categoryStore.name(transaction.categoryId) }}
             </BaseBadge>
-            <BaseBadge v-if="isExpense">
-              {{ EXPENSE_TYPE_LABEL[asExpense(transaction).type] }}
+            <BaseBadge>
+              {{ typeLabel(transaction) }}
             </BaseBadge>
             <BaseBadge
               v-if="isExpense"

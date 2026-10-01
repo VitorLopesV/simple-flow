@@ -14,6 +14,7 @@ export const incomeService = {
         .withRecurrences(db.incomes, filter.period)
         .filter((income) => isWithinPeriod(income.date, filter.period))
         .filter((income) => !filter.categoryId || income.categoryId === filter.categoryId)
+        .filter((income) => !filter.type || income.type === filter.type)
         .filter((income) => matchesSearch(`${income.description} ${income.notes ?? ''}`, filter.search))
         .sort((a, b) => b.date.localeCompare(a.date))
 
@@ -25,6 +26,7 @@ export const incomeService = {
         mes: filter.period.month,
         ano: filter.period.year,
         categoriaId: filter.categoryId ?? undefined,
+        tipo: filter.type ?? undefined,
         busca: filter.search || undefined,
         page: filter.page,
         pageSize: filter.pageSize,

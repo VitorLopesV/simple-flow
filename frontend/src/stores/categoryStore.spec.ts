@@ -14,9 +14,9 @@ const list = vi.mocked(categoryService.list)
 const CATEGORIES: Category[] = [
   { id: 'c1', name: 'Despesa Fixa', type: 'CONTA_FIXA', movement: 'SAIDA', color: '#6366f1' },
   { id: 'c2', name: 'Investimento', type: 'INVESTIMENTO', movement: 'SAIDA', color: '#0891b2' },
-  { id: 'c3', name: 'Salário', type: 'RENDA', movement: 'ENTRADA', color: '#10b981' },
-  { id: 'c4', name: 'Rendimentos', type: 'INVESTIMENTO', movement: 'ENTRADA', color: '#eab308' },
-  { id: 'c5', name: 'Outras receitas', type: 'OUTROS', movement: 'ENTRADA', color: '#94a3b8' },
+  { id: 'c3', name: 'Renda Fixa', type: 'RENDA_FIXA', movement: 'ENTRADA', color: '#10b981' },
+  { id: 'c4', name: 'Investimentos', type: 'INVESTIMENTO', movement: 'ENTRADA', color: '#eab308' },
+  { id: 'c5', name: 'Outros', type: 'OUTROS', movement: 'ENTRADA', color: '#94a3b8' },
 ]
 
 function loadedStore() {
@@ -147,13 +147,13 @@ describe('options', () => {
     ])
   })
 
-  it('ENTRADA com tipo RENDA usa só o nome; os demais levam o tipo como sufixo', async () => {
+  it('ENTRADA também usa só o nome: a categoria já é o grupo e o detalhe vai no tipo', async () => {
     const store = await loadedStore()
 
     expect(store.options('ENTRADA')).toEqual([
-      { label: 'Salário', value: 'c3' },
-      { label: 'Rendimentos · Investimentos', value: 'c4' },
-      { label: 'Outras receitas · Outros', value: 'c5' },
+      { label: 'Renda Fixa', value: 'c3' },
+      { label: 'Investimentos', value: 'c4' },
+      { label: 'Outros', value: 'c5' },
     ])
   })
 })
@@ -162,9 +162,9 @@ describe('nome / cor / tipo', () => {
   it('devolvem os dados da categoria existente', async () => {
     const store = await loadedStore()
 
-    expect(store.name('c3')).toBe('Salário')
+    expect(store.name('c3')).toBe('Renda Fixa')
     expect(store.color('c3')).toBe('#10b981')
-    expect(store.type('c3')).toBe('RENDA')
+    expect(store.type('c3')).toBe('RENDA_FIXA')
   })
 
   it.each([null, undefined, '', 'inexistente'])('usam o fallback para id %j', async (id) => {

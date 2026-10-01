@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 
 import { getErrorMessage } from '@/services/http'
 import { incomeService } from '@/services/incomeService'
-import type { Income, IncomePayload, IncomeSummary } from '@/types/income'
+import type { Income, IncomePayload, IncomeSummary, IncomeType } from '@/types/income'
 import { calculateChange } from '@/utils/currencyFormatter'
 import { usePeriodStore } from './periodStore'
 
@@ -25,13 +25,16 @@ export const useIncomeStore = defineStore('income', () => {
   const totalPages = ref(1)
 
   const categoryId = ref<string | null>(null)
+  const type = ref<IncomeType | null>(null)
   const search = ref('')
 
   const periodTotal = computed(() => summary.value?.total ?? 0)
   const change = computed(() =>
     summary.value ? calculateChange(summary.value.total, summary.value.previousMonthTotal) : 0,
   )
-  const hasActiveFilter = computed(() => Boolean(categoryId.value) || search.value.trim() !== '')
+  const hasActiveFilter = computed(
+    () => Boolean(categoryId.value) || Boolean(type.value) || search.value.trim() !== '',
+  )
   const isEmpty = computed(() => !loading.value && items.value.length === 0)
 
   async function load(): Promise<void> {
@@ -41,6 +44,7 @@ export const useIncomeStore = defineStore('income', () => {
       const filter = {
         period: periodStore.period,
         categoryId: categoryId.value,
+        type: type.value,
         search: search.value,
         page: page.value,
         pageSize: pageSize.value,
@@ -120,6 +124,12 @@ export const useIncomeStore = defineStore('income', () => {
     void load()
   }
 
+  function filterByType(newType: IncomeType | null): void {
+    type.value = newType
+    page.value = 1
+    void load()
+  }
+
   function setSearch(text: string): void {
     search.value = text
     page.value = 1
@@ -128,6 +138,7 @@ export const useIncomeStore = defineStore('income', () => {
 
   function clearFilters(): void {
     categoryId.value = null
+    type.value = null
     search.value = ''
     page.value = 1
     void load()
@@ -144,6 +155,7 @@ export const useIncomeStore = defineStore('income', () => {
     total,
     totalPages,
     categoryId,
+    type,
     search,
     periodTotal,
     change,
@@ -155,6 +167,7 @@ export const useIncomeStore = defineStore('income', () => {
     remove,
     goToPage,
     filterByCategory,
+    filterByType,
     setSearch,
     clearFilters,
   }

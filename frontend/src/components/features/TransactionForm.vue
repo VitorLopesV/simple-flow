@@ -13,7 +13,8 @@ import DateInput from '@/components/common/DateInput.vue'
 import type { CardTransaction, CardTransactionPayload } from '@/types/creditCard'
 import type { SelectOption } from '@/types/common'
 import type { Movement } from '@/types/category'
-import type { Income, IncomePayload } from '@/types/income'
+import type { Income, IncomePayload, IncomeType } from '@/types/income'
+import { INCOME_TYPE_OPTIONS } from '@/types/income'
 import type { Expense, ExpensePayload, ExpenseStatus, ExpenseType, PaymentMethod } from '@/types/expense'
 import { EXPENSE_STATUS_OPTIONS, EXPENSE_TYPE_OPTIONS, PAYMENT_METHOD_OPTIONS } from '@/types/expense'
 import { toISODate } from '@/utils/dateFormatter'
@@ -37,7 +38,8 @@ interface FormValues {
   status: ExpenseStatus
   dueDate: string
   paymentMethod: PaymentMethod
-  type: ExpenseType
+  /** `ExpenseType` em saídas/cartão, `IncomeType` em entradas; vazio só numa entrada nova. */
+  type: ExpenseType | IncomeType | null
   installmentCount: number
 }
 
@@ -85,7 +87,8 @@ function initialValues(): FormValues {
     status: expense?.status ?? 'PENDENTE',
     dueDate: expense?.dueDate ?? '',
     paymentMethod: expense?.paymentMethod ?? 'PIX',
-    type: expense?.type ?? 'OUTROS',
+    // Saída já nasce com "Outros"; entrada começa vazia para o usuário escolher o tipo.
+    type: transaction?.type ?? (isExpense.value ? 'OUTROS' : null),
     // No cartão, a edição mostra o parcelamento já existente (somente leitura).
     installmentCount: (transaction as CardTransaction | null)?.totalInstallments ?? 1,
   }
@@ -102,6 +105,7 @@ const { handleSubmit, resetForm } = useForm<FormValues>({
     amount: positiveAmount('Valor'),
     date: compose(required('Data'), isoDate('Data')),
     categoryId: required('Categoria'),
+    type: required('Tipo'),
     // Vencimento é opcional: só valida o formato quando o usuário preenche algo.
     dueDate: (value: unknown) => (String(value ?? '').trim() === '' ? true : isoDate('Vencimento')(value)),
     notes: maxLength(280, 'Observação'),
@@ -117,7 +121,7 @@ const { value: notes, errorMessage: notesError } = useField<string>('notes')
 const { value: status } = useField<ExpenseStatus>('status')
 const { value: dueDate, errorMessage: dueDateError } = useField<string>('dueDate')
 const { value: paymentMethod } = useField<PaymentMethod>('paymentMethod')
-const { value: type } = useField<ExpenseType>('type')
+const { value: type, errorMessage: typeError } = useField<ExpenseType | IncomeType | null>('type')
 const { value: installmentCount, errorMessage: installmentsError } = useField<number>('installmentCount')
 
 // Compra parcelada e lançamento recorrente são conceitos diferentes (fim previsto x
@@ -200,6 +204,7 @@ function emitSave(form: FormValues): void {
   if (!isExpense.value) {
     emit('save', {
       ...base,
+      type: form.type as IncomeType,
       date: entryDate(),
     } satisfies IncomePayload)
     return
@@ -213,7 +218,7 @@ function emitSave(form: FormValues): void {
 
     emit('save', {
       ...base,
-      type: form.type,
+      type: form.type as ExpenseType,
       installment: current?.installment ?? 1,
       totalInstallments: current?.totalInstallments ?? (form.recurring ? 1 : Number(form.installmentCount)),
     } satisfies CardTransactionPayload)
@@ -223,7 +228,7 @@ function emitSave(form: FormValues): void {
   emit('save', {
     ...base,
     date: entryDate(),
-    type: form.type,
+    type: form.type as ExpenseType,
     status: form.status,
     dueDate: form.dueDate || null,
     paymentMethod: form.paymentMethod,
@@ -250,7 +255,7 @@ function emitSave(form: FormValues): void {
 
     <CurrencyInput v-model="amount" label="Valor" :error="amountError" required />
 
-    <div class="grid gap-4" :class="isExpense ? 'sm:grid-cols-2' : ''">
+    <div class="grid gap-4 sm:grid-cols-2">
       <BaseSelect
         v-model="categoryId"
         label="Categoria"
@@ -259,7 +264,14 @@ function emitSave(form: FormValues): void {
         :error="categoryError"
         required
       />
-      <BaseSelect v-if="isExpense" v-model="type" label="Tipo" :options="EXPENSE_TYPE_OPTIONS" />
+      <BaseSelect
+        v-model="type"
+        label="Tipo"
+        placeholder="Selecione um tipo"
+        :options="isExpense ? EXPENSE_TYPE_OPTIONS : INCOME_TYPE_OPTIONS"
+        :error="typeError"
+        required
+      />
     </div>
 
     <div v-if="isExpense && !isCard" class="grid gap-4 sm:grid-cols-2">

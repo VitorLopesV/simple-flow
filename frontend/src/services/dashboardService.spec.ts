@@ -31,6 +31,7 @@ function income(overrides: Partial<Income> = {}): Income {
     amount: 100,
     date: '2026-08-05',
     categoryId: catA.id,
+    type: 'SALARIO',
     recurring: false,
     createdAt: '',
     updatedAt: '',

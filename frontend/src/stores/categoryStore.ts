@@ -5,7 +5,6 @@ import { categoryService } from '@/services/categoryService'
 import { getErrorMessage } from '@/services/http'
 import type { SelectOption } from '@/types/common'
 import type { Category, CategoryType, Movement } from '@/types/category'
-import { CATEGORY_TYPE_LABEL } from '@/types/category'
 
 export const useCategoryStore = defineStore('category', () => {
   const categories = ref<Category[]>([])
@@ -22,18 +21,14 @@ export const useCategoryStore = defineStore('category', () => {
   const incomeCategories = computed(() => categories.value.filter((c) => c.movement === 'ENTRADA'))
   const expenseCategories = computed(() => categories.value.filter((c) => c.movement === 'SAIDA'))
 
-  /** Opções agrupadas por tipo, no formato consumido pelo BaseSelect. */
+  /**
+   * Opções no formato consumido pelo BaseSelect. Tanto em entradas quanto em saídas o
+   * nome da categoria já É o agrupamento (Renda Fixa, Despesa Variável...) — o detalhe
+   * vai no campo `type` do lançamento, então o nome basta.
+   */
   function options(movement: Movement): SelectOption[] {
     const list = movement === 'ENTRADA' ? incomeCategories.value : expenseCategories.value
-    return list.map((category) => ({
-      // Em saídas o nome já É o agrupamento (Despesa Fixa/Variável/Investimento); em
-      // entradas "Renda" é o tipo padrão — nos dois casos o sufixo não agrega nada.
-      label:
-        movement === 'SAIDA' || category.type === 'RENDA'
-          ? category.name
-          : `${category.name} · ${CATEGORY_TYPE_LABEL[category.type]}`,
-      value: category.id,
-    }))
+    return list.map((category) => ({ label: category.name, value: category.id }))
   }
 
   function name(id: string | null | undefined): string {

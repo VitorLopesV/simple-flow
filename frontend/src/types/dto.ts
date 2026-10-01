@@ -10,6 +10,7 @@ import type { CategoryType, Movement } from './category'
 import type { ID } from './common'
 import type { CardBrand, InvoiceStatus } from './creditCard'
 import type { ExpenseStatus, ExpenseType, PaymentMethod } from './expense'
+import type { IncomeType } from './income'
 
 export interface SeriesPointDto {
   label: string
@@ -75,6 +76,7 @@ export interface IncomeDto {
   valor: number
   data: string
   categoriaId: ID
+  tipo: IncomeType
   recorrente: boolean
   observacao?: string
   criadoEm: string

@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable'
 import type { PageRequest, Paginated, Period } from '@/types/common'
 import { INVOICE_STATUS_LABEL } from '@/types/creditCard'
 import { EXPENSE_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '@/types/expense'
+import { INCOME_TYPE_LABEL } from '@/types/income'
 import { categoryService } from './categoryService'
 import { creditCardService } from './creditCardService'
 import { expenseService } from './expenseService'
@@ -109,16 +110,17 @@ export async function exportPdfReport(period: Period): Promise<void> {
     autoTable(doc, {
       startY: y,
       margin: { left: MARGIN, right: MARGIN },
-      head: [['Data', 'Descrição', 'Categoria', 'Valor']],
+      head: [['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor']],
       body: incomes.map((item) => [
         formatDate(item.date),
         item.description,
         categoryName(item.categoryId),
+        INCOME_TYPE_LABEL[item.type] ?? '—',
         formatCurrency(item.amount),
       ]),
       headStyles: { fillColor: [16, 185, 129] },
       styles: { fontSize: 9 },
-      columnStyles: { 3: { halign: 'right' } },
+      columnStyles: { 4: { halign: 'right' } },
     })
     y = finalY(doc) + 26
   } else {
