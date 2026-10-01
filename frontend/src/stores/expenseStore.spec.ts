@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { expenseService } from '@/services/expenseService'
+import { EditedMonthsError } from '@/services/http'
 import { usePeriodStore } from '@/stores/periodStore'
 import { useExpenseStore } from '@/stores/expenseStore'
 import type { Expense, ExpensePayload, ExpenseSummary } from '@/types/expense'
@@ -266,7 +267,7 @@ describe('update', () => {
     const ok = await store.update('s1', PAYLOAD)
 
     expect(ok).toBe(true)
-    expect(service.update).toHaveBeenCalledWith('s1', PAYLOAD)
+    expect(service.update).toHaveBeenCalledWith('s1', PAYLOAD, {})
     expect(lastFilter().page).toBe(2)
     expect(store.saving).toBe(false)
   })
@@ -302,7 +303,7 @@ describe('remove', () => {
     const ok = await store.remove('s1')
 
     expect(ok).toBe(true)
-    expect(service.remove).toHaveBeenCalledWith('s1')
+    expect(service.remove).toHaveBeenCalledWith('s1', {})
     expect(service.list).toHaveBeenCalledTimes(1)
     expect(store.saving).toBe(false)
   })
@@ -674,5 +675,51 @@ describe('periodTotal / variacao', () => {
     service.summary.mockResolvedValue(summary({ total: 0, previousMonthTotal: 0 }))
     await store.load()
     expect(store.change).toBe(0)
+  })
+})
+
+describe('meses seguintes alterados', () => {
+  it('remove barrado guarda os meses, não marca erro e não recarrega', async () => {
+    service.remove.mockRejectedValue(new EditedMonthsError(['2026-10']))
+    const store = useExpenseStore()
+    service.list.mockClear()
+
+    const ok = await store.remove('s1')
+
+    expect(ok).toBe(false)
+    expect(store.editedMonths).toEqual(['2026-10'])
+    expect(store.error).toBeNull()
+    expect(service.list).not.toHaveBeenCalled()
+    expect(store.saving).toBe(false)
+  })
+
+  it('remove com confirmação repassa a opção e limpa os meses pendentes', async () => {
+    const store = useExpenseStore()
+    store.editedMonths = ['2026-10']
+
+    const ok = await store.remove('s1', { confirm: true })
+
+    expect(ok).toBe(true)
+    expect(service.remove).toHaveBeenCalledWith('s1', { confirm: true })
+    expect(store.editedMonths).toBeNull()
+  })
+
+  it('update barrado (desligar recorrência) guarda os meses sem marcar erro', async () => {
+    service.update.mockRejectedValue(new EditedMonthsError(['2026-10', '2026-11']))
+    const store = useExpenseStore()
+
+    const ok = await store.update('s1', PAYLOAD)
+
+    expect(ok).toBe(false)
+    expect(store.editedMonths).toEqual(['2026-10', '2026-11'])
+    expect(store.error).toBeNull()
+  })
+
+  it('update com confirmação repassa a opção ao service', async () => {
+    const store = useExpenseStore()
+
+    await store.update('s1', PAYLOAD, { confirm: true })
+
+    expect(service.update).toHaveBeenCalledWith('s1', PAYLOAD, { confirm: true })
   })
 })

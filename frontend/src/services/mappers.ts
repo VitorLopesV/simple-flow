@@ -117,6 +117,7 @@ export function toIncome(dto: IncomeDto): Income {
     recurring: dto.recorrente,
     notes: dto.observacao,
     seriesId: dto.serieId,
+    manuallyEdited: dto.editadoManualmente,
     createdAt: dto.criadoEm,
     updatedAt: dto.atualizadoEm,
   }
@@ -168,6 +169,7 @@ export function toExpense(dto: ExpenseDto): Expense {
     updatedAt: dto.atualizadoEm,
     automatic: dto.automatica,
     seriesId: dto.serieId,
+    manuallyEdited: dto.editadoManualmente,
   }
 }
 
@@ -251,6 +253,7 @@ export function toCardTransaction(dto: CardTransactionDto): CardTransaction {
     recurring: dto.recorrente,
     notes: dto.observacao,
     seriesId: dto.serieId,
+    manuallyEdited: dto.editadoManualmente,
     createdAt: dto.criadoEm,
     updatedAt: dto.atualizadoEm,
   }

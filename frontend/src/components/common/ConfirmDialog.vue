@@ -40,7 +40,11 @@ function cancel(): void {
       >
         <TriangleAlert class="size-5" aria-hidden="true" />
       </div>
-      <p class="text-muted-foreground pt-2 text-sm">{{ message }}</p>
+      <div class="flex flex-col gap-3 pt-2 text-sm">
+        <p class="text-muted-foreground">{{ message }}</p>
+        <!-- Conteúdo extra opcional abaixo da mensagem (ex.: lista de itens afetados). -->
+        <slot />
+      </div>
     </div>
 
     <template #footer>

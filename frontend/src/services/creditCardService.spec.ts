@@ -7,6 +7,7 @@ vi.hoisted(() => {
 })
 
 import { creditCardService } from '@/services/creditCardService'
+import { EditedMonthsError } from '@/services/http'
 import { mockDb } from '@/services/mock'
 import type { CreditCard, CreditCardPayload, CardTransactionPayload } from '@/types/creditCard'
 
@@ -430,5 +431,30 @@ describe('transação recorrente (mock)', () => {
       .filter((expense) => expense.automatic && expense.date.startsWith('2026-09'))
 
     expect(september.map((expense) => expense.amount)).toEqual([55])
+  })
+})
+
+describe('transação recorrente com mês seguinte alterado (mock)', () => {
+  const fixedCategory = () => db.categories.find((category) => category.name === 'Despesa Fixa')!.id
+
+  it('excluir pede confirmação; confirmado, remove os dois meses', async () => {
+    const created = await creditCardService.createTransaction(
+      'car_a',
+      transactionPayload({ amount: 55, categoryId: fixedCategory(), recurring: true }),
+    )
+    const september = db.cardTransactions.find((item) => item.id !== created.id)!
+    await creditCardService.updateTransaction(
+      'car_a',
+      september.id,
+      transactionPayload({ date: september.date, amount: 60, categoryId: fixedCategory(), recurring: true }),
+    )
+
+    const error = await creditCardService.removeTransaction('car_a', created.id).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(EditedMonthsError)
+    expect((error as EditedMonthsError).months).toEqual(['2026-09'])
+    expect(db.cardTransactions).toHaveLength(2)
+
+    await creditCardService.removeTransaction('car_a', created.id, { confirm: true })
+    expect(db.cardTransactions).toHaveLength(0)
   })
 })

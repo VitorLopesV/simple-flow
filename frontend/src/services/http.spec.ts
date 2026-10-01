@@ -2,7 +2,7 @@ import { AxiosError, type AxiosAdapter, type AxiosResponse, type InternalAxiosRe
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
-import { ApiError, http, getErrorMessage } from '@/services/http'
+import { ApiError, asEditedMonthsError, EditedMonthsError, http, getErrorMessage } from '@/services/http'
 import { useAuthStore } from '@/stores/authStore'
 import type { UserSession } from '@/types/auth'
 import type { UserSessionDto } from '@/types/dto'
@@ -179,6 +179,40 @@ describe('normalização de erro', () => {
     expect(error).toBeInstanceOf(ApiError)
     expect((error as ApiError).message).toBe('CPF duplicado.')
     expect((error as ApiError).status).toBe(422)
+  })
+})
+
+describe('meses seguintes alterados (409)', () => {
+  const CONFLICT = { message: 'Há meses alterados.', mesesAlterados: ['2026-10'] }
+
+  it('o ApiError guarda o corpo da resposta', async () => {
+    script = (config) => respond(config, 409, CONFLICT)
+
+    const error = await http.delete('/saidas/1').catch((e: unknown) => e)
+
+    expect((error as ApiError).data).toEqual(CONFLICT)
+  })
+
+  it('asEditedMonthsError converte o 409 com mesesAlterados', async () => {
+    script = (config) => respond(config, 409, CONFLICT)
+
+    const error = asEditedMonthsError(await http.delete('/saidas/1').catch((e: unknown) => e))
+
+    expect(error).toBeInstanceOf(EditedMonthsError)
+    expect((error as EditedMonthsError).months).toEqual(['2026-10'])
+    expect((error as EditedMonthsError).message).toBe('Há meses alterados.')
+  })
+
+  it.each([
+    [409, { message: 'Conflito qualquer.' }],
+    [422, { mesesAlterados: ['2026-10'] }],
+  ])('status %i sem a lista de meses segue como ApiError comum', async (status, body) => {
+    script = (config) => respond(config, status, body)
+
+    const error = asEditedMonthsError(await http.delete('/saidas/1').catch((e: unknown) => e))
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).not.toBeInstanceOf(EditedMonthsError)
   })
 })
 

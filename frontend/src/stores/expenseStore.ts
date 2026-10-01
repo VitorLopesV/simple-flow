@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { compareExpensesByDueDate, expenseService } from '@/services/expenseService'
-import { getErrorMessage } from '@/services/http'
+import { EditedMonthsError, getErrorMessage } from '@/services/http'
+import type { SeriesChangeOptions } from '@/types/common'
 import type { Expense, ExpensePayload, ExpenseStatus, ExpenseSummary } from '@/types/expense'
 import { calculateChange } from '@/utils/currencyFormatter'
 import { usePeriodStore } from './periodStore'
@@ -18,6 +19,12 @@ export const useExpenseStore = defineStore('expense', () => {
   const loading = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
+
+  /**
+   * Meses seguintes alterados (`YYYY-MM`) que barraram a última exclusão/desativação de
+   * uma série. A página mostra a confirmação e repete a operação com `{ confirm: true }`.
+   */
+  const editedMonths = ref<string[] | null>(null)
 
   const page = ref(1)
   const pageSize = ref(DEFAULT_PAGE_SIZE)
@@ -90,13 +97,22 @@ export const useExpenseStore = defineStore('expense', () => {
     }
   }
 
-  async function update(id: string, payload: ExpensePayload): Promise<boolean> {
+  async function update(
+    id: string,
+    payload: ExpensePayload,
+    options: SeriesChangeOptions = {},
+  ): Promise<boolean> {
     saving.value = true
+    editedMonths.value = null
     try {
-      await expenseService.update(id, payload)
+      await expenseService.update(id, payload, options)
       await load()
       return true
     } catch (e) {
+      if (e instanceof EditedMonthsError) {
+        editedMonths.value = e.months
+        return false
+      }
       error.value = getErrorMessage(e, 'Não foi possível atualizar a saída.')
       return false
     } finally {
@@ -104,14 +120,19 @@ export const useExpenseStore = defineStore('expense', () => {
     }
   }
 
-  async function remove(id: string): Promise<boolean> {
+  async function remove(id: string, options: SeriesChangeOptions = {}): Promise<boolean> {
     saving.value = true
+    editedMonths.value = null
     try {
-      await expenseService.remove(id)
+      await expenseService.remove(id, options)
       if (items.value.length === 1 && page.value > 1) page.value -= 1
       await load()
       return true
     } catch (e) {
+      if (e instanceof EditedMonthsError) {
+        editedMonths.value = e.months
+        return false
+      }
       error.value = getErrorMessage(e, 'Não foi possível excluir a saída.')
       return false
     } finally {
@@ -162,6 +183,7 @@ export const useExpenseStore = defineStore('expense', () => {
     loading,
     saving,
     error,
+    editedMonths,
     page,
     pageSize,
     total,

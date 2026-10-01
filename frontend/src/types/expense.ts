@@ -51,10 +51,18 @@ export interface Expense {
    * ligado aos demais só por este id. Definido pelo backend; `null` fora de série.
    */
   seriesId?: ID | null
+  /**
+   * O usuário alterou este mês depois de gerado (valor, situação...). Definido pelo
+   * backend: excluir/desligar meses anteriores da série exige confirmação se houver algum.
+   */
+  manuallyEdited?: boolean
 }
 
 /** A série é gerida pelo backend, não vai no payload. */
-export type ExpensePayload = Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'seriesId'>
+export type ExpensePayload = Omit<
+  Expense,
+  'id' | 'createdAt' | 'updatedAt' | 'seriesId' | 'manuallyEdited'
+>
 
 export interface ExpenseFilter extends PageRequest {
   period: Period

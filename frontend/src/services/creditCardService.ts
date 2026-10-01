@@ -8,8 +8,9 @@ import type {
   InvoiceFilter,
 } from '@/types/creditCard'
 import type { CardTransactionDto, CreditCardDto, CreditCardWithInvoiceDto } from '@/types/dto'
+import type { SeriesChangeOptions } from '@/types/common'
 import { toReferenceMonth } from '@/utils/dateFormatter'
-import { http, USE_MOCK } from './http'
+import { asEditedMonthsError, EditedMonthsError, http, USE_MOCK } from './http'
 import {
   toCardTransaction,
   toCardTransactionPayloadDto,
@@ -173,11 +174,15 @@ export const creditCardService = {
     return toCardTransaction(data)
   },
 
-  /** Mudar a data pode mover o débito para a fatura de outra competência. */
+  /**
+   * Mudar a data pode mover o débito para a fatura de outra competência. Desligar a
+   * recorrência remove os meses seguintes — os alterados só com `options.confirm`.
+   */
   async updateTransaction(
     cardId: string,
     id: string,
     payload: CardTransactionPayload,
+    options: SeriesChangeOptions = {},
   ): Promise<CardTransaction> {
     if (USE_MOCK) {
       const db = await mockDb()
@@ -185,10 +190,14 @@ export const creditCardService = {
       if (index < 0) throw new Error('Transação não encontrada.')
 
       const previous = db.cardTransactions[index]!
-      const invoice = db.ensureInvoice(cardId, payload.date.slice(0, 7))
 
       // Trocar para uma categoria não fixa conta como desligar a recorrência.
       const recurring = payload.recurring && db.isFixedCategoryId(payload.categoryId)
+      const deactivating = previous.recurring && !recurring
+      const edited = deactivating ? db.editedLaterMonths(db.cardTransactions, previous) : []
+      if (edited.length && !options.confirm) throw new EditedMonthsError(edited)
+
+      const invoice = db.ensureInvoice(cardId, payload.date.slice(0, 7))
       const description = previous.recurring && recurring ? previous.description : payload.description
 
       const updated: CardTransaction = {
@@ -198,12 +207,13 @@ export const creditCardService = {
         description,
         invoiceId: invoice.id,
         seriesId: previous.seriesId ?? (recurring ? db.newId('ser') : null),
+        manuallyEdited: true,
         updatedAt: db.now(),
       }
       db.cardTransactions[index] = updated
 
       const touched = new Set([previous.invoiceId, invoice.id])
-      if (previous.recurring && !recurring) {
+      if (deactivating) {
         const later = db.laterInSeries(db.cardTransactions, previous)
         later.forEach((transaction) => touched.add(transaction.invoiceId))
         db.removeRecords(db.cardTransactions, later)
@@ -214,18 +224,27 @@ export const creditCardService = {
       return delay(db.clone(updated))
     }
 
-    const { data } = await http.put<CardTransactionDto>(
-      `/cartoes/${cardId}/transacoes/${id}`,
-      toCardTransactionPayloadDto(payload),
-    )
-    return toCardTransaction(data)
+    try {
+      const { data } = await http.put<CardTransactionDto>(
+        `/cartoes/${cardId}/transacoes/${id}`,
+        toCardTransactionPayloadDto(payload),
+        { params: { confirmar: options.confirm || undefined } },
+      )
+      return toCardTransaction(data)
+    } catch (error) {
+      throw asEditedMonthsError(error)
+    }
   },
 
-  async removeTransaction(cardId: string, id: string): Promise<void> {
+  /** Remove o mês e os seguintes da série; meses seguintes alterados exigem `options.confirm`. */
+  async removeTransaction(cardId: string, id: string, options: SeriesChangeOptions = {}): Promise<void> {
     if (USE_MOCK) {
       const db = await mockDb()
       const transaction = db.cardTransactions.find((item) => item.id === id)
       if (!transaction) throw new Error('Transação não encontrada.')
+
+      const edited = db.editedLaterMonths(db.cardTransactions, transaction)
+      if (edited.length && !options.confirm) throw new EditedMonthsError(edited)
 
       // Excluir um mês da série remove ele e os seguintes; os anteriores ficam intactos.
       const removed = [transaction, ...db.laterInSeries(db.cardTransactions, transaction)]
@@ -237,7 +256,13 @@ export const creditCardService = {
       return delay(undefined)
     }
 
-    await http.delete(`/cartoes/${cardId}/transacoes/${id}`)
+    try {
+      await http.delete(`/cartoes/${cardId}/transacoes/${id}`, {
+        params: { confirmar: options.confirm || undefined },
+      })
+    } catch (error) {
+      throw asEditedMonthsError(error)
+    }
   },
 
   async payInvoice(invoiceId: string): Promise<void> {

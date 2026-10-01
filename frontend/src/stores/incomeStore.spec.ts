@@ -242,7 +242,7 @@ describe('update', () => {
     const ok = await store.update('e1', PAYLOAD)
 
     expect(ok).toBe(true)
-    expect(service.update).toHaveBeenCalledWith('e1', PAYLOAD)
+    expect(service.update).toHaveBeenCalledWith('e1', PAYLOAD, {})
     expect(lastFilter().page).toBe(2)
     expect(store.saving).toBe(false)
   })
@@ -278,7 +278,7 @@ describe('remove', () => {
     const ok = await store.remove('e1')
 
     expect(ok).toBe(true)
-    expect(service.remove).toHaveBeenCalledWith('e1')
+    expect(service.remove).toHaveBeenCalledWith('e1', {})
     expect(service.list).toHaveBeenCalledTimes(1)
     expect(store.saving).toBe(false)
   })

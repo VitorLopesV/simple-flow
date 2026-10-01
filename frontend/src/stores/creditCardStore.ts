@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { creditCardService } from '@/services/creditCardService'
-import { getErrorMessage } from '@/services/http'
+import { EditedMonthsError, getErrorMessage } from '@/services/http'
 import { matchesSearch } from '@/services/mock'
 import type {
   CardTransaction,
@@ -11,6 +11,7 @@ import type {
   CreditCardPayload,
   CreditCardWithInvoice,
 } from '@/types/creditCard'
+import type { SeriesChangeOptions } from '@/types/common'
 import type { ExpenseType } from '@/types/expense'
 import { addMonths, dayInPeriod, fromReferenceMonth, toDate } from '@/utils/dateFormatter'
 import { usePeriodStore } from './periodStore'
@@ -32,6 +33,12 @@ export const useCreditCardStore = defineStore('creditCard', () => {
   const loading = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
+
+  /**
+   * Meses seguintes alterados (`YYYY-MM`) que barraram a última exclusão/desativação de
+   * uma série. A página mostra a confirmação e repete a operação com `{ confirm: true }`.
+   */
+  const editedMonths = ref<string[] | null>(null)
 
   const categoryId = ref<string | null>(null)
   const type = ref<ExpenseType | null>(null)
@@ -203,13 +210,19 @@ export const useCreditCardStore = defineStore('creditCard', () => {
     cardId: string,
     id: string,
     payload: CardTransactionPayload,
+    options: SeriesChangeOptions = {},
   ): Promise<boolean> {
     saving.value = true
+    editedMonths.value = null
     try {
-      await creditCardService.updateTransaction(cardId, id, payload)
+      await creditCardService.updateTransaction(cardId, id, payload, options)
       await load()
       return true
     } catch (e) {
+      if (e instanceof EditedMonthsError) {
+        editedMonths.value = e.months
+        return false
+      }
       error.value = getErrorMessage(e, 'Não foi possível atualizar o débito.')
       return false
     } finally {
@@ -217,13 +230,22 @@ export const useCreditCardStore = defineStore('creditCard', () => {
     }
   }
 
-  async function removeTransaction(cardId: string, id: string): Promise<boolean> {
+  async function removeTransaction(
+    cardId: string,
+    id: string,
+    options: SeriesChangeOptions = {},
+  ): Promise<boolean> {
     saving.value = true
+    editedMonths.value = null
     try {
-      await creditCardService.removeTransaction(cardId, id)
+      await creditCardService.removeTransaction(cardId, id, options)
       await load()
       return true
     } catch (e) {
+      if (e instanceof EditedMonthsError) {
+        editedMonths.value = e.months
+        return false
+      }
       error.value = getErrorMessage(e, 'Não foi possível excluir o débito.')
       return false
     } finally {
@@ -266,6 +288,7 @@ export const useCreditCardStore = defineStore('creditCard', () => {
     loading,
     saving,
     error,
+    editedMonths,
     categoryId,
     type,
     search,

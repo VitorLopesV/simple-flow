@@ -6,7 +6,7 @@ vi.hoisted(() => {
   vi.stubEnv('VITE_MOCK_LATENCY', '0')
 })
 
-import { USE_MOCK } from '@/services/http'
+import { EditedMonthsError, USE_MOCK } from '@/services/http'
 import { mockDb } from '@/services/mock'
 import { compareExpensesByDueDate, expenseService } from '@/services/expenseService'
 import type { Expense, ExpenseFilter, ExpensePayload } from '@/types/expense'
@@ -516,5 +516,94 @@ describe('recorrência com registros reais (mock)', () => {
 
     await expenseService.remove(created.id)
     expect(db.expenses).toHaveLength(0)
+  })
+})
+
+describe('meses seguintes alterados (mock)', () => {
+  function series() {
+    db.expenses.push(
+      expense({ id: 'ago', date: '2026-08-10', recurring: true, seriesId: 's' }),
+      expense({ id: 'set', date: '2026-09-10', recurring: true, seriesId: 's' }),
+      expense({ id: 'out', date: '2026-10-10', recurring: true, seriesId: 's' }),
+    )
+  }
+
+  const editOctober = (overrides: Partial<ExpensePayload> = { amount: 999 }) =>
+    expenseService.update('out', payload({ date: '2026-10-10', recurring: true, ...overrides }))
+
+  it('sem alteração nos meses seguintes, exclui direto', async () => {
+    series()
+
+    await expenseService.remove('set')
+
+    expect(db.expenses.map((item) => item.id)).toEqual(['ago'])
+  })
+
+  it('com mês seguinte editado, recusa listando os meses e não remove nada', async () => {
+    series()
+    await editOctober()
+
+    const error = await expenseService.remove('set').catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(EditedMonthsError)
+    expect((error as EditedMonthsError).months).toEqual(['2026-10'])
+    expect(db.expenses.map((item) => item.id)).toEqual(['ago', 'set', 'out'])
+  })
+
+  it('com confirmação, remove o mês e os seguintes; anteriores intactos', async () => {
+    series()
+    await editOctober()
+
+    await expenseService.remove('set', { confirm: true })
+
+    expect(db.expenses.map((item) => item.id)).toEqual(['ago'])
+  })
+
+  it('marcar o mês seguinte como pago conta como alteração', async () => {
+    series()
+    await editOctober({ status: 'PAGO' })
+
+    await expect(expenseService.remove('set')).rejects.toBeInstanceOf(EditedMonthsError)
+  })
+
+  it('alteração num mês anterior não exige confirmação', async () => {
+    series()
+    await expenseService.update('ago', payload({ date: '2026-08-10', amount: 1, recurring: true }))
+
+    await expenseService.remove('set')
+
+    expect(db.expenses.map((item) => item.id)).toEqual(['ago'])
+  })
+
+  it('desligar a recorrência com mês seguinte alterado recusa sem salvar nada', async () => {
+    series()
+    await editOctober()
+    const before = structuredClone(db.expenses)
+
+    await expect(
+      expenseService.update('set', payload({ date: '2026-09-10', amount: 5, recurring: false })),
+    ).rejects.toBeInstanceOf(EditedMonthsError)
+
+    expect(db.expenses).toEqual(before)
+  })
+
+  it('desligar com confirmação mantém o mês e remove os seguintes', async () => {
+    series()
+    await editOctober()
+
+    await expenseService.update('set', payload({ date: '2026-09-10', recurring: false }), { confirm: true })
+
+    expect(db.expenses.map((item) => item.id)).toEqual(['ago', 'set'])
+  })
+
+  it('o mês seguinte gerado ao religar nasce sem alteração', async () => {
+    db.expenses.push(
+      expense({ id: 'set', date: '2026-09-10', recurring: false, seriesId: 's', manuallyEdited: true }),
+    )
+
+    await expenseService.update('set', payload({ date: '2026-09-10', recurring: true }))
+
+    const october = db.expenses.find((item) => item.date === '2026-10-10')!
+    expect(october.manuallyEdited).toBe(false)
   })
 })

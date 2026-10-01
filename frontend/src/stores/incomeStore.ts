@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import { getErrorMessage } from '@/services/http'
+import { EditedMonthsError, getErrorMessage } from '@/services/http'
 import { incomeService } from '@/services/incomeService'
+import type { SeriesChangeOptions } from '@/types/common'
 import type { Income, IncomePayload, IncomeSummary, IncomeType } from '@/types/income'
 import { calculateChange } from '@/utils/currencyFormatter'
 import { usePeriodStore } from './periodStore'
@@ -18,6 +19,12 @@ export const useIncomeStore = defineStore('income', () => {
   const loading = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
+
+  /**
+   * Meses seguintes alterados (`YYYY-MM`) que barraram a última exclusão/desativação de
+   * uma série. A página mostra a confirmação e repete a operação com `{ confirm: true }`.
+   */
+  const editedMonths = ref<string[] | null>(null)
 
   const page = ref(1)
   const pageSize = ref(DEFAULT_PAGE_SIZE)
@@ -83,13 +90,22 @@ export const useIncomeStore = defineStore('income', () => {
     }
   }
 
-  async function update(id: string, payload: IncomePayload): Promise<boolean> {
+  async function update(
+    id: string,
+    payload: IncomePayload,
+    options: SeriesChangeOptions = {},
+  ): Promise<boolean> {
     saving.value = true
+    editedMonths.value = null
     try {
-      await incomeService.update(id, payload)
+      await incomeService.update(id, payload, options)
       await load()
       return true
     } catch (e) {
+      if (e instanceof EditedMonthsError) {
+        editedMonths.value = e.months
+        return false
+      }
       error.value = getErrorMessage(e, 'Não foi possível atualizar a entrada.')
       return false
     } finally {
@@ -97,15 +113,20 @@ export const useIncomeStore = defineStore('income', () => {
     }
   }
 
-  async function remove(id: string): Promise<boolean> {
+  async function remove(id: string, options: SeriesChangeOptions = {}): Promise<boolean> {
     saving.value = true
+    editedMonths.value = null
     try {
-      await incomeService.remove(id)
+      await incomeService.remove(id, options)
       // Se a página ficou vazia após a remoção, volta uma página.
       if (items.value.length === 1 && page.value > 1) page.value -= 1
       await load()
       return true
     } catch (e) {
+      if (e instanceof EditedMonthsError) {
+        editedMonths.value = e.months
+        return false
+      }
       error.value = getErrorMessage(e, 'Não foi possível excluir a entrada.')
       return false
     } finally {
@@ -150,6 +171,7 @@ export const useIncomeStore = defineStore('income', () => {
     loading,
     saving,
     error,
+    editedMonths,
     page,
     pageSize,
     total,

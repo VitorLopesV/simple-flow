@@ -645,14 +645,14 @@ describe('ações', () => {
       name: 'updateTransaction',
       call: (store: ReturnType<typeof useCreditCardStore>) => store.updateTransaction('A', 't1', transactionPayload()),
       method: () => service.updateTransaction,
-      args: ['A', 't1', transactionPayload()],
+      args: ['A', 't1', transactionPayload(), {}],
       fallback: 'Não foi possível atualizar o débito.',
     },
     {
       name: 'removeTransaction',
       call: (store: ReturnType<typeof useCreditCardStore>) => store.removeTransaction('A', 't1'),
       method: () => service.removeTransaction,
-      args: ['A', 't1'],
+      args: ['A', 't1', {}],
       fallback: 'Não foi possível excluir o débito.',
     },
     {

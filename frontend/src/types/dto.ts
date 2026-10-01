@@ -81,11 +81,15 @@ export interface IncomeDto {
   observacao?: string
   /** Série do lançamento recorrente (`serie_id`); `null` fora de série. */
   serieId?: ID | null
+  editadoManualmente?: boolean
   criadoEm: string
   atualizadoEm: string
 }
 
-export type IncomePayloadDto = Omit<IncomeDto, 'id' | 'criadoEm' | 'atualizadoEm' | 'serieId'>
+export type IncomePayloadDto = Omit<
+  IncomeDto,
+  'id' | 'criadoEm' | 'atualizadoEm' | 'serieId' | 'editadoManualmente'
+>
 
 export interface IncomeSummaryDto {
   total: number
@@ -115,9 +119,13 @@ export interface ExpenseDto {
   atualizadoEm: string
   automatica?: boolean
   serieId?: ID | null
+  editadoManualmente?: boolean
 }
 
-export type ExpensePayloadDto = Omit<ExpenseDto, 'id' | 'criadoEm' | 'atualizadoEm' | 'serieId'>
+export type ExpensePayloadDto = Omit<
+  ExpenseDto,
+  'id' | 'criadoEm' | 'atualizadoEm' | 'serieId' | 'editadoManualmente'
+>
 
 export interface ExpenseSummaryDto {
   total: number
@@ -161,13 +169,14 @@ export interface CardTransactionDto {
   recorrente: boolean
   observacao?: string | null
   serieId?: ID | null
+  editadoManualmente?: boolean
   criadoEm: string
   atualizadoEm: string
 }
 
 export type CardTransactionPayloadDto = Omit<
   CardTransactionDto,
-  'id' | 'cartaoId' | 'faturaId' | 'criadoEm' | 'atualizadoEm' | 'serieId'
+  'id' | 'cartaoId' | 'faturaId' | 'criadoEm' | 'atualizadoEm' | 'serieId' | 'editadoManualmente'
 >
 
 export interface DetailedInvoiceDto {
@@ -186,6 +195,19 @@ export interface CreditCardWithInvoiceDto {
   cartao: CreditCardDto
   fatura: DetailedInvoiceDto | null
   usoLimite: number
+}
+
+// ------------------------------------------------------------------ recorrência
+
+/**
+ * Corpo do 409 ao excluir/desligar a recorrência quando há meses seguintes alterados
+ * (`editado_manualmente`, inclusive marcados como PAGO). Repetir a chamada com
+ * `?confirmar=true` remove mesmo assim.
+ */
+export interface EditedMonthsConflictDto {
+  message: string
+  /** Competências `YYYY-MM` dos meses alterados. */
+  mesesAlterados: string[]
 }
 
 // ---------------------------------------------------------------- competências

@@ -10,11 +10,13 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import CreditCardForm from '@/components/features/CreditCardForm.vue'
 import CreditCardItem from '@/components/features/CreditCardItem.vue'
+import EditedMonthsDialog from '@/components/features/EditedMonthsDialog.vue'
 import InvoiceDetails from '@/components/features/InvoiceDetails.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import TransactionForm from '@/components/features/TransactionForm.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
+import { useEditedMonthsConfirmation } from '@/composables/useEditedMonthsConfirmation'
 import { notify } from '@/composables/useNotify'
 import { useCategoryStore } from '@/stores/categoryStore'
 import { useCreditCardStore } from '@/stores/creditCardStore'
@@ -47,6 +49,8 @@ const debitToDelete = ref<CardTransaction | null>(null)
 
 const paymentConfirmationOpen = ref(false)
 const invoiceIdToPay = ref<string | null>(null)
+
+const seriesChange = useEditedMonthsConfirmation()
 
 const categoryOptions = computed(() => categoryStore.options('SAIDA'))
 const modalTitle = computed(() => (editing.value ? 'Editar cartão' : 'Novo cartão'))
@@ -134,14 +138,39 @@ async function saveDebit(payload: IncomePayload | ExpensePayload | CardTransacti
     ? await creditCardStore.updateTransaction(cardId, current.id, debit)
     : await creditCardStore.createTransaction(cardId, debit)
 
-  if (!success) return
+  if (success) return afterSaveDebit(Boolean(current), debit)
 
-  notify.success(current ? 'Débito atualizado' : 'Débito lançado', debit.description)
-  // Um lançamento pode antecipar o primeiro mês com dados (limite do seletor de mês).
-  void periodStore.loadLimits()
+  // Desligar a recorrência barrado por meses seguintes alterados: pede confirmação.
+  if (current && creditCardStore.editedMonths) {
+    seriesChange.ask({
+      action: 'deactivate',
+      description: current.description,
+      months: creditCardStore.editedMonths,
+      run: async () => {
+        if (await creditCardStore.updateTransaction(cardId, current.id, debit, { confirm: true })) {
+          afterSaveDebit(true, debit)
+        }
+      },
+    })
+  }
+}
+
+function afterSaveDebit(updated: boolean, debit: CardTransactionPayload): void {
+  notify.success(updated ? 'Débito atualizado' : 'Débito lançado', debit.description)
   debitModalOpen.value = false
   debitEditing.value = null
+  // Um lançamento pode antecipar o primeiro mês com dados (limite do seletor de mês).
+  void periodStore.loadLimits()
 }
+
+/** Na série recorrente, excluir leva junto os meses seguintes — o texto deixa isso claro. */
+const deleteDebitMessage = computed(() => {
+  const debit = debitToDelete.value
+  const name = `“${debit?.description ?? ''}”`
+  return debit?.recurring
+    ? `Excluir ${name} remove este mês e os seguintes da série, também das faturas. Os meses anteriores não são afetados.`
+    : `Excluir ${name} também remove o valor da fatura. Deseja continuar?`
+})
 
 function askDeleteDebit(transaction: CardTransaction): void {
   debitToDelete.value = transaction
@@ -154,6 +183,17 @@ async function confirmDeleteDebit(): Promise<void> {
 
   if (await creditCardStore.removeTransaction(debit.cardId, debit.id)) {
     notify.success('Débito excluído', debit.description)
+  } else if (creditCardStore.editedMonths) {
+    seriesChange.ask({
+      action: 'remove',
+      description: debit.description,
+      months: creditCardStore.editedMonths,
+      run: async () => {
+        if (await creditCardStore.removeTransaction(debit.cardId, debit.id, { confirm: true })) {
+          notify.success('Débito excluído', debit.description)
+        }
+      },
+    })
   }
   debitConfirmationOpen.value = false
   debitToDelete.value = null
@@ -294,10 +334,20 @@ async function confirmDeleteDebit(): Promise<void> {
     <ConfirmDialog
       v-model:open="debitConfirmationOpen"
       title="Excluir débito"
-      :message="`Excluir “${debitToDelete?.description ?? ''}” também remove o valor da fatura. Deseja continuar?`"
+      :message="deleteDebitMessage"
       confirm-text="Excluir"
       :loading="creditCardStore.saving"
       @confirm="confirmDeleteDebit"
+    />
+
+    <EditedMonthsDialog
+      v-model:open="seriesChange.open.value"
+      :action="seriesChange.pending.value?.action ?? 'remove'"
+      :months="seriesChange.pending.value?.months ?? []"
+      :description="seriesChange.pending.value?.description"
+      :loading="creditCardStore.saving"
+      @confirm="seriesChange.confirm"
+      @cancel="seriesChange.cancel"
     />
 
     <ConfirmDialog

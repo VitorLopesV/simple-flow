@@ -43,6 +43,14 @@ export interface SelectOption<T = string> {
   disabled?: boolean
 }
 
+/**
+ * Opções de operações que podem encerrar parte de uma série recorrente (excluir um mês,
+ * desligar a recorrência). `confirm` autoriza remover meses seguintes já alterados.
+ */
+export interface SeriesChangeOptions {
+  confirm?: boolean
+}
+
 /** Estado de requisição usado pelas stores. */
 export interface RequestState {
   loading: boolean

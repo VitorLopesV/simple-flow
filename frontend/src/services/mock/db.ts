@@ -480,6 +480,7 @@ interface SeriesRecord {
   id: ID
   date: string
   seriesId?: ID | null
+  manuallyEdited?: boolean
 }
 
 /** Registros da mesma série nos meses posteriores ao do registro (os anteriores ficam de fora). */
@@ -492,6 +493,17 @@ export function laterInSeries<T extends SeriesRecord>(items: T[], record: T): T[
       item.id !== record.id &&
       periodOrdinal(periodOfDate(item.date)) > month,
   )
+}
+
+/**
+ * Competências (`YYYY-MM`) dos meses seguintes da série que o usuário alterou — são os
+ * que exigem confirmação antes de excluir/desligar (espelha o 409 do backend).
+ */
+export function editedLaterMonths<T extends SeriesRecord>(items: T[], record: T): string[] {
+  const months = laterInSeries(items, record)
+    .filter((item) => item.manuallyEdited)
+    .map((item) => item.date.slice(0, 7))
+  return [...new Set(months)].sort()
 }
 
 function hasNextMonthInSeries<T extends SeriesRecord>(items: T[], record: T): boolean {
@@ -517,6 +529,7 @@ export function ensureNextIncome(income: Income): void {
     ...structuredClone(income),
     id: newId('ent'),
     date: sameDayNextMonth(income.date),
+    manuallyEdited: false,
     createdAt: now(),
     updatedAt: now(),
   })
@@ -532,6 +545,7 @@ export function ensureNextExpense(expense: Expense): void {
     dueDate: expense.dueDate ? sameDayNextMonth(expense.dueDate) : expense.dueDate,
     status: 'PENDENTE',
     paidAt: null,
+    manuallyEdited: false,
     createdAt: now(),
     updatedAt: now(),
   })
@@ -557,6 +571,7 @@ export function ensureNextCardTransaction(transaction: CardTransaction): void {
     id: newId('trc'),
     invoiceId: invoice.id,
     date,
+    manuallyEdited: false,
     createdAt: now(),
     updatedAt: now(),
   })

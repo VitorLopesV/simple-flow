@@ -7,11 +7,13 @@ import BaseCard from '@/components/common/BaseCard.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import CategoryFilter from '@/components/features/CategoryFilter.vue'
+import EditedMonthsDialog from '@/components/features/EditedMonthsDialog.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import TransactionForm from '@/components/features/TransactionForm.vue'
 import TransactionList from '@/components/features/TransactionList.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
+import { useEditedMonthsConfirmation } from '@/composables/useEditedMonthsConfirmation'
 import { notify } from '@/composables/useNotify'
 import { useCategoryStore } from '@/stores/categoryStore'
 import { useCreditCardStore } from '@/stores/creditCardStore'
@@ -36,6 +38,8 @@ const pendingOpen = ref(false)
 const toPending = ref<Expense | null>(null)
 const paymentOpen = ref(false)
 const toPaid = ref<Expense | null>(null)
+
+const seriesChange = useEditedMonthsConfirmation()
 
 const categoryOptions = computed(() => categoryStore.options('SAIDA'))
 const statusOptions = computed(() =>
@@ -75,14 +79,37 @@ async function save(
     ? await expenseStore.update(current.id, expense)
     : await expenseStore.create(expense)
 
-  if (!success) return
+  if (success) return afterSave(Boolean(current), expense)
 
-  notify.success(current ? 'Saída atualizada' : 'Saída adicionada', expense.description)
-  // Um lançamento pode antecipar o primeiro mês com dados (limite do seletor de mês).
-  void periodStore.loadLimits()
+  // Desligar a recorrência barrado por meses seguintes alterados: pede confirmação.
+  if (current && expenseStore.editedMonths) {
+    seriesChange.ask({
+      action: 'deactivate',
+      description: current.description,
+      months: expenseStore.editedMonths,
+      run: async () => {
+        if (await expenseStore.update(current.id, expense, { confirm: true })) afterSave(true, expense)
+      },
+    })
+  }
+}
+
+function afterSave(updated: boolean, expense: ExpensePayload): void {
+  notify.success(updated ? 'Saída atualizada' : 'Saída adicionada', expense.description)
   modalOpen.value = false
   editing.value = null
+  // Um lançamento pode antecipar o primeiro mês com dados (limite do seletor de mês).
+  void periodStore.loadLimits()
 }
+
+/** Na série recorrente, excluir leva junto os meses seguintes — o texto deixa isso claro. */
+const deleteMessage = computed(() => {
+  const expense = toDelete.value
+  const name = `“${expense?.description ?? ''}”`
+  return expense?.recurring
+    ? `Excluir ${name} remove este mês e os seguintes da série. Os meses anteriores não são afetados.`
+    : `Tem certeza que deseja excluir ${name}? Esta ação não pode ser desfeita.`
+})
 
 function askDelete(expense: Expense): void {
   toDelete.value = expense
@@ -93,7 +120,20 @@ async function confirmDelete(): Promise<void> {
   const expense = toDelete.value
   if (!expense) return
 
-  if (await expenseStore.remove(expense.id)) notify.success('Saída excluída', expense.description)
+  if (await expenseStore.remove(expense.id)) {
+    notify.success('Saída excluída', expense.description)
+  } else if (expenseStore.editedMonths) {
+    seriesChange.ask({
+      action: 'remove',
+      description: expense.description,
+      months: expenseStore.editedMonths,
+      run: async () => {
+        if (await expenseStore.remove(expense.id, { confirm: true })) {
+          notify.success('Saída excluída', expense.description)
+        }
+      },
+    })
+  }
   confirmationOpen.value = false
   toDelete.value = null
 }
@@ -243,10 +283,20 @@ async function toggleStatus(expense: Expense): Promise<void> {
     <ConfirmDialog
       v-model:open="confirmationOpen"
       title="Excluir saída"
-      :message="`Tem certeza que deseja excluir “${toDelete?.description ?? ''}”? Esta ação não pode ser desfeita.`"
+      :message="deleteMessage"
       confirm-text="Excluir"
       :loading="expenseStore.saving"
       @confirm="confirmDelete"
+    />
+
+    <EditedMonthsDialog
+      v-model:open="seriesChange.open.value"
+      :action="seriesChange.pending.value?.action ?? 'remove'"
+      :months="seriesChange.pending.value?.months ?? []"
+      :description="seriesChange.pending.value?.description"
+      :loading="expenseStore.saving"
+      @confirm="seriesChange.confirm"
+      @cancel="seriesChange.cancel"
     />
 
     <ConfirmDialog

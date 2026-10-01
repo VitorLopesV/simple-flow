@@ -1,7 +1,7 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios'
 
 import { useAuthStore } from '@/stores/authStore'
-import type { UserSessionDto } from '@/types/dto'
+import type { EditedMonthsConflictDto, UserSessionDto } from '@/types/dto'
 import { toUserSession } from './mappers'
 
 /** Liga a camada de mock quando não há backend disponível. */
@@ -21,10 +21,34 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** Corpo da resposta de erro, para quem precisa de mais que a mensagem. */
+    readonly data?: unknown,
   ) {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+/**
+ * Excluir um mês de uma série recorrente (ou desligar a recorrência) remove os meses
+ * seguintes. Se algum deles foi alterado pelo usuário, a API recusa com 409 e lista os
+ * meses (`YYYY-MM`) — a operação só acontece se repetida com confirmação explícita.
+ */
+export class EditedMonthsError extends ApiError {
+  constructor(
+    readonly months: string[],
+    message = 'Há meses seguintes desta série que foram alterados.',
+  ) {
+    super(message, 409)
+    this.name = 'EditedMonthsError'
+  }
+}
+
+/** Converte o 409 com `mesesAlterados` em `EditedMonthsError`; outros erros passam iguais. */
+export function asEditedMonthsError(error: unknown): unknown {
+  if (!(error instanceof ApiError) || error.status !== 409) return error
+  const months = (error.data as Partial<EditedMonthsConflictDto> | undefined)?.mesesAlterados
+  return Array.isArray(months) ? new EditedMonthsError(months.map(String), error.message) : error
 }
 
 http.interceptors.request.use((config) => {
@@ -85,7 +109,7 @@ http.interceptors.response.use(
                 ? 'A solicitação demorou demais e foi cancelada.'
                 : 'Não foi possível conectar ao servidor.')
 
-    return Promise.reject(new ApiError(message, status))
+    return Promise.reject(new ApiError(message, status, error.response?.data))
   },
 )
 

@@ -1,8 +1,8 @@
-import type { Paginated, Period } from '@/types/common'
+import type { Paginated, Period, SeriesChangeOptions } from '@/types/common'
 import type { IncomeDto, IncomeSummaryDto } from '@/types/dto'
 import type { Income, IncomeFilter, IncomePayload, IncomeSummary } from '@/types/income'
 import { addMonths, isWithinPeriod, toReferenceMonth } from '@/utils/dateFormatter'
-import { http, USE_MOCK } from './http'
+import { asEditedMonthsError, EditedMonthsError, http, USE_MOCK } from './http'
 import { mapPage, toIncome, toIncomePayloadDto, toIncomeSummary } from './mappers'
 import { delay, matchesSearch, mockDb, paginate } from './mock'
 
@@ -103,7 +103,11 @@ export const incomeService = {
     return toIncome(data)
   },
 
-  async update(id: string, payload: IncomePayload): Promise<Income> {
+  /**
+   * Desligar a recorrência remove os meses seguintes da série; se algum foi alterado, só
+   * remove com `options.confirm` (senão rejeita com `EditedMonthsError`, sem salvar nada).
+   */
+  async update(id: string, payload: IncomePayload, options: SeriesChangeOptions = {}): Promise<Income> {
     if (USE_MOCK) {
       const db = await mockDb()
       const index = db.incomes.findIndex((income) => income.id === id)
@@ -115,6 +119,10 @@ export const incomeService = {
       // Nome de uma entrada recorrente é imutável — só muda quando ela deixa de ser recorrente.
       const description = current.recurring && recurring ? current.description : payload.description
 
+      const deactivating = current.recurring && !recurring
+      const edited = deactivating ? db.editedLaterMonths(db.incomes, current) : []
+      if (edited.length && !options.confirm) throw new EditedMonthsError(edited)
+
       const updated: Income = {
         ...current,
         ...payload,
@@ -122,31 +130,46 @@ export const incomeService = {
         description,
         // Religar a recorrência mantém a série original (ou abre uma, se nunca teve).
         seriesId: current.seriesId ?? (recurring ? db.newId('ser') : null),
+        manuallyEdited: true,
         updatedAt: db.now(),
       }
       db.incomes[index] = updated
 
       // Desligar encerra a série a partir do mês seguinte; religar volta a gerar o próximo mês.
-      if (current.recurring && !recurring) db.removeRecords(db.incomes, db.laterInSeries(db.incomes, current))
+      if (deactivating) db.removeRecords(db.incomes, db.laterInSeries(db.incomes, current))
       if (!current.recurring && recurring) db.ensureNextIncome(updated)
 
       return delay(db.clone(updated))
     }
 
-    const { data } = await http.put<IncomeDto>(`/entradas/${id}`, toIncomePayloadDto(payload))
-    return toIncome(data)
+    try {
+      const { data } = await http.put<IncomeDto>(`/entradas/${id}`, toIncomePayloadDto(payload), {
+        params: { confirmar: options.confirm || undefined },
+      })
+      return toIncome(data)
+    } catch (error) {
+      throw asEditedMonthsError(error)
+    }
   },
 
-  async remove(id: string): Promise<void> {
+  /** Remove o mês e os seguintes da série; meses seguintes alterados exigem `options.confirm`. */
+  async remove(id: string, options: SeriesChangeOptions = {}): Promise<void> {
     if (USE_MOCK) {
       const db = await mockDb()
       const income = db.incomes.find((item) => item.id === id)
       if (!income) throw new Error('Entrada não encontrada.')
+
+      const edited = db.editedLaterMonths(db.incomes, income)
+      if (edited.length && !options.confirm) throw new EditedMonthsError(edited)
       // Excluir um mês da série remove ele e os seguintes; os anteriores ficam intactos.
       db.removeRecords(db.incomes, [income, ...db.laterInSeries(db.incomes, income)])
       return delay(undefined)
     }
 
-    await http.delete(`/entradas/${id}`)
+    try {
+      await http.delete(`/entradas/${id}`, { params: { confirmar: options.confirm || undefined } })
+    } catch (error) {
+      throw asEditedMonthsError(error)
+    }
   },
 }

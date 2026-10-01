@@ -7,11 +7,13 @@ import BaseCard from '@/components/common/BaseCard.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import CategoryFilter from '@/components/features/CategoryFilter.vue'
+import EditedMonthsDialog from '@/components/features/EditedMonthsDialog.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import TransactionForm from '@/components/features/TransactionForm.vue'
 import TransactionList from '@/components/features/TransactionList.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
+import { useEditedMonthsConfirmation } from '@/composables/useEditedMonthsConfirmation'
 import { notify } from '@/composables/useNotify'
 import { useCategoryStore } from '@/stores/categoryStore'
 import { useIncomeStore } from '@/stores/incomeStore'
@@ -30,6 +32,8 @@ const modalOpen = ref(false)
 const confirmationOpen = ref(false)
 const editing = ref<Income | null>(null)
 const toDelete = ref<Income | null>(null)
+
+const seriesChange = useEditedMonthsConfirmation()
 
 const categoryOptions = computed(() => categoryStore.options('ENTRADA'))
 const modalTitle = computed(() => (editing.value ? 'Editar entrada' : 'Nova entrada'))
@@ -61,14 +65,37 @@ async function save(
     ? await incomeStore.update(current.id, income)
     : await incomeStore.create(income)
 
-  if (!success) return
+  if (success) return afterSave(Boolean(current), income)
 
-  notify.success(current ? 'Entrada atualizada' : 'Entrada adicionada', income.description)
-  // Um lançamento pode antecipar o primeiro mês com dados (limite do seletor de mês).
-  void periodStore.loadLimits()
+  // Desligar a recorrência barrado por meses seguintes alterados: pede confirmação.
+  if (current && incomeStore.editedMonths) {
+    seriesChange.ask({
+      action: 'deactivate',
+      description: current.description,
+      months: incomeStore.editedMonths,
+      run: async () => {
+        if (await incomeStore.update(current.id, income, { confirm: true })) afterSave(true, income)
+      },
+    })
+  }
+}
+
+function afterSave(updated: boolean, income: IncomePayload): void {
+  notify.success(updated ? 'Entrada atualizada' : 'Entrada adicionada', income.description)
   modalOpen.value = false
   editing.value = null
+  // Um lançamento pode antecipar o primeiro mês com dados (limite do seletor de mês).
+  void periodStore.loadLimits()
 }
+
+/** Na série recorrente, excluir leva junto os meses seguintes — o texto deixa isso claro. */
+const deleteMessage = computed(() => {
+  const income = toDelete.value
+  const name = `“${income?.description ?? ''}”`
+  return income?.recurring
+    ? `Excluir ${name} remove este mês e os seguintes da série. Os meses anteriores não são afetados.`
+    : `Tem certeza que deseja excluir ${name}? Esta ação não pode ser desfeita.`
+})
 
 function askDelete(income: Income): void {
   toDelete.value = income
@@ -81,6 +108,17 @@ async function confirmDelete(): Promise<void> {
 
   if (await incomeStore.remove(income.id)) {
     notify.success('Entrada excluída', income.description)
+  } else if (incomeStore.editedMonths) {
+    seriesChange.ask({
+      action: 'remove',
+      description: income.description,
+      months: incomeStore.editedMonths,
+      run: async () => {
+        if (await incomeStore.remove(income.id, { confirm: true })) {
+          notify.success('Entrada excluída', income.description)
+        }
+      },
+    })
   }
   confirmationOpen.value = false
   toDelete.value = null
@@ -194,10 +232,20 @@ async function confirmDelete(): Promise<void> {
     <ConfirmDialog
       v-model:open="confirmationOpen"
       title="Excluir entrada"
-      :message="`Tem certeza que deseja excluir “${toDelete?.description ?? ''}”? Esta ação não pode ser desfeita.`"
+      :message="deleteMessage"
       confirm-text="Excluir"
       :loading="incomeStore.saving"
       @confirm="confirmDelete"
+    />
+
+    <EditedMonthsDialog
+      v-model:open="seriesChange.open.value"
+      :action="seriesChange.pending.value?.action ?? 'remove'"
+      :months="seriesChange.pending.value?.months ?? []"
+      :description="seriesChange.pending.value?.description"
+      :loading="incomeStore.saving"
+      @confirm="seriesChange.confirm"
+      @cancel="seriesChange.cancel"
     />
   </PageLayout>
 </template>

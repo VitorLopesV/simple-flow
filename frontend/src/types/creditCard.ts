@@ -44,13 +44,18 @@ export interface CardTransaction {
    * ligado aos demais só por este id. Definido pelo backend; `null` fora de série.
    */
   seriesId?: ID | null
+  /**
+   * O usuário alterou este mês depois de gerado (valor, situação...). Definido pelo
+   * backend: excluir/desligar meses anteriores da série exige confirmação se houver algum.
+   */
+  manuallyEdited?: boolean
   createdAt: string
   updatedAt: string
 }
 
 export type CardTransactionPayload = Omit<
   CardTransaction,
-  'id' | 'cardId' | 'invoiceId' | 'createdAt' | 'updatedAt' | 'seriesId'
+  'id' | 'cardId' | 'invoiceId' | 'createdAt' | 'updatedAt' | 'seriesId' | 'manuallyEdited'
 >
 
 /** Valores gravados no banco e devolvidos pela API. */

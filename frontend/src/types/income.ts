@@ -24,12 +24,20 @@ export interface Income {
    * ligado aos demais só por este id. Definido pelo backend; `null` fora de série.
    */
   seriesId?: ID | null
+  /**
+   * O usuário alterou este mês depois de gerado (valor, situação...). Definido pelo
+   * backend: excluir/desligar meses anteriores da série exige confirmação se houver algum.
+   */
+  manuallyEdited?: boolean
   createdAt: string
   updatedAt: string
 }
 
 /** Dados aceitos pelo formulário de criação/edição. A série é gerida pelo backend. */
-export type IncomePayload = Omit<Income, 'id' | 'createdAt' | 'updatedAt' | 'seriesId'>
+export type IncomePayload = Omit<
+  Income,
+  'id' | 'createdAt' | 'updatedAt' | 'seriesId' | 'manuallyEdited'
+>
 
 export interface IncomeFilter extends PageRequest {
   period: Period
