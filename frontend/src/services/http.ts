@@ -4,8 +4,12 @@ import { useAuthStore } from '@/stores/authStore'
 import type { EditedMonthsConflictDto, UserSessionDto } from '@/types/dto'
 import { toUserSession } from './mappers'
 
-/** Liga a camada de mock quando não há backend disponível. */
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
+/**
+ * Liga a camada de mock quando não há backend disponível. Só liga com `'true'` explícito:
+ * no modo mock o login aceita qualquer credencial, então um deploy que esqueça a variável
+ * precisa cair no backend real, nunca no modo demonstração.
+ */
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
 /** Latência artificial do mock, em ms. */
 export const MOCK_LATENCY = Number(import.meta.env.VITE_MOCK_LATENCY ?? 350)

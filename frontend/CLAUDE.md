@@ -73,7 +73,7 @@ Ao adicionar um recurso novo, crie o arquivo correspondente em cada camada (`typ
 - **Todo método de service segue o padrão duplo mock/real**: checa `if (USE_MOCK) { ...; return delay(...) }` antes de cair na chamada axios real. Ao adicionar um endpoint novo, implemente os dois lados (mock em `services/mock/db.ts` + chamada real).
 - `http.ts`: injeta `Authorization: Bearer <token>` via interceptor de request; interceptor de response faz **refresh automático em 401** (com flag de promise compartilhada para evitar refreshes concorrentes) e força hard redirect (`window.location.assign`, não `router.push`) para `/auth/login` se o refresh falhar.
 - Erros são normalizados em `ApiError` com mensagens em pt-BR por status. Use sempre `getErrorMessage(error, fallback)` para extrair a mensagem a exibir em toast — não trate erro axios cru nos componentes.
-- Modo mock é infraestrutura de primeira classe, não hack de teste: `VITE_USE_MOCK=true` roda o frontend inteiro sem backend. `mock/db.ts` usa faker com seed fixa e guarda os dados já no formato de domínio (não passa pelos mappers); `mock/index.ts` importa o db **dinamicamente** para não entrar no bundle de produção — preserve esse `import()` dinâmico ao mexer ali.
+- Modo mock é infraestrutura de primeira classe, não hack de teste: `VITE_USE_MOCK=true` roda o frontend inteiro sem backend. **Só liga com `'true'` explícito** — ausente ou qualquer outro valor usa o backend real, para que um deploy que esqueça a variável nunca suba em modo demonstração (no mock o login aceita qualquer credencial). Não inverta esse padrão. `mock/db.ts` usa faker com seed fixa e guarda os dados já no formato de domínio (não passa pelos mappers); `mock/index.ts` importa o db **dinamicamente** para não entrar no bundle de produção — preserve esse `import()` dinâmico ao mexer ali.
 
 ## Autenticação
 
@@ -101,11 +101,17 @@ Datas trafegam sempre como string `YYYY-MM-DD` (nunca `Date` cru). Ao converter 
 ## Variáveis de ambiente
 
 ```
-VITE_API_URL=http://localhost:3000/api
-VITE_USE_MOCK=true|false
+VITE_API_URL=http://localhost:3000/api   # também define o connect-src da CSP no build
+VITE_USE_MOCK=true                       # só 'true' liga o mock; ausente = backend real
 VITE_MOCK_LATENCY=350
 ```
-Todas com prefixo `VITE_*` (exigido pelo Vite), tipadas em `env.d.ts`.
+Todas com prefixo `VITE_*` (exigido pelo Vite), tipadas em `env.d.ts`. Para desenvolver sem backend, copie `.env.example` para `.env`.
+
+## Segurança (cabeçalhos HTTP)
+
+- `vercel.json` envia `Content-Security-Policy`, `X-Frame-Options: DENY` e `X-Content-Type-Options: nosniff`. A CSP permite scripts só da própria origem (`script-src 'self'`, sem inline nem `eval`), estilos próprios + Google Fonts, fontes do `fonts.gstatic.com` e imagens `data:`/`blob:` (fotos de perfil e SVGs inlinados pelo Vite).
+- O `vercel.json` é estático, então lá o `connect-src` é amplo (`'self' https:`). O plugin `apiConnectSrcCsp` do `vite.config.ts` injeta no `index.html` do build uma `<meta>` CSP que restringe o `connect-src` à origem de `VITE_API_URL`; o navegador aplica as duas políticas e vale a mais restritiva.
+- **Ao adicionar qualquer recurso externo** (script, fonte, imagem, API de terceiros), atualize a CSP do `vercel.json` e valide o build (`npm run build`) sem violações no console. Não use scripts inline nem `eval`/`new Function`.
 
 ## Scripts
 
@@ -116,4 +122,4 @@ npm run preview       # vite preview
 npm run type-check    # vue-tsc --build --force
 ```
 
-Do monorepo raiz: `npm run dev:frontend`, `npm run build:frontend`, etc. Deploy detalhado em [`../DEPLOY.md`](../DEPLOY.md) (projeto Vercel separado, root directory `frontend/`).
+Do monorepo raiz: `npm run dev`, `npm run build`, etc. Deploy: projeto Vercel separado, root directory `frontend/` — ver a seção "Segurança no deploy" do [`../README.md`](../README.md).
