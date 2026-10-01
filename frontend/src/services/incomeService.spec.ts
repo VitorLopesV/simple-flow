@@ -152,3 +152,72 @@ describe('summary (mock)', () => {
     expect(summary.byCategory.reduce((sum, item) => sum + item.total, 0)).toBe(summary.total)
   })
 })
+
+describe('recorrência com registros reais (mock)', () => {
+  it('criar Renda Fixa recorrente cria também o mês seguinte', async () => {
+    const created = await incomeService.create({
+      description: 'Salário',
+      amount: 7000,
+      date: '2026-08-05',
+      categoryId: fixedIncome,
+      type: 'SALARIO',
+      recurring: true,
+    })
+
+    expect(db.incomes.map((item) => item.date)).toEqual(['2026-08-05', '2026-09-05'])
+    expect(db.incomes[1]!.seriesId).toBe(created.seriesId)
+  })
+
+  it('recorrente fora de Renda Fixa é recusada', async () => {
+    await expect(
+      incomeService.create({
+        description: 'Freela',
+        amount: 100,
+        date: '2026-08-05',
+        categoryId: variableIncome,
+        type: 'FREELANCE',
+        recurring: true,
+      }),
+    ).rejects.toThrow('Lançamento recorrente só é permitido em Renda Fixa ou Despesa Fixa.')
+  })
+
+  it('excluir remove o mês e os seguintes; desligar remove só os seguintes', async () => {
+    db.incomes.push(
+      income({ id: 'jul', date: '2026-07-05', recurring: true, seriesId: 's' }),
+      income({ id: 'ago', date: '2026-08-05', recurring: true, seriesId: 's' }),
+      income({ id: 'set', date: '2026-09-05', recurring: true, seriesId: 's' }),
+    )
+
+    await incomeService.update('jul', {
+      description: 'Entrada',
+      amount: 100,
+      date: '2026-07-05',
+      categoryId: fixedIncome,
+      type: 'SALARIO',
+      recurring: false,
+    })
+    expect(db.incomes.map((item) => item.id)).toEqual(['jul'])
+
+    db.incomes.push(
+      income({ id: 'a2', date: '2026-08-05', recurring: true, seriesId: 't' }),
+      income({ id: 'b2', date: '2026-09-05', recurring: true, seriesId: 't' }),
+    )
+    await incomeService.remove('a2')
+    expect(db.incomes.map((item) => item.id)).toEqual(['jul'])
+  })
+
+  it('a data salva na edição é a do próprio registro', async () => {
+    db.incomes.push(income({ id: 'set', date: '2026-09-05', recurring: true, seriesId: 's' }))
+
+    const updated = await incomeService.update('set', {
+      description: 'Entrada',
+      amount: 300,
+      date: '2026-09-05',
+      categoryId: fixedIncome,
+      type: 'SALARIO',
+      recurring: true,
+    })
+
+    expect(updated.date).toBe('2026-09-05')
+  })
+})

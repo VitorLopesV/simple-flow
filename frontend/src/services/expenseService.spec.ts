@@ -163,15 +163,6 @@ describe('list', () => {
     expect(byNotes.items.map((s) => s.id)).toEqual(['obs'])
   })
 
-  it('inclui projeções de recorrência do período', async () => {
-    db.expenses.push(expense({ id: 'origin', description: 'Aluguel', date: '2026-07-05', recurring: true }))
-
-    const { items } = await expenseService.list(filter())
-
-    expect(items.map((s) => s.id)).toEqual(['origin_2026-08'])
-    expect(items[0]).toMatchObject({ date: '2026-08-05', recurrenceOriginId: 'origin', status: 'PENDENTE' })
-  })
-
   it('inclui a fatura de cartão do período como saída automática', async () => {
     const card = db.cards[0]!
     const invoice = db.ensureInvoice(card.id, '2026-08')
@@ -390,39 +381,10 @@ describe('update', () => {
     expect(updated.description).toBe('Outro nome')
   })
 
-  it('editar ocorrência projetada materializa uma linha nova com a descrição da origem', async () => {
-    const origin = expense({ id: 'origin', description: 'Aluguel', date: '2026-07-05', recurring: true })
-    db.expenses.push(origin)
-
-    const created = await expenseService.update(
-      'origin_2026-08',
-      payload({ description: 'Nome diferente', date: '2026-08-05', status: 'PAGO', recurring: true }),
-    )
-
-    expect(created.id).not.toBe('origin_2026-08')
-    expect(created.id).toMatch(/^sai_\d+$/)
-    expect(created.description).toBe('Aluguel')
-    expect(created.paidAt).toBe(db.todayISO)
-    expect(db.expenses).toHaveLength(2)
-    expect(db.expenses[0]).toEqual(origin)
-  })
-
   it('id inexistente rejeita com "Saída não encontrada."', async () => {
     await expect(expenseService.update('sai_nao_existe', payload())).rejects.toThrow(
       'Saída não encontrada.',
     )
-  })
-
-  it('id projetado cuja origem não existe ou não é recorrente rejeita', async () => {
-    db.expenses.push(expense({ id: 'fixa', recurring: false }))
-
-    await expect(expenseService.update('fantasma_2026-08', payload())).rejects.toThrow(
-      'Saída não encontrada.',
-    )
-    await expect(expenseService.update('fixa_2026-08', payload())).rejects.toThrow(
-      'Saída não encontrada.',
-    )
-    expect(db.expenses).toHaveLength(1)
   })
 })
 
@@ -439,5 +401,120 @@ describe('remove', () => {
 
   it('id inexistente rejeita com "Saída não encontrada."', async () => {
     await expect(expenseService.remove('sai_nao_existe')).rejects.toThrow('Saída não encontrada.')
+  })
+})
+
+describe('recorrência com registros reais (mock)', () => {
+  /** categoryA = Despesa Fixa, categoryB = Despesa Variável (ordem da semente). */
+  function seriesMonths(seriesId: string | null | undefined) {
+    return db.expenses
+      .filter((item) => item.seriesId === seriesId)
+      .map((item) => item.date)
+      .sort()
+  }
+
+  it('criar recorrente em Despesa Fixa cria também o mês seguinte, PENDENTE e na mesma série', async () => {
+    const created = await expenseService.create(
+      payload({ description: 'Aluguel', date: '2026-08-10', status: 'PAGO', recurring: true }),
+    )
+
+    expect(created.seriesId).toBeTruthy()
+    expect(db.expenses).toHaveLength(2)
+    expect(db.expenses[1]).toMatchObject({
+      description: 'Aluguel',
+      date: '2026-09-10',
+      status: 'PENDENTE',
+      paidAt: null,
+      seriesId: created.seriesId,
+    })
+
+    const september = await expenseService.list(filter({ period: { month: 9, year: 2026 } }))
+    expect(september.items.map((item) => item.description)).toEqual(['Aluguel'])
+    expect(september.items[0]!.id).not.toContain('_2026-')
+  })
+
+  it('recorrente em categoria não fixa é recusado', async () => {
+    await expect(
+      expenseService.create(payload({ categoryId: categoryB, recurring: true })),
+    ).rejects.toThrow('Lançamento recorrente só é permitido em Renda Fixa ou Despesa Fixa.')
+    expect(db.expenses).toHaveLength(0)
+  })
+
+  it('não recorrente não cria o mês seguinte', async () => {
+    await expenseService.create(payload({ recurring: false }))
+
+    expect(db.expenses).toHaveLength(1)
+    expect(db.expenses[0]!.seriesId).toBeNull()
+  })
+
+  it('excluir um mês remove ele e os seguintes da série; anteriores ficam intactos', async () => {
+    db.expenses.push(
+      expense({ id: 'jul', date: '2026-07-10', recurring: true, seriesId: 's' }),
+      expense({ id: 'ago', date: '2026-08-10', recurring: true, seriesId: 's' }),
+      expense({ id: 'set', date: '2026-09-10', recurring: true, seriesId: 's' }),
+      expense({ id: 'out', date: '2026-10-10', recurring: true, seriesId: 's' }),
+      expense({ id: 'outra', date: '2026-10-10', recurring: true, seriesId: 'outra' }),
+    )
+
+    await expenseService.remove('set')
+
+    expect(db.expenses.map((item) => item.id)).toEqual(['jul', 'ago', 'outra'])
+  })
+
+  it('desligar a recorrência mantém o registro e remove só os meses seguintes', async () => {
+    db.expenses.push(
+      expense({ id: 'ago', date: '2026-08-10', recurring: true, seriesId: 's' }),
+      expense({ id: 'set', date: '2026-09-10', recurring: true, seriesId: 's' }),
+      expense({ id: 'out', date: '2026-10-10', recurring: true, seriesId: 's' }),
+    )
+
+    const updated = await expenseService.update('set', payload({ date: '2026-09-10', recurring: false }))
+
+    expect(updated.recurring).toBe(false)
+    expect(db.expenses.map((item) => item.id)).toEqual(['ago', 'set'])
+  })
+
+  it('trocar a categoria de fixa para não fixa conta como desligar a recorrência', async () => {
+    db.expenses.push(
+      expense({ id: 'set', date: '2026-09-10', recurring: true, seriesId: 's' }),
+      expense({ id: 'out', date: '2026-10-10', recurring: true, seriesId: 's' }),
+    )
+
+    const updated = await expenseService.update(
+      'set',
+      payload({ date: '2026-09-10', categoryId: categoryB, recurring: true }),
+    )
+
+    expect(updated.recurring).toBe(false)
+    expect(db.expenses.map((item) => item.id)).toEqual(['set'])
+  })
+
+  it('religar a recorrência volta a criar o mês seguinte na mesma série', async () => {
+    db.expenses.push(expense({ id: 'set', date: '2026-09-10', recurring: false, seriesId: 's' }))
+
+    await expenseService.update('set', payload({ date: '2026-09-10', recurring: true }))
+
+    expect(seriesMonths('s')).toEqual(['2026-09-10', '2026-10-10'])
+  })
+
+  it('editar um mês não altera os outros', async () => {
+    db.expenses.push(
+      expense({ id: 'ago', date: '2026-08-10', amount: 100, recurring: true, seriesId: 's' }),
+      expense({ id: 'set', date: '2026-09-10', amount: 100, recurring: true, seriesId: 's' }),
+    )
+
+    await expenseService.update('set', payload({ date: '2026-09-10', amount: 250, recurring: true }))
+
+    expect(db.expenses.find((item) => item.id === 'ago')!.amount).toBe(100)
+    expect(db.expenses.find((item) => item.id === 'set')!.amount).toBe(250)
+  })
+
+  it('saída comum (não recorrente): criar, editar e excluir continuam funcionando', async () => {
+    const created = await expenseService.create(payload({ description: 'Mercado', categoryId: categoryB }))
+    await expenseService.update(created.id, payload({ description: 'Feira', categoryId: categoryB }))
+    expect(db.expenses[0]!.description).toBe('Feira')
+
+    await expenseService.remove(created.id)
+    expect(db.expenses).toHaveLength(0)
   })
 })

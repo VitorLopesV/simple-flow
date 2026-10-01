@@ -47,16 +47,14 @@ export interface Expense {
   /** true = gerado automaticamente a partir da fatura de um cartão (não editável/removível diretamente). */
   automatic?: boolean
   /**
-   * Preenchido só nas ocorrências futuras projetadas a partir de um lançamento
-   * recorrente (ver `withRecurrences` em `services/mock/db.ts`) — nunca persistidas,
-   * recalculadas a cada leitura. Editar uma dessas ocorrências materializa uma linha
-   * própria para aquele mês, independente do original em situação, data de
-   * pagamento e valor.
+   * Série do lançamento recorrente: cada mês é um registro próprio e independente,
+   * ligado aos demais só por este id. Definido pelo backend; `null` fora de série.
    */
-  recurrenceOriginId?: ID
+  seriesId?: ID | null
 }
 
-export type ExpensePayload = Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>
+/** A série é gerida pelo backend, não vai no payload. */
+export type ExpensePayload = Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'seriesId'>
 
 export interface ExpenseFilter extends PageRequest {
   period: Period

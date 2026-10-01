@@ -79,12 +79,13 @@ export interface IncomeDto {
   tipo: IncomeType
   recorrente: boolean
   observacao?: string
+  /** Série do lançamento recorrente (`serie_id`); `null` fora de série. */
+  serieId?: ID | null
   criadoEm: string
   atualizadoEm: string
-  origemRecorrenciaId?: ID
 }
 
-export type IncomePayloadDto = Omit<IncomeDto, 'id' | 'criadoEm' | 'atualizadoEm'>
+export type IncomePayloadDto = Omit<IncomeDto, 'id' | 'criadoEm' | 'atualizadoEm' | 'serieId'>
 
 export interface IncomeSummaryDto {
   total: number
@@ -113,10 +114,10 @@ export interface ExpenseDto {
   criadoEm: string
   atualizadoEm: string
   automatica?: boolean
-  origemRecorrenciaId?: ID
+  serieId?: ID | null
 }
 
-export type ExpensePayloadDto = Omit<ExpenseDto, 'id' | 'criadoEm' | 'atualizadoEm'>
+export type ExpensePayloadDto = Omit<ExpenseDto, 'id' | 'criadoEm' | 'atualizadoEm' | 'serieId'>
 
 export interface ExpenseSummaryDto {
   total: number
@@ -159,14 +160,14 @@ export interface CardTransactionDto {
   totalParcelas: number
   recorrente: boolean
   observacao?: string | null
+  serieId?: ID | null
   criadoEm: string
   atualizadoEm: string
-  origemRecorrenciaId?: ID
 }
 
 export type CardTransactionPayloadDto = Omit<
   CardTransactionDto,
-  'id' | 'cartaoId' | 'faturaId' | 'criadoEm' | 'atualizadoEm' | 'origemRecorrenciaId'
+  'id' | 'cartaoId' | 'faturaId' | 'criadoEm' | 'atualizadoEm' | 'serieId'
 >
 
 export interface DetailedInvoiceDto {

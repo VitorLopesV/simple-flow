@@ -63,11 +63,6 @@ function typeLabel(transaction: Transaction): string {
     : (INCOME_TYPE_LABEL[(transaction as Income).type] ?? '—')
 }
 
-/** Ocorrência projetada de uma recorrência, ainda sem lançamento próprio no mês. */
-function isRecurringProjection(transaction: Transaction): boolean {
-  return Boolean(transaction.recurrenceOriginId)
-}
-
 /** Realça a linha da fatura com a cor definida ao cartão na aba Cartões. */
 function rowStyle(transaction: Transaction) {
   if (!isExpense.value) return undefined
@@ -80,16 +75,10 @@ function isAutomatic(transaction: Transaction): boolean {
   return isExpense.value && Boolean(asExpense(transaction).automatic)
 }
 
-// Editar (ou alternar a situação de) uma ocorrência projetada materializa um
-// lançamento próprio daquele mês — independente do original em situação, data de
-// pagamento e valor. Só a fatura de cartão continua totalmente bloqueada aqui.
+// Todo lançamento é um registro real (inclusive cada mês de uma série recorrente), então
+// pode ser editado e removido. Só a fatura de cartão é derivada e fica bloqueada aqui.
 function canEdit(transaction: Transaction): boolean {
   return !isAutomatic(transaction)
-}
-
-// Remover só faz sentido depois que a ocorrência já existe como lançamento próprio.
-function canDelete(transaction: Transaction): boolean {
-  return !isAutomatic(transaction) && !isRecurringProjection(transaction)
 }
 </script>
 
@@ -233,7 +222,6 @@ function canDelete(transaction: Transaction): boolean {
                     <Pencil class="size-4" aria-hidden="true" />
                   </BaseButton>
                   <BaseButton
-                    v-if="canDelete(transaction)"
                     variant="ghost"
                     size="icon"
                     class="hover:text-danger"
@@ -292,7 +280,6 @@ function canDelete(transaction: Transaction): boolean {
                 <Pencil class="size-4" aria-hidden="true" />
               </BaseButton>
               <BaseButton
-                v-if="canDelete(transaction)"
                 variant="ghost"
                 size="icon"
                 class="hover:text-danger"

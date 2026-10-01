@@ -2,42 +2,29 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
   cards,
-  withRecurrences,
+  categories,
   invoices,
   ensureInvoice,
-  parseProjectedId,
+  ensureNextCardTransaction,
+  ensureNextExpense,
+  ensureNextIncome,
+  generateNextMonth,
+  incomes,
+  isFixedCategoryId,
+  laterInSeries,
   recalculateInvoiceTotal,
+  removeRecords,
+  sameDayNextMonth,
   expenses,
   expensesWithInvoices,
   cardTransactions,
 } from '@/services/mock/db'
 import type { CardTransaction } from '@/types/creditCard'
 import type { Expense } from '@/types/expense'
+import type { Income } from '@/types/income'
 
-interface Item {
-  id: string
-  date: string
-  description: string
-  categoryId: string
-  recurring: boolean
-  amount: number
-  recurrenceOriginId?: string
-  automatic?: boolean
-  dueDate?: string | null
-  status?: string
-  paidAt?: string | null
-}
-
-function item(overrides: Partial<Item> = {}): Item {
-  return {
-    id: 'sai_1',
-    date: '2026-01-15',
-    description: 'Aluguel',
-    categoryId: 'cat_1',
-    recurring: true,
-    amount: 100,
-    ...overrides,
-  }
+function categoryId(name: string): string {
+  return categories.find((category) => category.name === name)!.id
 }
 
 function transaction(invoiceId: string, amount: number, id: string): CardTransaction {
@@ -59,130 +46,218 @@ function transaction(invoiceId: string, amount: number, id: string): CardTransac
   }
 }
 
+function fixedExpense(overrides: Partial<Expense> = {}): Expense {
+  return {
+    id: 'sai_1',
+    description: 'Aluguel',
+    amount: 1900,
+    date: '2026-01-15',
+    categoryId: categoryId('Despesa Fixa'),
+    type: 'CONTA',
+    status: 'PAGO',
+    dueDate: '2026-01-10',
+    paidAt: '2026-01-10',
+    paymentMethod: 'PIX',
+    cardId: null,
+    recurring: true,
+    seriesId: 'ser_1',
+    createdAt: '',
+    updatedAt: '',
+    ...overrides,
+  }
+}
+
+function fixedIncome(overrides: Partial<Income> = {}): Income {
+  return {
+    id: 'ent_1',
+    description: 'Salário',
+    amount: 7000,
+    date: '2026-01-05',
+    categoryId: categoryId('Renda Fixa'),
+    type: 'SALARIO',
+    recurring: true,
+    seriesId: 'ser_ent',
+    createdAt: '',
+    updatedAt: '',
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
+  incomes.length = 0
   expenses.length = 0
   invoices.length = 0
   cardTransactions.length = 0
 })
 
-describe('withRecurrences', () => {
-  it('projeta a ocorrência do mês seguinte a partir de uma série recorrente', () => {
-    const origin = item({ dueDate: '2026-01-10' })
-    const result = withRecurrences([origin], { month: 2, year: 2026 })
-
-    expect(result).toHaveLength(2)
-    const projected = result[1]!
-    expect(projected.id).toBe('sai_1_2026-02')
-    expect(projected.date).toBe('2026-02-15')
-    expect(projected.dueDate).toBe('2026-02-10')
-    expect(projected.recurrenceOriginId).toBe('sai_1')
-    expect(projected.description).toBe('Aluguel')
-    expect(projected.amount).toBe(100)
-  })
-
-  it('não duplica quando o mês já tem lançamento da mesma série', () => {
-    const real = item({ id: 'sai_2', date: '2026-02-20', amount: 150 })
-    const result = withRecurrences([item(), real], { month: 2, year: 2026 })
-
-    expect(result).toHaveLength(2)
-    expect(result.filter((i) => i.recurrenceOriginId)).toHaveLength(0)
-  })
-
-  it('projeta quando o lançamento do mês pertence a outra série', () => {
-    const otherSeries = item({ id: 'sai_2', date: '2026-02-20', description: 'Internet' })
-    const result = withRecurrences([item(), otherSeries], { month: 2, year: 2026 })
-
-    expect(result.map((i) => i.id)).toContain('sai_1_2026-02')
-  })
-
-  it('não projeta para o mês da origem nem para meses anteriores', () => {
-    const items = [item()]
-    expect(withRecurrences(items, { month: 1, year: 2026 })).toEqual(items)
-    expect(withRecurrences(items, { month: 12, year: 2025 })).toEqual(items)
-  })
-
-  it('ignora itens automáticos (faturas)', () => {
-    const items = [item({ automatic: true })]
-    expect(withRecurrences(items, { month: 2, year: 2026 })).toEqual(items)
-  })
-
-  it('ignora itens que já são projeção', () => {
-    const items = [item({ recurrenceOriginId: 'sai_0' })]
-    expect(withRecurrences(items, { month: 2, year: 2026 })).toEqual(items)
-  })
-
-  it('nunca projeta item com recorrente false', () => {
-    const items = [item({ recurring: false })]
-    expect(withRecurrences(items, { month: 2, year: 2026 })).toEqual(items)
-  })
-
-  it('usa a ocorrência real mais recente da série como base', () => {
-    const old = item({ id: 'sai_1', date: '2026-01-05', amount: 100 })
-    const recent = item({ id: 'sai_3', date: '2026-03-08', amount: 300 })
-    const result = withRecurrences([old, recent], { month: 4, year: 2026 })
-
-    const projected = result.filter((i) => i.recurrenceOriginId)
-    expect(projected).toHaveLength(1)
-    expect(projected[0]).toMatchObject({
-      id: 'sai_3_2026-04',
-      date: '2026-04-08',
-      amount: 300,
-      recurrenceOriginId: 'sai_3',
-    })
-  })
-
-  it('limita dia 31 ao último dia do mês curto, em data e vencimento', () => {
-    const origin = item({ date: '2026-01-31', dueDate: '2026-01-31' })
-
-    const february = withRecurrences([origin], { month: 2, year: 2026 })[1]!
-    expect(february.date).toBe('2026-02-28')
-    expect(february.dueDate).toBe('2026-02-28')
-
-    const april = withRecurrences([origin], { month: 4, year: 2026 })[1]!
-    expect(april.date).toBe('2026-04-30')
-    expect(april.dueDate).toBe('2026-04-30')
-
-    const march = withRecurrences([origin], { month: 3, year: 2026 })[1]!
-    expect(march.date).toBe('2026-03-31')
-  })
-
-  it('não cria vencimento nem status quando o item não tem (entradas)', () => {
-    const projected = withRecurrences([item()], { month: 2, year: 2026 })[1]!
-    expect('dueDate' in projected).toBe(false)
-    expect('status' in projected).toBe(false)
-  })
-
-  it('a projeção de saída começa pendente, sem herdar o pagamento da origem', () => {
-    const origin = item({ status: 'PAGO', paidAt: '2026-01-15' })
-    const projected = withRecurrences([origin], { month: 2, year: 2026 })[1]!
-
-    expect(projected.status).toBe('PENDENTE')
-    expect(projected.paidAt).toBeNull()
-  })
-
-  it('não muta os dados de entrada e é determinístico', () => {
-    const items = [item({ dueDate: '2026-01-10', status: 'PAGO', paidAt: '2026-01-15' })]
-    const copy = structuredClone(items)
-
-    const first = withRecurrences(items, { month: 3, year: 2026 })
-    const second = withRecurrences(items, { month: 3, year: 2026 })
-
-    expect(items).toEqual(copy)
-    expect(first).toEqual(second)
-    expect(first).toHaveLength(2)
+describe('isFixedCategoryId', () => {
+  it('só Despesa Fixa e Renda Fixa aceitam recorrência', () => {
+    expect(isFixedCategoryId(categoryId('Despesa Fixa'))).toBe(true)
+    expect(isFixedCategoryId(categoryId('Renda Fixa'))).toBe(true)
+    expect(isFixedCategoryId(categoryId('Despesa Variável'))).toBe(false)
+    expect(isFixedCategoryId(categoryId('Investimento'))).toBe(false)
+    expect(isFixedCategoryId(categoryId('Renda Variável'))).toBe(false)
+    expect(isFixedCategoryId(null)).toBe(false)
   })
 })
 
-describe('parseProjectedId', () => {
-  it('extrai origem e competência de um id projetado', () => {
-    expect(parseProjectedId('sai_00001_2026-02')).toEqual({
-      originId: 'sai_00001',
-      referenceMonth: '2026-02',
-    })
+describe('sameDayNextMonth', () => {
+  it.each([
+    ['2026-01-15', '2026-02-15'],
+    ['2026-01-31', '2026-02-28'],
+    ['2026-03-31', '2026-04-30'],
+    ['2026-12-10', '2027-01-10'],
+  ])('%s → %s', (from, to) => {
+    expect(sameDayNextMonth(from)).toBe(to)
+  })
+})
+
+describe('laterInSeries', () => {
+  it('devolve só os meses posteriores da mesma série', () => {
+    const jan = fixedExpense({ id: 'jan', date: '2026-01-15' })
+    const feb = fixedExpense({ id: 'feb', date: '2026-02-15' })
+    const mar = fixedExpense({ id: 'mar', date: '2026-03-15' })
+    const other = fixedExpense({ id: 'other', date: '2026-03-15', seriesId: 'ser_2' })
+
+    expect(laterInSeries([jan, feb, mar, other], feb).map((item) => item.id)).toEqual(['mar'])
+    expect(laterInSeries([jan, feb, mar, other], jan).map((item) => item.id)).toEqual(['feb', 'mar'])
   })
 
-  it.each(['sai_00001', 'sai_fat_fat_00001', ''])('devolve null para id comum %j', (id) => {
-    expect(parseProjectedId(id)).toBeNull()
+  it('registro fora de série não tem meses seguintes', () => {
+    const item = fixedExpense({ seriesId: null })
+
+    expect(laterInSeries([item, fixedExpense({ id: 'x', date: '2026-02-15' })], item)).toEqual([])
+  })
+})
+
+describe('removeRecords', () => {
+  it('remove pelos ids, mantendo a mesma referência de array', () => {
+    const list = [fixedExpense({ id: 'a' }), fixedExpense({ id: 'b' }), fixedExpense({ id: 'c' })]
+    const reference = list
+
+    removeRecords(list, [list[0]!, list[2]!])
+
+    expect(reference.map((item) => item.id)).toEqual(['b'])
+  })
+})
+
+describe('ensureNextExpense', () => {
+  it('cria o mês seguinte como registro próprio, PENDENTE e com a mesma série', () => {
+    const jan = fixedExpense()
+    expenses.push(jan)
+
+    ensureNextExpense(jan)
+
+    expect(expenses).toHaveLength(2)
+    expect(expenses[1]).toMatchObject({
+      date: '2026-02-15',
+      dueDate: '2026-02-10',
+      status: 'PENDENTE',
+      paidAt: null,
+      seriesId: 'ser_1',
+      description: 'Aluguel',
+      amount: 1900,
+    })
+    expect(expenses[1]!.id).not.toBe(jan.id)
+    expect(expenses[1]!.id).not.toContain('_2026-')
+  })
+
+  it('dia 31 vai para o último dia do mês seguinte', () => {
+    const jan = fixedExpense({ date: '2026-01-31', dueDate: '2026-01-31' })
+    expenses.push(jan)
+
+    ensureNextExpense(jan)
+
+    expect(expenses[1]).toMatchObject({ date: '2026-02-28', dueDate: '2026-02-28' })
+  })
+
+  it('não duplica quando a série já tem o mês seguinte', () => {
+    const jan = fixedExpense()
+    expenses.push(jan)
+
+    ensureNextExpense(jan)
+    ensureNextExpense(jan)
+
+    expect(expenses).toHaveLength(2)
+  })
+
+  it('não faz nada para registro não recorrente ou sem série', () => {
+    const notRecurring = fixedExpense({ recurring: false })
+    const withoutSeries = fixedExpense({ id: 'x', seriesId: null })
+    expenses.push(notRecurring, withoutSeries)
+
+    ensureNextExpense(notRecurring)
+    ensureNextExpense(withoutSeries)
+
+    expect(expenses).toHaveLength(2)
+  })
+
+  it('o mês seguinte é independente: mudar um não altera o outro', () => {
+    const jan = fixedExpense()
+    expenses.push(jan)
+    ensureNextExpense(jan)
+
+    expenses[1]!.amount = 2000
+
+    expect(expenses[0]!.amount).toBe(1900)
+  })
+})
+
+describe('ensureNextIncome', () => {
+  it('cria o mês seguinte da entrada recorrente', () => {
+    const jan = fixedIncome()
+    incomes.push(jan)
+
+    ensureNextIncome(jan)
+
+    expect(incomes).toHaveLength(2)
+    expect(incomes[1]).toMatchObject({ date: '2026-02-05', seriesId: 'ser_ent', amount: 7000 })
+  })
+})
+
+describe('ensureNextCardTransaction', () => {
+  it('lança o mês seguinte na fatura daquele mês, criando-a se preciso', () => {
+    const card = cards[0]!
+    const august = ensureInvoice(card.id, '2026-08')
+    const current: CardTransaction = {
+      ...transaction(august.id, 55, 'trc_1'),
+      categoryId: categoryId('Despesa Fixa'),
+      recurring: true,
+      seriesId: 'ser_card',
+    }
+    cardTransactions.push(current)
+
+    ensureNextCardTransaction(current)
+
+    const september = invoices.find((invoice) => invoice.cardId === card.id && invoice.referenceMonth === '2026-09')
+    expect(september).toBeDefined()
+    expect(cardTransactions[1]).toMatchObject({
+      invoiceId: september!.id,
+      date: '2026-09-10',
+      seriesId: 'ser_card',
+    })
+    expect(september!.total).toBe(55)
+  })
+})
+
+describe('generateNextMonth', () => {
+  it('copia para o mês seguinte os recorrentes do mês de referência e é idempotente', () => {
+    expenses.push(fixedExpense({ date: '2026-08-15', dueDate: null }))
+    incomes.push(fixedIncome({ date: '2026-08-05' }))
+
+    generateNextMonth({ month: 8, year: 2026 })
+    generateNextMonth({ month: 8, year: 2026 })
+
+    expect(expenses.map((item) => item.date)).toEqual(['2026-08-15', '2026-09-15'])
+    expect(incomes.map((item) => item.date)).toEqual(['2026-08-05', '2026-09-05'])
+  })
+
+  it('ignora registros de outros meses', () => {
+    expenses.push(fixedExpense({ date: '2026-06-15' }))
+
+    generateNextMonth({ month: 8, year: 2026 })
+
+    expect(expenses).toHaveLength(1)
   })
 })
 

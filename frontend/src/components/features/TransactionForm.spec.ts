@@ -272,6 +272,19 @@ describe('recorrência — demais regras', () => {
     expect(field(wrapper, 'Quantidade de parcelas').element.value).toBe('1')
   })
 
+  it('editar um mês da série salva a data do próprio registro, não a de criação', async () => {
+    const wrapper = mountForm({
+      kind: 'SAIDA',
+      categories: EXPENSE_CATEGORIES,
+      transaction: expense({ date: '2026-11-10', createdAt: '2026-10-01T12:00:00.000Z' }),
+    })
+
+    await submit(wrapper)
+
+    const [payload] = wrapper.emitted('save')![0] as [Record<string, unknown>]
+    expect(payload.date).toBe('2026-11-10')
+  })
+
   it('registro antigo recorrente em categoria não fixa é salvo como não recorrente', async () => {
     const transaction: CardTransaction = {
       id: 'trc_1',

@@ -116,9 +116,9 @@ export function toIncome(dto: IncomeDto): Income {
     type: dto.tipo,
     recurring: dto.recorrente,
     notes: dto.observacao,
+    seriesId: dto.serieId,
     createdAt: dto.criadoEm,
     updatedAt: dto.atualizadoEm,
-    recurrenceOriginId: dto.origemRecorrenciaId,
   }
 }
 
@@ -131,7 +131,6 @@ export function toIncomePayloadDto(payload: IncomePayload): IncomePayloadDto {
     tipo: payload.type,
     recorrente: payload.recurring,
     observacao: payload.notes,
-    origemRecorrenciaId: payload.recurrenceOriginId,
   }
 }
 
@@ -168,7 +167,7 @@ export function toExpense(dto: ExpenseDto): Expense {
     createdAt: dto.criadoEm,
     updatedAt: dto.atualizadoEm,
     automatic: dto.automatica,
-    recurrenceOriginId: dto.origemRecorrenciaId,
+    seriesId: dto.serieId,
   }
 }
 
@@ -187,7 +186,6 @@ export function toExpensePayloadDto(payload: ExpensePayload): ExpensePayloadDto 
     recorrente: payload.recurring,
     observacao: payload.notes,
     automatica: payload.automatic,
-    origemRecorrenciaId: payload.recurrenceOriginId,
   }
 }
 
@@ -252,9 +250,9 @@ export function toCardTransaction(dto: CardTransactionDto): CardTransaction {
     totalInstallments: dto.totalParcelas,
     recurring: dto.recorrente,
     notes: dto.observacao,
+    seriesId: dto.serieId,
     createdAt: dto.criadoEm,
     updatedAt: dto.atualizadoEm,
-    recurrenceOriginId: dto.origemRecorrenciaId,
   }
 }
 

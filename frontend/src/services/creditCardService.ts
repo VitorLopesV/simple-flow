@@ -143,6 +143,10 @@ export const creditCardService = {
   async createTransaction(cardId: string, payload: CardTransactionPayload): Promise<CardTransaction> {
     if (USE_MOCK) {
       const db = await mockDb()
+      if (payload.recurring && !db.isFixedCategoryId(payload.categoryId)) {
+        throw new Error(db.RECURRING_ONLY_FIXED)
+      }
+
       const invoice = db.ensureInvoice(cardId, payload.date.slice(0, 7))
 
       const transaction: CardTransaction = {
@@ -150,11 +154,14 @@ export const creditCardService = {
         id: db.newId('trc'),
         cardId,
         invoiceId: invoice.id,
+        seriesId: payload.recurring ? db.newId('ser') : null,
         createdAt: db.now(),
         updatedAt: db.now(),
       }
       db.cardTransactions.push(transaction)
       db.recalculateInvoiceTotal(invoice.id)
+      // Recorrente: o débito do mês seguinte já entra na fatura daquele mês.
+      db.ensureNextCardTransaction(transaction)
 
       return delay(db.clone(transaction))
     }
@@ -180,16 +187,29 @@ export const creditCardService = {
       const previous = db.cardTransactions[index]!
       const invoice = db.ensureInvoice(cardId, payload.date.slice(0, 7))
 
+      // Trocar para uma categoria não fixa conta como desligar a recorrência.
+      const recurring = payload.recurring && db.isFixedCategoryId(payload.categoryId)
+      const description = previous.recurring && recurring ? previous.description : payload.description
+
       const updated: CardTransaction = {
         ...previous,
         ...payload,
+        recurring,
+        description,
         invoiceId: invoice.id,
+        seriesId: previous.seriesId ?? (recurring ? db.newId('ser') : null),
         updatedAt: db.now(),
       }
       db.cardTransactions[index] = updated
 
-      db.recalculateInvoiceTotal(previous.invoiceId)
-      if (invoice.id !== previous.invoiceId) db.recalculateInvoiceTotal(invoice.id)
+      const touched = new Set([previous.invoiceId, invoice.id])
+      if (previous.recurring && !recurring) {
+        const later = db.laterInSeries(db.cardTransactions, previous)
+        later.forEach((transaction) => touched.add(transaction.invoiceId))
+        db.removeRecords(db.cardTransactions, later)
+      }
+      touched.forEach((invoiceId) => db.recalculateInvoiceTotal(invoiceId))
+      if (!previous.recurring && recurring) db.ensureNextCardTransaction(updated)
 
       return delay(db.clone(updated))
     }
@@ -204,11 +224,15 @@ export const creditCardService = {
   async removeTransaction(cardId: string, id: string): Promise<void> {
     if (USE_MOCK) {
       const db = await mockDb()
-      const index = db.cardTransactions.findIndex((transaction) => transaction.id === id)
-      if (index < 0) throw new Error('Transação não encontrada.')
+      const transaction = db.cardTransactions.find((item) => item.id === id)
+      if (!transaction) throw new Error('Transação não encontrada.')
 
-      const [removed] = db.cardTransactions.splice(index, 1)
-      db.recalculateInvoiceTotal(removed!.invoiceId)
+      // Excluir um mês da série remove ele e os seguintes; os anteriores ficam intactos.
+      const removed = [transaction, ...db.laterInSeries(db.cardTransactions, transaction)]
+      db.removeRecords(db.cardTransactions, removed)
+      new Set(removed.map((item) => item.invoiceId)).forEach((invoiceId) =>
+        db.recalculateInvoiceTotal(invoiceId),
+      )
 
       return delay(undefined)
     }

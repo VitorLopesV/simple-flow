@@ -31,7 +31,7 @@ const INCOME_DTO: IncomeDto = {
   observacao: 'Crédito em conta',
   criadoEm: '2026-08-01T00:00:00.000Z',
   atualizadoEm: '2026-08-02T00:00:00.000Z',
-  origemRecorrenciaId: 'ent_0',
+  serieId: 'ser_1',
 }
 
 const EXPENSE_DTO: ExpenseDto = {
@@ -108,15 +108,22 @@ describe('entradas', () => {
       notes: 'Crédito em conta',
       createdAt: '2026-08-01T00:00:00.000Z',
       updatedAt: '2026-08-02T00:00:00.000Z',
-      recurrenceOriginId: 'ent_0',
+      seriesId: 'ser_1',
     })
   })
 
   it('ida e volta do payload preserva todos os campos editáveis', () => {
-    const { id: _id, criadoEm: _criadoEm, atualizadoEm: _atualizadoEm, ...payloadDto } = INCOME_DTO
-    const { id: _i, createdAt: _c, updatedAt: _u, ...payload } = toIncome(INCOME_DTO)
+    const { id: _id, criadoEm: _criadoEm, atualizadoEm: _atualizadoEm, serieId: _s, ...payloadDto } = INCOME_DTO
+    const { id: _i, createdAt: _c, updatedAt: _u, seriesId: _si, ...payload } = toIncome(INCOME_DTO)
 
     expect(toIncomePayloadDto(payload)).toEqual(payloadDto)
+  })
+
+  it('a série vem da API mas nunca vai no payload (é gerida pelo backend)', () => {
+    const { id: _i, createdAt: _c, updatedAt: _u, ...rest } = toIncome(INCOME_DTO)
+
+    expect(rest.seriesId).toBe('ser_1')
+    expect(toIncomePayloadDto(rest)).not.toHaveProperty('serieId')
   })
 
   it('converte o resumo, com as categorias', () => {

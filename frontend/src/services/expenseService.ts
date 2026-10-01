@@ -23,7 +23,7 @@ export const expenseService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const found = db
-        .withRecurrences(db.expensesWithInvoices(), filter.period)
+        .expensesWithInvoices()
         .filter((expense) => isWithinPeriod(expense.date, filter.period))
         .filter((expense) => !filter.categoryId || expense.categoryId === filter.categoryId)
         .filter((expense) => !filter.status || expense.status === filter.status)
@@ -53,14 +53,11 @@ export const expenseService = {
       const all = db.expensesWithInvoices()
 
       const periodTotal = (target: Period) =>
-        db
-          .withRecurrences(all, target)
+        all
           .filter((expense) => isWithinPeriod(expense.date, target))
           .reduce((sum, expense) => sum + expense.amount, 0)
 
-      const inPeriod = db
-        .withRecurrences(all, period)
-        .filter((expense) => isWithinPeriod(expense.date, period))
+      const inPeriod = all.filter((expense) => isWithinPeriod(expense.date, period))
       const total = inPeriod.reduce((sum, expense) => sum + expense.amount, 0)
 
       const grouped = new Map<string, number>()
@@ -114,16 +111,24 @@ export const expenseService = {
   async create(payload: ExpensePayload): Promise<Expense> {
     if (USE_MOCK) {
       const db = await mockDb()
+      // Mesmas regras do backend: recorrência só em Despesa Fixa, e criar um registro
+      // recorrente já cria o do mês seguinte (registro próprio, mesma série, PENDENTE).
+      if (payload.recurring && !db.isFixedCategoryId(payload.categoryId)) {
+        throw new Error(db.RECURRING_ONLY_FIXED)
+      }
+
       // `paidAt` espelha a regra do backend: nunca vem do formulário, é definida
       // aqui a partir da situação escolhida (ver CriarSaida no backend).
       const expense: Expense = {
         ...payload,
         paidAt: payload.status === 'PAGO' ? db.todayISO : null,
+        seriesId: payload.recurring ? db.newId('ser') : null,
         id: db.newId('sai'),
         createdAt: db.now(),
         updatedAt: db.now(),
       }
       db.expenses.push(expense)
+      db.ensureNextExpense(expense)
       return delay(db.clone(expense))
     }
 
@@ -135,28 +140,7 @@ export const expenseService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const index = db.expenses.findIndex((expense) => expense.id === id)
-
-      if (index < 0) {
-        // Ocorrência projetada de uma recorrência (id sintético, nunca persistido —
-        // ver `withRecurrences`): editá-la materializa uma linha própria para este
-        // mês, independente das demais, em vez de mudar o lançamento original.
-        const projected = db.parseProjectedId(id)
-        const origin = projected && db.expenses.find((expense) => expense.id === projected.originId)
-        if (!origin?.recurring) throw new Error('Saída não encontrada.')
-
-        const created: Expense = {
-          ...payload,
-          // Nome vem sempre do lançamento original (ver AtualizarSaida no backend):
-          // as ocorrências de uma série só continuam casando pela mesma chave.
-          description: origin.description,
-          paidAt: payload.status === 'PAGO' ? db.todayISO : null,
-          id: db.newId('sai'),
-          createdAt: db.now(),
-          updatedAt: db.now(),
-        }
-        db.expenses.push(created)
-        return delay(db.clone(created))
-      }
+      if (index < 0) throw new Error('Saída não encontrada.')
 
       const current = db.expenses[index]!
       // Mesma regra do backend (ver AtualizarSaida): mantém a data de pagamento
@@ -166,12 +150,27 @@ export const expenseService = {
           ? null
           : (current.status === 'PAGO' ? current.paidAt : null) ?? db.todayISO
 
-      // Nome de uma saída recorrente é fixo entre suas ocorrências (ver acima) — só
-      // aceita mudança de descrição quando a saída deixa de ser recorrente.
-      const description = current.recurring && payload.recurring ? current.description : payload.description
+      // Trocar para uma categoria não fixa conta como desligar a recorrência.
+      const recurring = payload.recurring && db.isFixedCategoryId(payload.categoryId)
+      // Nome de uma saída recorrente é imutável — só muda quando ela deixa de ser recorrente.
+      const description = current.recurring && recurring ? current.description : payload.description
 
-      const updated: Expense = { ...current, ...payload, description, paidAt, updatedAt: db.now() }
+      const updated: Expense = {
+        ...current,
+        ...payload,
+        recurring,
+        description,
+        paidAt,
+        // Religar a recorrência mantém a série original (ou abre uma, se nunca teve).
+        seriesId: current.seriesId ?? (recurring ? db.newId('ser') : null),
+        updatedAt: db.now(),
+      }
       db.expenses[index] = updated
+
+      // Desligar encerra a série a partir do mês seguinte; religar volta a gerar o próximo mês.
+      if (current.recurring && !recurring) db.removeRecords(db.expenses, db.laterInSeries(db.expenses, current))
+      if (!current.recurring && recurring) db.ensureNextExpense(updated)
+
       return delay(db.clone(updated))
     }
 
@@ -182,9 +181,10 @@ export const expenseService = {
   async remove(id: string): Promise<void> {
     if (USE_MOCK) {
       const db = await mockDb()
-      const index = db.expenses.findIndex((expense) => expense.id === id)
-      if (index < 0) throw new Error('Saída não encontrada.')
-      db.expenses.splice(index, 1)
+      const expense = db.expenses.find((item) => item.id === id)
+      if (!expense) throw new Error('Saída não encontrada.')
+      // Excluir um mês da série remove ele e os seguintes; os anteriores ficam intactos.
+      db.removeRecords(db.expenses, [expense, ...db.laterInSeries(db.expenses, expense)])
       return delay(undefined)
     }
 

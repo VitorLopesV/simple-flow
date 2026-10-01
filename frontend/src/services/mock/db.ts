@@ -11,6 +11,7 @@
 import { faker } from '@faker-js/faker/locale/pt_BR'
 
 import type { Category } from '@/types/category'
+import { isFixedCategory } from '@/types/category'
 import type { ID, Period } from '@/types/common'
 import type { CardTransaction, CreditCard, Invoice } from '@/types/creditCard'
 import type { Expense, ExpenseType, PaymentMethod } from '@/types/expense'
@@ -118,6 +119,11 @@ export const cardTransactions: CardTransaction[] = []
 const HISTORY_MONTHS = 8
 const base = currentPeriod()
 
+// Cada lançamento recorrente pertence a uma série: os meses são registros próprios,
+// independentes, ligados só pelo `seriesId`.
+const salarySeries = newId('ser')
+const fixedExpenseSeries = new Map<string, ID>()
+
 for (let offset = HISTORY_MONTHS - 1; offset >= 0; offset -= 1) {
   const period = addMonths(base, -offset)
   const salary = faker.number.int({ min: 7200, max: 7800 })
@@ -130,6 +136,7 @@ for (let offset = HISTORY_MONTHS - 1; offset >= 0; offset -= 1) {
     categoryId: categoryByName('Renda Fixa').id,
     type: 'SALARIO',
     recurring: true,
+    seriesId: salarySeries,
     notes: 'Crédito em conta corrente',
     createdAt: now(),
     updatedAt: now(),
@@ -188,6 +195,7 @@ for (let offset = HISTORY_MONTHS - 1; offset >= 0; offset -= 1) {
   ]
 
   for (const [, description, min, max, day] of fixed) {
+    if (!fixedExpenseSeries.has(description)) fixedExpenseSeries.set(description, newId('ser'))
     const dueDate = dayInPeriod(period, day)
     const status = offset === 0 && day > new Date().getDate() ? 'PENDENTE' : 'PAGO'
 
@@ -204,6 +212,7 @@ for (let offset = HISTORY_MONTHS - 1; offset >= 0; offset -= 1) {
       paymentMethod: faker.helpers.arrayElement<PaymentMethod>(['PIX', 'BOLETO', 'DEBITO']),
       cardId: null,
       recurring: true,
+      seriesId: fixedExpenseSeries.get(description),
       createdAt: now(),
       updatedAt: now(),
     })
@@ -441,69 +450,6 @@ function periodOrdinal(period: Period): number {
 }
 
 /**
- * Projeta, para um período-alvo, a ocorrência de cada série recorrente (agrupada
- * por descrição + categoria) que ainda não tenha lançamento real naquele período —
- * nunca persiste, recalcula a cada leitura a partir da ocorrência real mais recente
- * da série. Assim, desligar `recurring` no original (ou editar seu valor) já
- * reflete nos meses seguintes sozinho, sem nada pra apagar/sincronizar; e um mês que
- * já tem lançamento próprio (histórico real, ou editado à mão) não é duplicado.
- * `automatic` (fatura de cartão) fica de fora: aquelas já são geradas por período
- * pelo mecanismo de faturas.
- */
-export function withRecurrences<
-  T extends {
-    id: ID
-    date: string
-    description: string
-    categoryId: ID
-    recurring: boolean
-    recurrenceOriginId?: ID
-    automatic?: boolean
-    /** Só existe em Expense — quando presente, precisa avançar mês a mês junto com `date`. */
-    dueDate?: string | null
-  },
->(items: T[], targetPeriod: Period): T[] {
-  const target = periodOrdinal(targetPeriod)
-  const seriesKey = (item: T) => `${item.description}::${item.categoryId}`
-
-  const alreadyPosted = new Set(
-    items
-      .filter((item) => periodOrdinal(periodOfDate(item.date)) === target)
-      .map(seriesKey),
-  )
-
-  const latestBySeries = new Map<string, T>()
-  for (const item of items) {
-    if (!item.recurring || item.recurrenceOriginId || item.automatic) continue
-    if (periodOrdinal(periodOfDate(item.date)) >= target) continue
-
-    const key = seriesKey(item)
-    const current = latestBySeries.get(key)
-    if (!current || item.date > current.date) latestBySeries.set(key, item)
-  }
-
-  const projected = [...latestBySeries.entries()]
-    .filter(([key]) => !alreadyPosted.has(key))
-    .map(([, origin]) => ({
-      ...origin,
-      id: `${origin.id}_${toReferenceMonth(targetPeriod)}`,
-      date: dayInPeriod(targetPeriod, toDate(origin.date).getDate()),
-      // Some junto com `date`: sem isso, o formulário de saída (que usa o vencimento
-      // como competência quando ele existe — ver TransactionForm.vue) reenviaria a
-      // ocorrência para o mês do vencimento original ao editá-la, em vez do mês projetado.
-      ...(origin.dueDate
-        ? { dueDate: dayInPeriod(targetPeriod, toDate(origin.dueDate).getDate()) }
-        : {}),
-      // Projeção nunca herda a situação de pagamento do original (só existe em Expense):
-      // cada mês começa pendente, senão pagar um mês marcaria todos os seguintes.
-      ...('status' in origin ? { status: 'PENDENTE', paidAt: null } : {}),
-      recurrenceOriginId: origin.id,
-    }))
-
-  return [...items, ...projected]
-}
-
-/**
  * Primeiro mês com algum registro do usuário (entrada, saída ou transação de cartão) —
  * espelha o endpoint de limites de navegação do backend. Sem registros, é o mês atual.
  */
@@ -515,14 +461,120 @@ export function firstRecordMonth(): Period {
   return periodOfDate(first)
 }
 
-const PROJECTED_ID_REGEX = /^(.+)_(\d{4}-\d{2})$/
+// ------------------------------------------------------------------ recorrência
+
+/** Mensagem do 422 do backend para recorrência fora de Renda Fixa / Despesa Fixa. */
+export const RECURRING_ONLY_FIXED = 'Lançamento recorrente só é permitido em Renda Fixa ou Despesa Fixa.'
+
+/** Despesa Fixa / Renda Fixa: só elas aceitam recorrência. */
+export function isFixedCategoryId(id: ID | null | undefined): boolean {
+  return isFixedCategory(categories.find((category) => category.id === id))
+}
+
+/** Mesmo dia no mês seguinte, limitado ao último dia dele (31/01 → 28/02). */
+export function sameDayNextMonth(iso: string): string {
+  return dayInPeriod(addMonths(periodOfDate(iso), 1), toDate(iso).getDate())
+}
+
+interface SeriesRecord {
+  id: ID
+  date: string
+  seriesId?: ID | null
+}
+
+/** Registros da mesma série nos meses posteriores ao do registro (os anteriores ficam de fora). */
+export function laterInSeries<T extends SeriesRecord>(items: T[], record: T): T[] {
+  if (!record.seriesId) return []
+  const month = periodOrdinal(periodOfDate(record.date))
+  return items.filter(
+    (item) =>
+      item.seriesId === record.seriesId &&
+      item.id !== record.id &&
+      periodOrdinal(periodOfDate(item.date)) > month,
+  )
+}
+
+function hasNextMonthInSeries<T extends SeriesRecord>(items: T[], record: T): boolean {
+  const next = periodOrdinal(periodOfDate(record.date)) + 1
+  return laterInSeries(items, record).some((item) => periodOrdinal(periodOfDate(item.date)) === next)
+}
+
+/** Remove os registros informados da coleção (por id), sem trocar a referência do array. */
+export function removeRecords<T extends { id: ID }>(items: T[], toRemove: T[]): void {
+  const ids = new Set(toRemove.map((item) => item.id))
+  for (let i = items.length - 1; i >= 0; i -= 1) {
+    if (ids.has(items[i]!.id)) items.splice(i, 1)
+  }
+}
 
 /**
- * Reconhece o id sintético de uma ocorrência projetada (`${originId}_${referenceMonth}`,
- * ver `withRecurrences`) e extrai o id do lançamento original. Espelha
- * `origemDoIdProjetado` do backend (`shared/utils/recorrencia.ts`).
+ * Cria o registro do mês seguinte de uma entrada recorrente, se a série ainda não o
+ * tiver — cópia independente, no mesmo dia (limitado ao fim do mês).
  */
-export function parseProjectedId(id: ID): { originId: ID; referenceMonth: string } | null {
-  const found = id.match(PROJECTED_ID_REGEX)
-  return found ? { originId: found[1]!, referenceMonth: found[2]! } : null
+export function ensureNextIncome(income: Income): void {
+  if (!income.recurring || !income.seriesId || hasNextMonthInSeries(incomes, income)) return
+  incomes.push({
+    ...structuredClone(income),
+    id: newId('ent'),
+    date: sameDayNextMonth(income.date),
+    createdAt: now(),
+    updatedAt: now(),
+  })
 }
+
+/** Mesmo que `ensureNextIncome`, para saídas: o mês seguinte sempre nasce PENDENTE. */
+export function ensureNextExpense(expense: Expense): void {
+  if (!expense.recurring || !expense.seriesId || hasNextMonthInSeries(expenses, expense)) return
+  expenses.push({
+    ...structuredClone(expense),
+    id: newId('sai'),
+    date: sameDayNextMonth(expense.date),
+    dueDate: expense.dueDate ? sameDayNextMonth(expense.dueDate) : expense.dueDate,
+    status: 'PENDENTE',
+    paidAt: null,
+    createdAt: now(),
+    updatedAt: now(),
+  })
+}
+
+/**
+ * Mesmo que `ensureNextIncome`, para transações de cartão: o débito do mês seguinte
+ * entra na fatura daquele mês (criada se ainda não existir).
+ */
+export function ensureNextCardTransaction(transaction: CardTransaction): void {
+  if (
+    !transaction.recurring ||
+    !transaction.seriesId ||
+    hasNextMonthInSeries(cardTransactions, transaction)
+  ) {
+    return
+  }
+
+  const date = sameDayNextMonth(transaction.date)
+  const invoice = ensureInvoice(transaction.cardId, date.slice(0, 7))
+  cardTransactions.push({
+    ...structuredClone(transaction),
+    id: newId('trc'),
+    invoiceId: invoice.id,
+    date,
+    createdAt: now(),
+    updatedAt: now(),
+  })
+  recalculateInvoiceTotal(invoice.id)
+}
+
+/**
+ * Espelha o job agendado do backend: copia para o mês seguinte os registros recorrentes
+ * do mês de referência que ainda não têm o próximo mês. Idempotente.
+ */
+export function generateNextMonth(reference: Period = currentPeriod()): void {
+  const inReference = (record: { date: string }) =>
+    periodOrdinal(periodOfDate(record.date)) === periodOrdinal(reference)
+
+  incomes.filter(inReference).forEach(ensureNextIncome)
+  expenses.filter(inReference).forEach(ensureNextExpense)
+  cardTransactions.filter(inReference).forEach(ensureNextCardTransaction)
+}
+
+// A base semeada já tem o mês seguinte das séries, como o job deixaria.
+generateNextMonth(base)

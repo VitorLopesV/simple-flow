@@ -64,11 +64,6 @@ const categorySummary = computed(() => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 4)
 })
-
-/** Ocorrência projetada de uma recorrência: só o lançamento original é editável/removível. */
-function isProjection(transaction: CardTransaction): boolean {
-  return Boolean(transaction.recurrenceOriginId)
-}
 </script>
 
 <template>
@@ -230,7 +225,7 @@ function isProjection(transaction: CardTransaction): boolean {
                 {{ formatCurrency(transaction.amount) }}
               </td>
               <td class="px-5 py-3">
-                <div v-if="!isProjection(transaction)" class="flex justify-end gap-1">
+                <div class="flex justify-end gap-1">
                   <BaseButton
                     variant="ghost"
                     size="icon"
@@ -249,9 +244,6 @@ function isProjection(transaction: CardTransaction): boolean {
                     <Trash2 class="size-4" aria-hidden="true" />
                   </BaseButton>
                 </div>
-                <span v-else class="text-muted-foreground block text-right text-xs">
-                  Editável no original
-                </span>
               </td>
             </tr>
           </tbody>

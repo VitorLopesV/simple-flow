@@ -10,8 +10,7 @@ export const incomeService = {
   async list(filter: IncomeFilter): Promise<Paginated<Income>> {
     if (USE_MOCK) {
       const db = await mockDb()
-      const found = db
-        .withRecurrences(db.incomes, filter.period)
+      const found = db.incomes
         .filter((income) => isWithinPeriod(income.date, filter.period))
         .filter((income) => !filter.categoryId || income.categoryId === filter.categoryId)
         .filter((income) => !filter.type || income.type === filter.type)
@@ -40,14 +39,11 @@ export const incomeService = {
       const db = await mockDb()
 
       const periodTotal = (target: Period) =>
-        db
-          .withRecurrences(db.incomes, target)
+        db.incomes
           .filter((income) => isWithinPeriod(income.date, target))
           .reduce((sum, income) => sum + income.amount, 0)
 
-      const inPeriod = db
-        .withRecurrences(db.incomes, period)
-        .filter((income) => isWithinPeriod(income.date, period))
+      const inPeriod = db.incomes.filter((income) => isWithinPeriod(income.date, period))
       const total = inPeriod.reduce((sum, income) => sum + income.amount, 0)
 
       const grouped = new Map<string, number>()
@@ -85,13 +81,21 @@ export const incomeService = {
   async create(payload: IncomePayload): Promise<Income> {
     if (USE_MOCK) {
       const db = await mockDb()
+      // Mesmas regras do backend: recorrência só em Renda Fixa, e criar um registro
+      // recorrente já cria o do mês seguinte (registro próprio, mesma série).
+      if (payload.recurring && !db.isFixedCategoryId(payload.categoryId)) {
+        throw new Error(db.RECURRING_ONLY_FIXED)
+      }
+
       const income: Income = {
         ...payload,
+        seriesId: payload.recurring ? db.newId('ser') : null,
         id: db.newId('ent'),
         createdAt: db.now(),
         updatedAt: db.now(),
       }
       db.incomes.push(income)
+      db.ensureNextIncome(income)
       return delay(db.clone(income))
     }
 
@@ -103,35 +107,29 @@ export const incomeService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const index = db.incomes.findIndex((income) => income.id === id)
-
-      if (index < 0) {
-        // Ocorrência projetada de uma recorrência (id sintético, nunca persistido —
-        // ver `withRecurrences`): editá-la materializa uma linha própria para este
-        // mês, independente das demais, em vez de mudar o lançamento original.
-        const projected = db.parseProjectedId(id)
-        const origin = projected && db.incomes.find((income) => income.id === projected.originId)
-        if (!origin?.recurring) throw new Error('Entrada não encontrada.')
-
-        const created: Income = {
-          ...payload,
-          // Nome vem sempre do lançamento original (ver AtualizarEntrada no
-          // backend): as ocorrências de uma série só continuam casando pela mesma chave.
-          description: origin.description,
-          id: db.newId('ent'),
-          createdAt: db.now(),
-          updatedAt: db.now(),
-        }
-        db.incomes.push(created)
-        return delay(db.clone(created))
-      }
+      if (index < 0) throw new Error('Entrada não encontrada.')
 
       const current = db.incomes[index]!
-      // Nome de uma entrada recorrente é fixo entre suas ocorrências (ver acima) —
-      // só aceita mudança de descrição quando a entrada deixa de ser recorrente.
-      const description = current.recurring && payload.recurring ? current.description : payload.description
+      // Trocar para uma categoria não fixa conta como desligar a recorrência.
+      const recurring = payload.recurring && db.isFixedCategoryId(payload.categoryId)
+      // Nome de uma entrada recorrente é imutável — só muda quando ela deixa de ser recorrente.
+      const description = current.recurring && recurring ? current.description : payload.description
 
-      const updated: Income = { ...current, ...payload, description, updatedAt: db.now() }
+      const updated: Income = {
+        ...current,
+        ...payload,
+        recurring,
+        description,
+        // Religar a recorrência mantém a série original (ou abre uma, se nunca teve).
+        seriesId: current.seriesId ?? (recurring ? db.newId('ser') : null),
+        updatedAt: db.now(),
+      }
       db.incomes[index] = updated
+
+      // Desligar encerra a série a partir do mês seguinte; religar volta a gerar o próximo mês.
+      if (current.recurring && !recurring) db.removeRecords(db.incomes, db.laterInSeries(db.incomes, current))
+      if (!current.recurring && recurring) db.ensureNextIncome(updated)
+
       return delay(db.clone(updated))
     }
 
@@ -142,9 +140,10 @@ export const incomeService = {
   async remove(id: string): Promise<void> {
     if (USE_MOCK) {
       const db = await mockDb()
-      const index = db.incomes.findIndex((income) => income.id === id)
-      if (index < 0) throw new Error('Entrada não encontrada.')
-      db.incomes.splice(index, 1)
+      const income = db.incomes.find((item) => item.id === id)
+      if (!income) throw new Error('Entrada não encontrada.')
+      // Excluir um mês da série remove ele e os seguintes; os anteriores ficam intactos.
+      db.removeRecords(db.incomes, [income, ...db.laterInSeries(db.incomes, income)])
       return delay(undefined)
     }
 

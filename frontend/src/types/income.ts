@@ -19,19 +19,17 @@ export interface Income {
   /** Marca receitas que se repetem todo mês (salário, aluguel recebido...). */
   recurring: boolean
   notes?: string
+  /**
+   * Série do lançamento recorrente: cada mês é um registro próprio e independente,
+   * ligado aos demais só por este id. Definido pelo backend; `null` fora de série.
+   */
+  seriesId?: ID | null
   createdAt: string
   updatedAt: string
-  /**
-   * Preenchido só nas ocorrências futuras projetadas a partir de um lançamento
-   * recorrente (ver `withRecurrences` em `services/mock/db.ts`) — nunca persistidas,
-   * recalculadas a cada leitura. Editar uma dessas ocorrências materializa uma linha
-   * própria para aquele mês, independente do original.
-   */
-  recurrenceOriginId?: ID
 }
 
-/** Dados aceitos pelo formulário de criação/edição. */
-export type IncomePayload = Omit<Income, 'id' | 'createdAt' | 'updatedAt'>
+/** Dados aceitos pelo formulário de criação/edição. A série é gerida pelo backend. */
+export type IncomePayload = Omit<Income, 'id' | 'createdAt' | 'updatedAt' | 'seriesId'>
 
 export interface IncomeFilter extends PageRequest {
   period: Period

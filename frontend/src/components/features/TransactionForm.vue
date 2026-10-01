@@ -174,18 +174,12 @@ watch(
 )
 
 /**
- * Sem campo "Data" visível no formulário de entrada/saída: usa a data em que o
- * registro foi criado, independente do vencimento (que é só informativo). Exceção:
- * uma ocorrência projetada de recorrência (`recurrenceOriginId` presente) já vem
- * com `date` recalculada para o mês projetado (ver `projetarRecorrencias` no
- * backend), enquanto `createdAt` continua sendo o do lançamento original — usar
- * `createdAt` aqui materializaria a edição no mês do lançamento original em vez do
- * mês projetado que o usuário está de fato editando.
+ * Sem campo "Data" visível no formulário de entrada/saída: um registro novo usa a data
+ * de hoje e a edição mantém a data do próprio registro — cada mês de uma série
+ * recorrente é um registro real, com a data do seu mês.
  */
 function entryDate(): string {
-  const transaction = props.transaction as (Income | Expense | CardTransaction) | null
-  if (!transaction) return toISODate(new Date())
-  return transaction.recurrenceOriginId ? transaction.date : toISODate(new Date(transaction.createdAt))
+  return props.transaction?.date ?? toISODate(new Date())
 }
 
 const pendingConfirmationOpen = ref(false)

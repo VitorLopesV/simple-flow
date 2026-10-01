@@ -39,20 +39,18 @@ export interface CardTransaction {
   totalInstallments: number
   recurring: boolean
   notes?: string | null
+  /**
+   * Série do lançamento recorrente: cada mês é um registro próprio e independente,
+   * ligado aos demais só por este id. Definido pelo backend; `null` fora de série.
+   */
+  seriesId?: ID | null
   createdAt: string
   updatedAt: string
-  /**
-   * Preenchido só nas ocorrências futuras projetadas a partir de uma transação
-   * recorrente — nunca persistido, recalculado a cada leitura. A fatura a que
-   * pertence pode inclusive ser virtual (ver `Invoice.id`), quando o mês ainda não
-   * tem fatura própria.
-   */
-  recurrenceOriginId?: ID
 }
 
 export type CardTransactionPayload = Omit<
   CardTransaction,
-  'id' | 'cardId' | 'invoiceId' | 'createdAt' | 'updatedAt' | 'recurrenceOriginId'
+  'id' | 'cardId' | 'invoiceId' | 'createdAt' | 'updatedAt' | 'seriesId'
 >
 
 /** Valores gravados no banco e devolvidos pela API. */

@@ -361,3 +361,74 @@ describe('payInvoice', () => {
     await expect(creditCardService.payInvoice('fat_x')).rejects.toThrow('Fatura não encontrada.')
   })
 })
+
+describe('transação recorrente (mock)', () => {
+  const fixedCategory = () => db.categories.find((category) => category.name === 'Despesa Fixa')!.id
+  const variableCategory = () => db.categories.find((category) => category.name === 'Despesa Variável')!.id
+  const invoiceOf = (referenceMonth: string) =>
+    db.invoices.find((invoice) => invoice.cardId === 'car_a' && invoice.referenceMonth === referenceMonth)
+
+  it('Despesa Fixa recorrente entra na fatura do mês e na do mês seguinte', async () => {
+    const created = await creditCardService.createTransaction(
+      'car_a',
+      transactionPayload({ description: 'Netflix', amount: 55, categoryId: fixedCategory(), recurring: true }),
+    )
+
+    expect(db.cardTransactions).toHaveLength(2)
+    expect(invoiceOf('2026-08')!.total).toBe(55)
+    expect(invoiceOf('2026-09')!.total).toBe(55)
+    expect(db.cardTransactions[1]).toMatchObject({ date: '2026-09-10', seriesId: created.seriesId })
+  })
+
+  it('recorrente em categoria não fixa é recusada', async () => {
+    await expect(
+      creditCardService.createTransaction(
+        'car_a',
+        transactionPayload({ categoryId: variableCategory(), recurring: true }),
+      ),
+    ).rejects.toThrow('Lançamento recorrente só é permitido em Renda Fixa ou Despesa Fixa.')
+  })
+
+  it('excluir um mês remove ele e os seguintes e recalcula as faturas', async () => {
+    const created = await creditCardService.createTransaction(
+      'car_a',
+      transactionPayload({ amount: 55, categoryId: fixedCategory(), recurring: true }),
+    )
+
+    await creditCardService.removeTransaction('car_a', created.id)
+
+    expect(db.cardTransactions).toHaveLength(0)
+    expect(invoiceOf('2026-08')!.total).toBe(0)
+    expect(invoiceOf('2026-09')!.total).toBe(0)
+  })
+
+  it('desligar a recorrência mantém o mês e remove os seguintes', async () => {
+    const created = await creditCardService.createTransaction(
+      'car_a',
+      transactionPayload({ amount: 55, categoryId: fixedCategory(), recurring: true }),
+    )
+
+    await creditCardService.updateTransaction(
+      'car_a',
+      created.id,
+      transactionPayload({ amount: 55, categoryId: fixedCategory(), recurring: false }),
+    )
+
+    expect(db.cardTransactions.map((item) => item.id)).toEqual([created.id])
+    expect(invoiceOf('2026-08')!.total).toBe(55)
+    expect(invoiceOf('2026-09')!.total).toBe(0)
+  })
+
+  it('a recorrência do cartão aparece como fatura em Saídas no mês seguinte', async () => {
+    await creditCardService.createTransaction(
+      'car_a',
+      transactionPayload({ amount: 55, categoryId: fixedCategory(), recurring: true }),
+    )
+
+    const september = db
+      .expensesWithInvoices()
+      .filter((expense) => expense.automatic && expense.date.startsWith('2026-09'))
+
+    expect(september.map((expense) => expense.amount)).toEqual([55])
+  })
+})
