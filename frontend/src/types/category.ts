@@ -47,6 +47,23 @@ export const CATEGORY_TYPES: CategoryType[] = [
   'OUTROS',
 ]
 
+/** Natureza das categorias fixas (Despesa Fixa / Renda Fixa): as únicas que aceitam recorrência. */
+export const FIXED_CATEGORY_TYPES: readonly CategoryType[] = ['CONTA_FIXA', 'RENDA_FIXA']
+
+const FIXED_CATEGORY_NAMES = ['despesa fixa', 'renda fixa']
+
+/**
+ * Categoria fixa = Despesa Fixa ou Renda Fixa. Confere pela natureza e, como reforço,
+ * pelo nome — um backend que grave Renda Fixa com outra natureza continua reconhecido.
+ */
+export function isFixedCategory(category: Pick<Category, 'type' | 'name'> | null | undefined): boolean {
+  if (!category) return false
+  return (
+    FIXED_CATEGORY_TYPES.includes(category.type) ||
+    FIXED_CATEGORY_NAMES.includes(category.name.trim().toLowerCase())
+  )
+}
+
 export const CATEGORY_TYPE_OPTIONS: SelectOption<CategoryType>[] = CATEGORY_TYPES.map((type) => ({
   label: CATEGORY_TYPE_LABEL[type],
   value: type,

@@ -5,6 +5,7 @@ import { categoryService } from '@/services/categoryService'
 import { getErrorMessage } from '@/services/http'
 import type { SelectOption } from '@/types/common'
 import type { Category, CategoryType, Movement } from '@/types/category'
+import { isFixedCategory } from '@/types/category'
 
 export const useCategoryStore = defineStore('category', () => {
   const categories = ref<Category[]>([])
@@ -46,6 +47,12 @@ export const useCategoryStore = defineStore('category', () => {
     return byId.value.get(id)?.type ?? null
   }
 
+  /** Despesa Fixa / Renda Fixa: só elas aceitam lançamento recorrente. */
+  function isFixed(id: string | null | undefined): boolean {
+    if (!id) return false
+    return isFixedCategory(byId.value.get(id))
+  }
+
   /** Carrega uma única vez por sessão, a menos que `force` seja verdadeiro. */
   async function load(force = false): Promise<void> {
     if (loaded.value && !force) return
@@ -74,6 +81,7 @@ export const useCategoryStore = defineStore('category', () => {
     name,
     color,
     type,
+    isFixed,
     load,
   }
 })

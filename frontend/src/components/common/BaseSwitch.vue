@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { useId } from 'vue'
 
-withDefaults(defineProps<{ label?: string; description?: string }>(), { label: '', description: '' })
+withDefaults(defineProps<{ label?: string; description?: string; disabled?: boolean }>(), {
+  label: '',
+  description: '',
+  disabled: false,
+})
 
 const model = defineModel<boolean>({ default: false })
 const id = useId()
@@ -10,7 +14,9 @@ const id = useId()
 <template>
   <div class="flex items-center justify-between gap-4">
     <span class="flex flex-col">
-      <label :for="id" class="cursor-pointer text-sm font-medium">{{ label }}</label>
+      <label :for="id" class="text-sm font-medium" :class="disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'">
+        {{ label }}
+      </label>
       <span v-if="description" class="text-muted-foreground text-xs">{{ description }}</span>
     </span>
 
@@ -20,7 +26,8 @@ const id = useId()
       role="switch"
       :aria-checked="model"
       :aria-label="label || undefined"
-      class="focus-visible:outline-ring relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+      :disabled="disabled"
+      class="focus-visible:outline-ring relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       :class="model ? 'bg-primary' : 'bg-input'"
       @click="model = !model"
     >

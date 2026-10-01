@@ -10,6 +10,7 @@ import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import BaseTextarea from '@/components/common/BaseTextarea.vue'
 import CurrencyInput from '@/components/common/CurrencyInput.vue'
 import DateInput from '@/components/common/DateInput.vue'
+import { useCategoryStore } from '@/stores/categoryStore'
 import type { CardTransaction, CardTransactionPayload } from '@/types/creditCard'
 import type { SelectOption } from '@/types/common'
 import type { Movement } from '@/types/category'
@@ -64,14 +65,11 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+const categoryStore = useCategoryStore()
+
 const isCard = computed(() => props.context === 'card')
 const isExpense = computed(() => props.kind === 'SAIDA')
 const isEditing = computed(() => Boolean(props.transaction))
-
-// Nome de um lançamento recorrente é o que liga suas ocorrências na mesma série
-// (backend casa por descrição + categoria) — travado na edição para não divergir
-// entre os meses.
-const nameLocked = computed(() => isEditing.value && Boolean(props.transaction?.recurring))
 
 function initialValues(): FormValues {
   const transaction = props.transaction
@@ -117,6 +115,32 @@ const { value: description, errorMessage: descriptionError } = useField<string>(
 const { value: amount, errorMessage: amountError } = useField<number>('amount')
 const { value: categoryId, errorMessage: categoryError } = useField<string | null>('categoryId')
 const { value: recurring } = useField<boolean>('recurring')
+
+/**
+ * Recorrência só existe em categoria fixa (Despesa Fixa / Renda Fixa — o backend
+ * recusa nas demais). Nas outras o toggle fica desligado e indisponível.
+ */
+const recurringAvailable = computed(() => categoryStore.isFixed(categoryId.value))
+
+/**
+ * Escolher a categoria no formulário liga a recorrência numa categoria fixa (o
+ * usuário ainda pode desligar) e desliga nas demais. Só reage à escolha do usuário:
+ * abrir um registro para edição mantém a recorrência que ele já tem.
+ */
+function onCategoryChange(id: string | null): void {
+  recurring.value = categoryStore.isFixed(id)
+}
+
+// Nome de um lançamento recorrente é imutável entre os meses da série — travado na
+// edição enquanto a recorrência estiver ligada; desligar libera o nome.
+const nameLocked = computed(
+  () => isEditing.value && Boolean(props.transaction?.recurring) && recurring.value,
+)
+
+// Religar a recorrência volta ao nome original (é o que o backend mantém).
+watch(nameLocked, (locked) => {
+  if (locked && props.transaction) description.value = props.transaction.description
+})
 const { value: notes, errorMessage: notesError } = useField<string>('notes')
 const { value: status } = useField<ExpenseStatus>('status')
 const { value: dueDate, errorMessage: dueDateError } = useField<string>('dueDate')
@@ -131,7 +155,9 @@ const showRecurring = computed(() => !isCard.value || isEditing.value || Number(
 // Lançamento recorrente não tem quantidade de parcelas: trava o campo em 1 e ignora
 // o que estiver nele ao salvar.
 // Na edição o parcelamento é fixo (não recria parcelas), então o campo fica travado.
-const installmentsLocked = computed(() => isCard.value && (isEditing.value || recurring.value))
+const installmentsLocked = computed(
+  () => isCard.value && (isEditing.value || (recurring.value && recurringAvailable.value)),
+)
 
 watch(installmentCount, (current) => {
   if (!isEditing.value && Number(current) > 1) recurring.value = false
@@ -197,7 +223,8 @@ function emitSave(form: FormValues): void {
     amount: Number(form.amount),
     date: form.date,
     categoryId: form.categoryId as string,
-    recurring: form.recurring,
+    // Fora de categoria fixa nunca vai recorrente (registros antigos podem estar marcados).
+    recurring: form.recurring && categoryStore.isFixed(form.categoryId),
     notes: form.notes.trim() || undefined,
   }
 
@@ -220,7 +247,7 @@ function emitSave(form: FormValues): void {
       ...base,
       type: form.type as ExpenseType,
       installment: current?.installment ?? 1,
-      totalInstallments: current?.totalInstallments ?? (form.recurring ? 1 : Number(form.installmentCount)),
+      totalInstallments: current?.totalInstallments ?? (base.recurring ? 1 : Number(form.installmentCount)),
     } satisfies CardTransactionPayload)
     return
   }
@@ -246,7 +273,11 @@ function emitSave(form: FormValues): void {
         isCard ? 'Ex.: Supermercado' : isExpense ? 'Ex.: Conta de energia' : 'Ex.: Salário mensal'
       "
       :error="descriptionError"
-      :hint="nameLocked ? 'Lançamento recorrente: o nome é o mesmo em todas as ocorrências.' : ''"
+      :hint="
+        nameLocked
+          ? 'Lançamento recorrente: o nome é o mesmo em todos os meses. Desligue a recorrência para alterá-lo.'
+          : ''
+      "
       required
       :maxlength="80"
       :disabled="nameLocked"
@@ -263,6 +294,7 @@ function emitSave(form: FormValues): void {
         :options="categories"
         :error="categoryError"
         required
+        @update:model-value="onCategoryChange"
       />
       <BaseSelect
         v-model="type"
@@ -312,15 +344,19 @@ function emitSave(form: FormValues): void {
 
     <BaseSwitch
       v-if="showRecurring"
-      v-model="recurring"
+      :model-value="recurring && recurringAvailable"
       label="Lançamento recorrente"
+      :disabled="!recurringAvailable"
       :description="
-        isCard
-          ? 'Repete todo mês na fatura (assinatura, mensalidade...)'
-          : isExpense
-            ? 'Repete todo mês (aluguel, assinatura...)'
-            : 'Receita fixa mensal'
+        !recurringAvailable
+          ? `Disponível apenas para ${isExpense ? 'Despesa Fixa' : 'Renda Fixa'}`
+          : isCard
+            ? 'Repete todo mês na fatura (assinatura, mensalidade...)'
+            : isExpense
+              ? 'Repete todo mês (aluguel, assinatura...)'
+              : 'Receita fixa mensal'
       "
+      @update:model-value="recurring = $event"
     />
 
     <BaseTextarea

@@ -190,3 +190,31 @@ describe('nome / cor / tipo', () => {
     expect(store.byId.get('c2')?.name).toBe('Investimento')
   })
 })
+
+describe('isFixed', () => {
+  it('é verdadeiro só para Despesa Fixa e Renda Fixa', async () => {
+    const store = await loadedStore()
+
+    expect(store.isFixed('c1')).toBe(true)
+    expect(store.isFixed('c3')).toBe(true)
+    expect(store.isFixed('c2')).toBe(false)
+    expect(store.isFixed('c4')).toBe(false)
+    expect(store.isFixed('c5')).toBe(false)
+  })
+
+  it('reconhece Renda Fixa pelo nome mesmo com outra natureza', async () => {
+    list.mockResolvedValue([
+      { id: 'x', name: 'Renda Fixa', type: 'RENDA', movement: 'ENTRADA', color: '#10b981' },
+    ])
+    const store = useCategoryStore()
+    await store.load()
+
+    expect(store.isFixed('x')).toBe(true)
+  })
+
+  it.each([null, undefined, '', 'inexistente'])('é falso para id %j', async (id) => {
+    const store = await loadedStore()
+
+    expect(store.isFixed(id)).toBe(false)
+  })
+})
