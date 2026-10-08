@@ -21,7 +21,7 @@ import { useExpenseStore } from '@/stores/expenseStore'
 import { usePeriodStore } from '@/stores/periodStore'
 import type { CardTransactionPayload } from '@/types/creditCard'
 import type { Expense, ExpensePayload, ExpenseStatus } from '@/types/expense'
-import { EXPENSE_STATUS_OPTIONS } from '@/types/expense'
+import { EXPENSE_STATUS_OPTIONS, isExpenseOverdue } from '@/types/expense'
 import type { IncomePayload } from '@/types/income'
 import { formatPeriod } from '@/utils/dateFormatter'
 
@@ -156,6 +156,13 @@ async function confirmPending(): Promise<void> {
   pendingOpen.value = false
   toPending.value = null
 }
+
+/** A saída vencida continua pendente por baixo; o texto só acompanha o que o badge mostrava. */
+const paymentMessage = computed(() => {
+  const expense = toPaid.value
+  const from = expense && isExpenseOverdue(expense) ? 'vencido' : 'pendente'
+  return `Deseja realmente alterar “${expense?.description ?? ''}” de ${from} para pago?`
+})
 
 async function confirmPaid(): Promise<void> {
   const expense = toPaid.value
@@ -312,7 +319,7 @@ async function toggleStatus(expense: Expense): Promise<void> {
     <ConfirmDialog
       v-model:open="paymentOpen"
       title="Alterar para pago"
-      :message="`Deseja realmente alterar “${toPaid?.description ?? ''}” de pendente para pago?`"
+      :message="paymentMessage"
       confirm-text="Alterar para pago"
       :destructive="false"
       :loading="expenseStore.saving"

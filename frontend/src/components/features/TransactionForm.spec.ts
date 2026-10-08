@@ -310,3 +310,19 @@ describe('recorrência — demais regras', () => {
     expect(payload.recurring).toBe(false)
   })
 })
+
+describe('TransactionForm — situação da saída', () => {
+  it('oferece apenas Pendente e Pago: "Vencido" nunca é selecionável', () => {
+    const wrapper = mountForm({ kind: 'SAIDA', categories: EXPENSE_CATEGORIES })
+
+    expect(optionLabels(wrapper, 'Situação')).toEqual(['Pendente', 'Pago'])
+  })
+
+  it('saída vencida aberta para edição continua com a situação gravada, Pendente', () => {
+    const overdue = expense({ recurring: false, dueDate: '2020-01-10' })
+    const wrapper = mountForm({ kind: 'SAIDA', categories: EXPENSE_CATEGORIES, transaction: overdue })
+
+    expect(field(wrapper, 'Situação').element.value).toBe('PENDENTE')
+    expect(optionLabels(wrapper, 'Situação')).not.toContain('Vencido')
+  })
+})

@@ -11,7 +11,13 @@ import { useCategoryStore } from '@/stores/categoryStore'
 import { useCreditCardStore } from '@/stores/creditCardStore'
 import type { Movement } from '@/types/category'
 import type { Expense } from '@/types/expense'
-import { EXPENSE_STATUS_LABEL, EXPENSE_TYPE_LABEL, PAYMENT_METHOD_LABEL } from '@/types/expense'
+import {
+  EXPENSE_OVERDUE_LABEL,
+  EXPENSE_STATUS_LABEL,
+  EXPENSE_TYPE_LABEL,
+  isExpenseOverdue,
+  PAYMENT_METHOD_LABEL,
+} from '@/types/expense'
 import type { Income } from '@/types/income'
 import { INCOME_TYPE_LABEL } from '@/types/income'
 import { formatCurrency } from '@/utils/currencyFormatter'
@@ -61,6 +67,23 @@ function typeLabel(transaction: Transaction): string {
   return isExpense.value
     ? EXPENSE_TYPE_LABEL[asExpense(transaction).type]
     : (INCOME_TYPE_LABEL[(transaction as Income).type] ?? '—')
+}
+
+/**
+ * Situação exibida no badge. O usuário só grava Pago ou Pendente; "Vencido" (vermelho) é
+ * a pendente com vencimento passado, derivada na hora — por isso voltar uma saída paga
+ * e já vencida para pendente a mostra vencida imediatamente.
+ */
+function statusBadge(transaction: Transaction): { label: string; tone: 'success' | 'warning' | 'danger' } {
+  const expense = asExpense(transaction)
+  if (expense.status === 'PAGO') return { label: EXPENSE_STATUS_LABEL.PAGO, tone: 'success' }
+  if (isExpenseOverdue(expense)) return { label: EXPENSE_OVERDUE_LABEL, tone: 'danger' }
+  return { label: EXPENSE_STATUS_LABEL.PENDENTE, tone: 'warning' }
+}
+
+/** Clicar no badge alterna a situação (Vencido também marca como pago). */
+function statusActionTitle(transaction: Transaction): string {
+  return asExpense(transaction).status === 'PAGO' ? 'Marcar como pendente' : 'Marcar como pago'
 }
 
 /** Realça a linha da fatura com a cor definida ao cartão na aba Cartões. */
@@ -186,20 +209,17 @@ function canEdit(transaction: Transaction): boolean {
                 <button
                   v-if="canEdit(transaction)"
                   type="button"
+                  data-testid="expense-status"
                   class="focus-visible:outline-ring rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
-                  :title="
-                    asExpense(transaction).status === 'PAGO'
-                      ? 'Marcar como pendente'
-                      : 'Marcar como pago'
-                  "
+                  :title="statusActionTitle(transaction)"
                   @click="emit('toggleStatus', asExpense(transaction))"
                 >
-                  <BaseBadge :tone="asExpense(transaction).status === 'PAGO' ? 'success' : 'warning'">
-                    {{ EXPENSE_STATUS_LABEL[asExpense(transaction).status] }}
+                  <BaseBadge :tone="statusBadge(transaction).tone">
+                    {{ statusBadge(transaction).label }}
                   </BaseBadge>
                 </button>
-                <BaseBadge v-else :tone="asExpense(transaction).status === 'PAGO' ? 'success' : 'warning'">
-                  {{ EXPENSE_STATUS_LABEL[asExpense(transaction).status] }}
+                <BaseBadge v-else data-testid="expense-status" :tone="statusBadge(transaction).tone">
+                  {{ statusBadge(transaction).label }}
                 </BaseBadge>
               </td>
 
@@ -263,12 +283,23 @@ function canEdit(transaction: Transaction): boolean {
             <BaseBadge>
               {{ typeLabel(transaction) }}
             </BaseBadge>
-            <BaseBadge
-              v-if="isExpense"
-              :tone="asExpense(transaction).status === 'PAGO' ? 'success' : 'warning'"
-            >
-              {{ EXPENSE_STATUS_LABEL[asExpense(transaction).status] }}
-            </BaseBadge>
+            <template v-if="isExpense">
+              <button
+                v-if="canEdit(transaction)"
+                type="button"
+                data-testid="expense-status"
+                class="focus-visible:outline-ring rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
+                :title="statusActionTitle(transaction)"
+                @click="emit('toggleStatus', asExpense(transaction))"
+              >
+                <BaseBadge :tone="statusBadge(transaction).tone">
+                  {{ statusBadge(transaction).label }}
+                </BaseBadge>
+              </button>
+              <BaseBadge v-else data-testid="expense-status" :tone="statusBadge(transaction).tone">
+                {{ statusBadge(transaction).label }}
+              </BaseBadge>
+            </template>
 
             <div v-if="canEdit(transaction)" class="ml-auto flex gap-1">
               <BaseButton

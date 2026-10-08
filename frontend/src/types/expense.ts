@@ -1,3 +1,4 @@
+import { toISODate } from '@/utils/dateFormatter'
 import type { ID, PageRequest, Period, SelectOption } from './common'
 
 // Os valores dos tipos abaixo são os gravados no banco e devolvidos pela API, por
@@ -86,6 +87,22 @@ export interface ExpenseSummary {
 export const EXPENSE_STATUS_LABEL: Record<ExpenseStatus, string> = {
   PENDENTE: 'Pendente',
   PAGO: 'Pago',
+}
+
+/** Rótulo exibido para a saída vencida — não é uma situação gravada nem selecionável. */
+export const EXPENSE_OVERDUE_LABEL = 'Vencido'
+
+/**
+ * "Vencido" é derivado, nunca gravado: saída pendente cujo vencimento é anterior a hoje.
+ * Sem vencimento nunca vence, e saída paga continua paga mesmo depois do vencimento —
+ * mas, se voltar para pendente com o vencimento já passado, fica vencida na hora.
+ * `today` no formato `YYYY-MM-DD` (data local); a comparação de strings ISO basta.
+ */
+export function isExpenseOverdue(
+  expense: Pick<Expense, 'status' | 'dueDate'>,
+  today: string = toISODate(new Date()),
+): boolean {
+  return expense.status === 'PENDENTE' && Boolean(expense.dueDate) && expense.dueDate! < today
 }
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
