@@ -39,7 +39,7 @@ const items: MenuItem[] = [
   >
     <div class="relative flex justify-center pt-6 pb-[43px]">
       <RouterLink :to="{ name: 'dashboard' }" class="cursor-default" @click="emit('close')">
-        <img :src="simpleFlowLogo" alt="SimpleFlow" class="mx-auto -mt-[38px] -mb-[9px] block w-[160px] max-w-full" />
+        <img :src="simpleFlowLogo" alt="SimpleFlow" class="mx-auto -mt-[38px] -mb-[9px] block w-[130px] max-w-full" />
       </RouterLink>
 
       <BaseButton
