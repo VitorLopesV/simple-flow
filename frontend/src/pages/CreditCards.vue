@@ -12,6 +12,7 @@ import CreditCardForm from '@/components/features/CreditCardForm.vue'
 import CreditCardItem from '@/components/features/CreditCardItem.vue'
 import EditedMonthsDialog from '@/components/features/EditedMonthsDialog.vue'
 import InvoiceDetails from '@/components/features/InvoiceDetails.vue'
+import InvoiceSpendingChart from '@/components/features/InvoiceSpendingChart.vue'
 import MonthPicker from '@/components/features/MonthPicker.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import TransactionForm from '@/components/features/TransactionForm.vue'
@@ -53,6 +54,7 @@ const invoiceIdToPay = ref<string | null>(null)
 const seriesChange = useEditedMonthsConfirmation()
 
 const categoryOptions = computed(() => categoryStore.options('SAIDA'))
+const initialLoading = computed(() => creditCardStore.loading && !creditCardStore.cards.length)
 const modalTitle = computed(() => (editing.value ? 'Editar cartão' : 'Novo cartão'))
 const debitModalTitle = computed(() => (debitEditing.value ? 'Editar débito' : 'Novo débito'))
 
@@ -252,42 +254,52 @@ async function confirmDeleteDebit(): Promise<void> {
     </div>
 
     <div class="grid gap-6 2xl:grid-cols-[22rem_minmax(0,1fr)]">
-      <section class="flex flex-col gap-4" aria-label="Cartões cadastrados">
-        <template v-if="creditCardStore.loading && !creditCardStore.cards.length">
-          <div v-for="i in 2" :key="i" class="bg-card border-border rounded-card border p-4">
-            <BaseSkeleton :lines="3" height="h-6" />
-          </div>
-        </template>
+      <div class="flex min-w-0 flex-col gap-6">
+        <section class="flex flex-col gap-4" aria-label="Cartões cadastrados">
+          <template v-if="initialLoading">
+            <div v-for="i in 2" :key="i" class="bg-card border-border rounded-card border p-4">
+              <BaseSkeleton :lines="3" height="h-6" />
+            </div>
+          </template>
 
-        <BaseCard v-else-if="creditCardStore.isEmpty" no-padding>
-          <EmptyState
-            title="Nenhum cartão cadastrado"
-            description="Cadastre um cartão para acompanhar faturas e transações."
-          >
-            <template #icon>
-              <CreditCard class="size-6" aria-hidden="true" />
-            </template>
-            <template #action>
-              <BaseButton variant="outline" @click="openNew">
-                <Plus class="size-4" aria-hidden="true" />
-                Adicionar cartão
-              </BaseButton>
-            </template>
-          </EmptyState>
-        </BaseCard>
+          <BaseCard v-else-if="creditCardStore.isEmpty" no-padding>
+            <EmptyState
+              title="Nenhum cartão cadastrado"
+              description="Cadastre um cartão para acompanhar faturas e transações."
+            >
+              <template #icon>
+                <CreditCard class="size-6" aria-hidden="true" />
+              </template>
+              <template #action>
+                <BaseButton variant="outline" @click="openNew">
+                  <Plus class="size-4" aria-hidden="true" />
+                  Adicionar cartão
+                </BaseButton>
+              </template>
+            </EmptyState>
+          </BaseCard>
 
-        <template v-else>
-          <CreditCardItem
-            v-for="item in creditCardStore.cards"
-            :key="item.card.id"
-            :item="item"
-            :selected="item.card.id === creditCardStore.selected?.card.id"
-            @select="creditCardStore.select($event)"
-            @edit="openEdit"
-            @remove="askDelete"
-          />
-        </template>
-      </section>
+          <template v-else>
+            <CreditCardItem
+              v-for="item in creditCardStore.cards"
+              :key="item.card.id"
+              :item="item"
+              :selected="item.card.id === creditCardStore.selected?.card.id"
+              @select="creditCardStore.select($event)"
+              @edit="openEdit"
+              @remove="askDelete"
+            />
+          </template>
+        </section>
+
+        <!-- Fatura inteira do cartão selecionado, sem os filtros da tabela ao lado. -->
+        <InvoiceSpendingChart
+          v-if="initialLoading || creditCardStore.selected"
+          :transactions="creditCardStore.selected?.invoice?.transactions ?? []"
+          :description="creditCardStore.selected?.card.name"
+          :loading="initialLoading"
+        />
+      </div>
 
       <InvoiceDetails
         v-if="creditCardStore.selected"
