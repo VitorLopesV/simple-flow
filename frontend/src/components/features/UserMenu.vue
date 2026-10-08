@@ -44,7 +44,7 @@ async function logOut(): Promise<void> {
     <BaseButton
       variant="ghost"
       size="icon"
-      class="border-border !size-[47px] !rounded-full border-2 !p-0"
+      class="border-border !size-[56px] !rounded-full border-2 !p-0"
       aria-label="Menu de usuário"
       aria-haspopup="menu"
       :aria-expanded="menuOpen"

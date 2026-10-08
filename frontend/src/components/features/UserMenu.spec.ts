@@ -71,6 +71,12 @@ describe('menu do usuário', () => {
     expect(trigger(screen).get('img').attributes('src')).toBe('data:image/jpeg;base64,FOTO')
   })
 
+  it('o botão do avatar tem 56px de diâmetro', () => {
+    const screen = mountComponent()
+
+    expect(trigger(screen).classes()).toContain('!size-[56px]')
+  })
+
   it('clicar de novo no ícone fecha o menu', async () => {
     const screen = mountComponent()
 
