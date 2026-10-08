@@ -98,6 +98,19 @@ describe('menu do usuário', () => {
     await screen.vm.$nextTick()
     expect(screen.find('[role="menu"]').exists()).toBe(false)
   })
+
+  it('fecha quando o foco sai do menu (ex.: Shift+Tab até o sino), para não sobrepor as notificações', async () => {
+    const outside = document.createElement('button')
+    document.body.appendChild(outside)
+    const screen = mountComponent()
+
+    await trigger(screen).trigger('click')
+    await trigger(screen).trigger('focusout', { relatedTarget: item(screen, 'Meu perfil')!.element })
+    expect(screen.find('[role="menu"]').exists()).toBe(true)
+
+    await trigger(screen).trigger('focusout', { relatedTarget: outside })
+    expect(screen.find('[role="menu"]').exists()).toBe(false)
+  })
 })
 
 describe('ações do menu', () => {

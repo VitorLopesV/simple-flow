@@ -26,6 +26,12 @@ watch(menuOpen, (open) => {
 })
 onBeforeUnmount(() => window.removeEventListener('keydown', closeOnEscape))
 
+/** Tab para fora do menu (ex.: até o sino de notificações) fecha, então os dois nunca se sobrepõem. */
+function closeOnFocusOut(event: FocusEvent): void {
+  const next = event.relatedTarget as Node | null
+  if (next && !(event.currentTarget as HTMLElement).contains(next)) menuOpen.value = false
+}
+
 function openProfile(): void {
   menuOpen.value = false
   profileOpen.value = true
@@ -40,7 +46,7 @@ async function logOut(): Promise<void> {
 </script>
 
 <template>
-  <div class="relative">
+  <div class="relative" @focusout="closeOnFocusOut">
     <BaseButton
       variant="ghost"
       size="icon"

@@ -2,9 +2,13 @@
 import { Menu } from '@lucide/vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
+import NotificationMenu from '@/components/features/NotificationMenu.vue'
 import UserMenu from '@/components/features/UserMenu.vue'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 const emit = defineEmits<{ openMenu: [] }>()
+
+const notificationStore = useNotificationStore()
 </script>
 
 <template>
@@ -23,6 +27,7 @@ const emit = defineEmits<{ openMenu: [] }>()
     </BaseButton>
 
     <div class="ml-auto flex items-center gap-2">
+      <NotificationMenu :notifications="notificationStore.notifications" />
       <UserMenu />
     </div>
   </header>
