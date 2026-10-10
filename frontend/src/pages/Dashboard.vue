@@ -259,9 +259,9 @@ watch(
         Exportar dados
       </BaseButton>
       <BaseButton
-        variant="outline"
-        class="!h-11 !w-11 justify-center !px-0"
-        :class="transactionsOpen ? '!bg-success !border-success !text-success-foreground hover:!bg-success/90' : ''"
+        variant="ghost"
+        class="!h-11 !w-11 justify-center !px-0 hover:!bg-transparent hover:!text-success"
+        :class="transactionsOpen ? '!text-success' : '!text-foreground'"
         aria-label="Últimas transações"
         title="Últimas transações"
         aria-controls="recent-transactions-panel"
@@ -269,7 +269,7 @@ watch(
         @click="transactionsOpen = !transactionsOpen"
       >
         <span
-          class="inline-block size-7 bg-current"
+          class="inline-block size-[37px] bg-current"
           :style="recentTransactionsIconStyle"
           aria-hidden="true"
         />

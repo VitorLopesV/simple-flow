@@ -17,12 +17,14 @@ interface MenuItem {
   label: string
   /** URL do SVG; vira máscara para herdar a cor do item (hover e ativo). */
   icon: string
+  /** Classe de tamanho do ícone; o padrão é `size-8`. */
+  iconSize?: string
 }
 
 const items: MenuItem[] = [
   { route: 'dashboard', label: 'Dashboard', icon: dashboardIcon },
-  { route: 'incomes', label: 'Entradas', icon: inflowIcon },
-  { route: 'expenses', label: 'Saídas', icon: outflowIcon },
+  { route: 'incomes', label: 'Entradas', icon: inflowIcon, iconSize: 'size-[34px]' },
+  { route: 'expenses', label: 'Saídas', icon: outflowIcon, iconSize: 'size-[34px]' },
   { route: 'cards', label: 'Cartões', icon: cardsIcon },
 ]
 </script>
@@ -67,7 +69,12 @@ const items: MenuItem[] = [
         active-class="bg-success"
         @click="emit('close')"
       >
-        <span class="inline-block size-8 shrink-0 bg-current" :style="iconMaskStyle(item.icon)" aria-hidden="true" />
+        <span
+          class="inline-block shrink-0 bg-current"
+          :class="item.iconSize ?? 'size-8'"
+          :style="iconMaskStyle(item.icon)"
+          aria-hidden="true"
+        />
         {{ item.label }}
       </RouterLink>
     </nav>
