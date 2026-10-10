@@ -47,15 +47,16 @@ describe('botão de notificações', () => {
 
     expect(bell(screen).attributes('aria-label')).toBe('Notificações')
     expect(bell(screen).attributes('aria-expanded')).toBe('false')
-    expect(bell(screen).find('svg').exists()).toBe(true)
+    expect(bell(screen).find('[data-testid="notification-icon"]').exists()).toBe(true)
     expect(popup(screen).exists()).toBe(false)
   })
 
-  it('tem o mesmo diâmetro do avatar do usuário (56px)', () => {
+  it('mostra só o ícone, sem círculo nem borda, e fica verde no hover', () => {
     const screen = mountComponent()
 
-    expect(bell(screen).classes()).toContain('!size-[56px]')
-    expect(bell(screen).classes()).toContain('!rounded-full')
+    expect(bell(screen).classes()).not.toContain('border-2')
+    expect(bell(screen).classes()).not.toContain('!rounded-full')
+    expect(bell(screen).classes()).toContain('hover:!text-success')
   })
 
   it('sem alertas, não mostra badge', () => {

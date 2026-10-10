@@ -1,6 +1,6 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import TransactionForm from '@/components/features/TransactionForm.vue'
 import { useCategoryStore } from '@/stores/categoryStore'
@@ -54,11 +54,15 @@ function optionLabels(wrapper: VueWrapper, label: string): string[] {
     .map((option) => option.text())
 }
 
-/** A validação do vee-validate é assíncrona: espera ela terminar antes de conferir. */
+/**
+ * A validação do vee-validate é assíncrona e o tempo dela varia: espera até o formulário
+ * emitir `save` ou exibir um erro, em vez de contar com um atraso fixo (que dava flakiness).
+ */
 async function submit(wrapper: VueWrapper) {
   await wrapper.get('form').trigger('submit')
-  await flushPromises()
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  await vi.waitFor(() => {
+    if (!wrapper.emitted('save') && !wrapper.find('[role="alert"]').exists()) throw new Error('validação pendente')
+  })
   await flushPromises()
 }
 

@@ -46,7 +46,7 @@ async function logOut(): Promise<void> {
 </script>
 
 <template>
-  <div class="relative" @focusout="closeOnFocusOut">
+  <div class="relative flex" @focusout="closeOnFocusOut">
     <BaseButton
       variant="ghost"
       size="icon"
