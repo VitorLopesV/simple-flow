@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Download, Wallet } from '@lucide/vue'
+import { ArrowDownCircle, ArrowUpCircle, CreditCard, Wallet } from '@lucide/vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
@@ -12,7 +12,8 @@ import MonthPicker from '@/components/features/MonthPicker.vue'
 import StatisticsChart from '@/components/features/StatisticsChart.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
-import recentTransactionsIcon from '@/img/last_transitions_icon.svg'
+import exportDataIcon from '@/img/export_data_icon.svg'
+import recentTransactionsIcon from '@/img/recent_transactions_icon.svg'
 import { notify } from '@/composables/useNotify'
 import { exportPdfReport } from '@/services/exportService'
 import { getErrorMessage } from '@/services/http'
@@ -22,6 +23,7 @@ import { usePeriodStore } from '@/stores/periodStore'
 import { EXPENSE_TYPE_COLOR, EXPENSE_TYPE_LABEL } from '@/types/expense'
 import { formatCurrency, formatPercent } from '@/utils/currencyFormatter'
 import { formatDate, formatPeriod } from '@/utils/dateFormatter'
+import { iconMaskStyle } from '@/utils/iconMask'
 
 const authStore = useAuthStore()
 const periodStore = usePeriodStore()
@@ -83,20 +85,8 @@ onBeforeUnmount(() => {
 
 const exporting = ref(false)
 
-/**
- * O SVG tem `fill` fixo, então vira máscara: a cor vem de `bg-current` e acompanha o tema.
- * A URL vai entre aspas porque o Vite pode inlinar o arquivo como data URI.
- */
-const recentTransactionsIconStyle = {
-  maskImage: `url("${recentTransactionsIcon}")`,
-  WebkitMaskImage: `url("${recentTransactionsIcon}")`,
-  maskRepeat: 'no-repeat',
-  WebkitMaskRepeat: 'no-repeat',
-  maskPosition: 'center',
-  WebkitMaskPosition: 'center',
-  maskSize: 'contain',
-  WebkitMaskSize: 'contain',
-}
+const recentTransactionsIconStyle = iconMaskStyle(recentTransactionsIcon)
+const exportIconStyle = iconMaskStyle(exportDataIcon)
 
 /** Painel lateral de últimas transações: oculto por padrão, aberto sob demanda. */
 const transactionsOpen = ref(false)
@@ -265,7 +255,7 @@ watch(
         @today="periodStore.goToToday()"
       />
       <BaseButton variant="outline" class="!h-11" :loading="exporting" @click="exportData">
-        <Download class="size-4" aria-hidden="true" />
+        <span class="inline-block size-6 bg-current" :style="exportIconStyle" aria-hidden="true" />
         Exportar dados
       </BaseButton>
       <BaseButton

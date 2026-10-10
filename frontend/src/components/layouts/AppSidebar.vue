@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, LayoutDashboard, X } from '@lucide/vue'
-import type { Component } from 'vue'
+import { X } from '@lucide/vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
+import cardsIcon from '@/img/cards_pane_icon.svg'
+import dashboardIcon from '@/img/dashboard_pane_icon.svg'
+import inflowIcon from '@/img/financial_inflow_pane_icon.svg'
+import outflowIcon from '@/img/financial_outflow_pane_icon.svg'
 import simpleFlowLogo from '@/img/simple-flow-logo.svg'
+import { iconMaskStyle } from '@/utils/iconMask'
 
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -11,14 +15,15 @@ const emit = defineEmits<{ close: [] }>()
 interface MenuItem {
   route: string
   label: string
-  icon: Component
+  /** URL do SVG; vira máscara para herdar a cor do item (hover e ativo). */
+  icon: string
 }
 
 const items: MenuItem[] = [
-  { route: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { route: 'incomes', label: 'Entradas', icon: ArrowUpCircle },
-  { route: 'expenses', label: 'Saídas', icon: ArrowDownCircle },
-  { route: 'cards', label: 'Cartões', icon: CreditCard },
+  { route: 'dashboard', label: 'Dashboard', icon: dashboardIcon },
+  { route: 'incomes', label: 'Entradas', icon: inflowIcon },
+  { route: 'expenses', label: 'Saídas', icon: outflowIcon },
+  { route: 'cards', label: 'Cartões', icon: cardsIcon },
 ]
 </script>
 
@@ -58,11 +63,11 @@ const items: MenuItem[] = [
         v-for="item in items"
         :key="item.route"
         :to="{ name: item.route }"
-        class="text-muted-foreground [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:hover:text-foreground [&:not(.router-link-active)]:focus-visible:bg-success/25 [&:not(.router-link-active)]:focus-visible:text-foreground flex items-center gap-3 rounded-lg px-5 py-3 text-base font-medium outline-none transition-colors"
-        active-class="bg-success text-success-foreground"
+        class="text-foreground [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:focus-visible:bg-success/25 flex items-center gap-3 rounded-lg px-5 py-3 text-sm font-medium outline-none transition-colors"
+        active-class="bg-success"
         @click="emit('close')"
       >
-        <component :is="item.icon" class="size-5 shrink-0" aria-hidden="true" />
+        <span class="inline-block size-8 shrink-0 bg-current" :style="iconMaskStyle(item.icon)" aria-hidden="true" />
         {{ item.label }}
       </RouterLink>
     </nav>

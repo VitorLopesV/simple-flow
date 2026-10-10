@@ -3,7 +3,7 @@ import { CircleCheck } from '@lucide/vue'
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
-import notificationsIcon from '@/img/notifications.svg'
+import notificationsIcon from '@/img/notifications_icon.svg'
 import type { AppNotification } from '@/types/notification'
 import { formatDate } from '@/utils/dateFormatter'
 
@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
       ref="trigger"
       variant="ghost"
       size="icon"
-      class="relative !size-10 !p-0 hover:!bg-transparent hover:!text-success"
+      class="relative !size-10 !p-0 !text-foreground hover:!bg-transparent hover:!text-success"
       :class="open && '!text-success'"
       :aria-label="triggerLabel"
       aria-haspopup="dialog"
