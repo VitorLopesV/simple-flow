@@ -22,7 +22,6 @@
     "verbatimModuleSyntax": true,
     "exactOptionalPropertyTypes": false,
 
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
