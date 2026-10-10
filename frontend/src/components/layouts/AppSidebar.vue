@@ -73,7 +73,7 @@ const items: MenuItem[] = [
     </nav>
 
     <div class="p-4">
-      <p class="text-muted-foreground text-center text-xs">Versão atual: 0.2.4</p>
+      <p class="text-muted-foreground text-center text-xs">Versão atual: 0.2.5</p>
     </div>
   </aside>
 </template>
