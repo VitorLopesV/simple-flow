@@ -19,6 +19,7 @@ export type ExpenseType =
   | 'EDUCACAO'
   | 'COMPRAS'
   | 'FARMACIA'
+  | 'ASSINATURA'
   | 'OUTROS'
 
 export interface Expense {
@@ -138,6 +139,7 @@ export const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
   EDUCACAO: 'Educação',
   COMPRAS: 'Compras',
   FARMACIA: 'Farmácia',
+  ASSINATURA: 'Assinatura',
   OUTROS: 'Outros',
 }
 
@@ -156,5 +158,6 @@ export const EXPENSE_TYPE_COLOR: Record<ExpenseType, string> = {
   EDUCACAO: '#eab308',
   COMPRAS: '#ec4899',
   FARMACIA: '#ef4444',
+  ASSINATURA: '#14b8a6',
   OUTROS: '#94a3b8',
 }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { EXPENSE_STATUS_OPTIONS, isExpenseOverdue } from '@/types/expense'
+import { EXPENSE_STATUS_OPTIONS, EXPENSE_TYPE_COLOR, EXPENSE_TYPE_OPTIONS, isExpenseOverdue } from '@/types/expense'
 
 const TODAY = '2026-10-08'
 
@@ -39,5 +39,12 @@ describe('isExpenseOverdue', () => {
 describe('situações selecionáveis', () => {
   it('são só Pendente e Pago — "Vencido" é derivado, não uma opção', () => {
     expect(EXPENSE_STATUS_OPTIONS.map((option) => option.value)).toEqual(['PENDENTE', 'PAGO'])
+  })
+})
+
+describe('tipos de saída', () => {
+  it('oferece "Assinatura" (usado em saídas e cartões) com cor própria', () => {
+    expect(EXPENSE_TYPE_OPTIONS).toContainEqual({ label: 'Assinatura', value: 'ASSINATURA' })
+    expect(EXPENSE_TYPE_COLOR.ASSINATURA).toBeTruthy()
   })
 })
