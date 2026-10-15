@@ -172,7 +172,7 @@ const doughnutOptions = computed<ChartOptions<'doughnut'>>(() => ({
   <div
     :style="{ '--chart-height': `${height}px` }"
     class="relative h-(--chart-height) w-full min-w-0"
-    :class="fill && 'md:h-full'"
+    :class="fill && '2xl:h-full'"
   >
     <Line
       v-if="type === 'line'"

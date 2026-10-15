@@ -13,7 +13,6 @@ import StatisticsChart from '@/components/features/StatisticsChart.vue'
 import SummaryCard from '@/components/features/SummaryCard.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
 import exportDataIcon from '@/img/export_data_icon.svg'
-import recentTransactionsIcon from '@/img/recent_transactions_icon.svg'
 import { notify } from '@/composables/useNotify'
 import { exportPdfReport } from '@/services/exportService'
 import { getErrorMessage } from '@/services/http'
@@ -78,22 +77,11 @@ function startTyping(): void {
 }
 
 watch(userName, startTyping)
-onBeforeUnmount(() => {
-  stopTyping()
-  window.removeEventListener('keydown', closeOnEscape)
-})
+onBeforeUnmount(stopTyping)
 
 const exporting = ref(false)
 
-const recentTransactionsIconStyle = iconMaskStyle(recentTransactionsIcon)
 const exportIconStyle = iconMaskStyle(exportDataIcon)
-
-/** Painel lateral de últimas transações: oculto por padrão, aberto sob demanda. */
-const transactionsOpen = ref(false)
-
-function closeOnEscape(event: KeyboardEvent): void {
-  if (event.key === 'Escape') transactionsOpen.value = false
-}
 
 async function exportData(): Promise<void> {
   exporting.value = true
@@ -215,7 +203,6 @@ const incomeSeries = computed(() => [
 const incomeColors = computed(() => incomes.value.map((item) => item.color))
 
 onMounted(() => {
-  window.addEventListener('keydown', closeOnEscape)
   startTyping()
   void dashboardStore.load()
 })
@@ -227,7 +214,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex w-full flex-col gap-10 md:h-full md:min-h-0 md:gap-6">
+  <div class="flex w-full flex-col gap-10 2xl:h-full 2xl:min-h-0 2xl:gap-6">
   <h2
     data-testid="greeting"
     :aria-label="fullText"
@@ -243,7 +230,7 @@ watch(
   </h2>
 
   <PageLayout
-    class="md:min-h-0 md:flex-1"
+    class="2xl:min-h-0 2xl:flex-1"
     title="Visão geral"
     :description="`Resumo financeiro de ${formatPeriod(periodStore.period)}`"
   >
@@ -258,27 +245,11 @@ watch(
         <span class="inline-block size-6 bg-current" :style="exportIconStyle" aria-hidden="true" />
         Exportar dados
       </BaseButton>
-      <BaseButton
-        variant="ghost"
-        class="!h-11 !w-11 justify-center !px-0 hover:!bg-transparent hover:!text-success"
-        :class="transactionsOpen ? '!text-success' : '!text-foreground'"
-        aria-label="Últimas transações"
-        title="Últimas transações"
-        aria-controls="recent-transactions-panel"
-        :aria-expanded="transactionsOpen"
-        @click="transactionsOpen = !transactionsOpen"
-      >
-        <span
-          class="inline-block size-[37px] bg-current"
-          :style="recentTransactionsIconStyle"
-          aria-hidden="true"
-        />
-      </BaseButton>
     </template>
 
-    <div class="flex flex-col gap-6 md:min-h-0 md:flex-1 md:flex-row md:items-stretch md:gap-0">
-      <div class="@container flex min-w-0 flex-1 flex-col gap-4 md:min-h-0">
-        <div class="grid shrink-0 grid-cols-1 gap-4 @lg:grid-cols-2 @3xl:grid-cols-4">
+    <div class="flex flex-col gap-6 2xl:min-h-0 2xl:flex-1 2xl:flex-row 2xl:items-stretch">
+      <div class="@container flex min-w-0 flex-1 flex-col gap-4 2xl:min-h-0">
+        <div class="grid shrink-0 grid-cols-1 gap-4 @md:grid-cols-2 @3xl:grid-cols-4">
           <SummaryCard
             label="Entradas"
             :value="summary?.totalIncome ?? 0"
@@ -316,10 +287,10 @@ watch(
           />
         </div>
 
-        <div class="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:grid-rows-2">
-          <div class="grid grid-cols-1 gap-4 md:min-h-0 md:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 2xl:min-h-0 2xl:flex-1 2xl:grid-rows-2">
+          <div class="grid grid-cols-1 gap-4 2xl:min-h-0 @2xl:grid-cols-2">
             <BaseCard fill title="Entradas x Saídas" description="Evolução dos últimos 6 meses">
-              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
+              <BaseSkeleton v-if="initialLoading" height="h-64 2xl:h-full" />
               <StatisticsChart
                 v-else
                 fill
@@ -331,7 +302,7 @@ watch(
             </BaseCard>
 
             <BaseCard fill title="Acompanhamento mensal" description="Entradas e saídas nos últimos 6 meses">
-              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
+              <BaseSkeleton v-if="initialLoading" height="h-64 2xl:h-full" />
               <StatisticsChart
                 v-else
                 fill
@@ -343,7 +314,7 @@ watch(
             </BaseCard>
           </div>
 
-          <div class="grid grid-cols-1 gap-4 md:min-h-0 md:grid-cols-3">
+          <div class="grid grid-cols-1 gap-4 2xl:min-h-0 @2xl:grid-cols-3">
             <BaseCard fill title="Gastos por categoria" :description="formatPeriod(periodStore.period)">
               <template #actions>
                 <ExpenseSourceToggle
@@ -353,7 +324,7 @@ watch(
                 />
               </template>
 
-              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
+              <BaseSkeleton v-if="initialLoading" height="h-64 2xl:h-full" />
               <EmptyState
                 compact
                 v-else-if="!spending.length && categorySource === 'cards'"
@@ -386,7 +357,7 @@ watch(
                 />
               </template>
 
-              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
+              <BaseSkeleton v-if="initialLoading" height="h-64 2xl:h-full" />
               <EmptyState
                 compact
                 v-else-if="!types.length && typeSource === 'cards'"
@@ -411,7 +382,7 @@ watch(
             </BaseCard>
 
             <BaseCard fill title="Entradas por categoria" :description="formatPeriod(periodStore.period)">
-              <BaseSkeleton v-if="initialLoading" height="h-64 md:h-full" />
+              <BaseSkeleton v-if="initialLoading" height="h-64 2xl:h-full" />
               <EmptyState
                 compact
                 v-else-if="!incomes.length"
@@ -433,21 +404,13 @@ watch(
       </div>
 
       <div
-        :inert="!transactionsOpen"
-        :aria-hidden="!transactionsOpen"
-        class="shrink-0 overflow-hidden transition-[width,opacity,margin] duration-300 ease-out motion-reduce:transition-none md:min-h-0"
-        :class="
-          transactionsOpen
-            ? 'w-full opacity-100 md:ml-6 md:w-80 lg:w-96'
-            : 'hidden w-0 opacity-0 md:ml-0 md:block'
-        "
+        class="w-full shrink-0 2xl:min-h-0 2xl:w-96 2xl:self-stretch"
       >
         <aside
           id="recent-transactions-panel"
           data-testid="recent-transactions-panel"
           aria-label="Últimas transações"
-          class="bg-card border-border flex max-h-[70vh] w-full flex-col rounded-xl border shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none md:h-full md:max-h-none md:w-80 lg:w-96"
-          :class="transactionsOpen ? 'translate-x-0' : 'md:translate-x-8'"
+          class="bg-card border-border flex max-h-[70vh] w-full flex-col rounded-xl border shadow-sm 2xl:h-full 2xl:max-h-none"
         >
           <div class="border-border flex items-center justify-between border-b px-5 py-4">
             <div>

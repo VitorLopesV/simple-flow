@@ -307,48 +307,20 @@ describe('gastos por categoria', () => {
 })
 
 describe('painel de últimas transações', () => {
-  function button(screen: VueWrapper) {
-    return screen.get('button[aria-controls="recent-transactions-panel"]')
-  }
-
-  function panelVisible(screen: VueWrapper): boolean {
-    const panel = screen.get('[data-testid="recent-transactions-panel"]')
-    return panel.element.parentElement?.getAttribute('aria-hidden') === 'false'
-  }
-
-  it('começa oculto', async () => {
+  it('fica sempre visível, sem botão para abrir ou fechar', async () => {
     const screen = await mountComponent(summary())
 
-    expect(button(screen).attributes('aria-expanded')).toBe('false')
-    expect(panelVisible(screen)).toBe(false)
+    expect(screen.find('[data-testid="recent-transactions-panel"]').exists()).toBe(true)
+    expect(screen.find('button[aria-controls="recent-transactions-panel"]').exists()).toBe(false)
+    expect(screen.find('[aria-hidden="true"][inert]').exists()).toBe(false)
   })
 
-  it('abre e fecha ao clicar no botão', async () => {
+  it('não fecha com a tecla Esc', async () => {
     const screen = await mountComponent(summary())
-
-    await button(screen).trigger('click')
-    expect(button(screen).attributes('aria-expanded')).toBe('true')
-    expect(panelVisible(screen)).toBe(true)
-
-    await button(screen).trigger('click')
-    expect(button(screen).attributes('aria-expanded')).toBe('false')
-    expect(panelVisible(screen)).toBe(false)
-  })
-
-  it('fecha com a tecla Esc', async () => {
-    const screen = await mountComponent(summary())
-    await button(screen).trigger('click')
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     await screen.vm.$nextTick()
 
-    expect(panelVisible(screen)).toBe(false)
-  })
-
-  it('o botão tem só ícone, com nome acessível', async () => {
-    const screen = await mountComponent(summary())
-
-    expect(button(screen).text()).toBe('')
-    expect(button(screen).attributes('aria-label')).toBe('Últimas transações')
+    expect(screen.find('[data-testid="recent-transactions-panel"]').isVisible()).toBe(true)
   })
 })

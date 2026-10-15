@@ -15,7 +15,7 @@ const periodStore = usePeriodStore()
 
 const menuOpen = ref(false)
 
-/** Páginas que cabem na viewport (md+): a coluna assume a altura da tela e o conteúdo se ajusta. */
+/** Páginas que cabem na viewport (2xl+): a coluna assume a altura da tela e o conteúdo se ajusta. */
 const noScroll = computed(() => route.meta.noScroll === true)
 
 /** Competência pedida na URL (`?competencia=YYYY-MM`), já limitada ao intervalo navegável. */
@@ -53,14 +53,14 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
 
     <div
       class="flex min-h-full min-w-0 flex-col lg:pl-(--sidebar-width)"
-      :class="noScroll && 'md:h-dvh md:overflow-hidden'"
+      :class="noScroll && '2xl:h-dvh 2xl:overflow-hidden'"
     >
       <AppHeader @open-menu="menuOpen = true" />
 
       <main
         id="main-content"
         class="min-w-0 flex-1 px-4 py-6 sm:px-[50px]"
-        :class="noScroll && 'md:flex md:min-h-0 md:flex-col md:pb-6'"
+        :class="noScroll && '2xl:flex 2xl:min-h-0 2xl:flex-col 2xl:pb-6'"
       >
         <RouterView v-slot="{ Component }">
           <Transition
