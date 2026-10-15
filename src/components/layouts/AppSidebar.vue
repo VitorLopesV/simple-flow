@@ -23,8 +23,8 @@ interface MenuItem {
 
 const items: MenuItem[] = [
   { route: 'dashboard', label: 'Dashboard', icon: dashboardIcon },
-  { route: 'incomes', label: 'Entradas', icon: inflowIcon, iconSize: 'size-[34px]' },
-  { route: 'expenses', label: 'Saídas', icon: outflowIcon, iconSize: 'size-[34px]' },
+  { route: 'incomes', label: 'Entradas', icon: inflowIcon, iconSize: 'size-8' },
+  { route: 'expenses', label: 'Saídas', icon: outflowIcon, iconSize: 'size-8' },
   { route: 'cards', label: 'Cartões', icon: cardsIcon },
 ]
 </script>
@@ -65,13 +65,13 @@ const items: MenuItem[] = [
         v-for="item in items"
         :key="item.route"
         :to="{ name: item.route }"
-        class="text-[#D1D1D1] [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:focus-visible:bg-success/25 flex items-center gap-3 rounded-lg px-5 py-3 text-sm font-medium outline-none transition-colors"
-        active-class="bg-success"
+        class="text-[#D1D1D1] [&.router-link-active]:text-[#212121] [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:focus-visible:bg-success/25 flex items-center gap-3 rounded-lg px-5 py-3 text-sm font-medium group outline-none transition-colors"
+        active-class="router-link-active bg-success"
         @click="emit('close')"
       >
         <span
-          class="inline-block shrink-0 bg-[#D1D1D1]"
-          :class="item.iconSize ?? 'size-8'"
+          class="inline-block shrink-0 bg-current transition-transform duration-200 motion-safe:group-hover:scale-110 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-focus-visible:scale-110 motion-safe:group-focus-visible:-translate-y-0.5"
+          :class="item.iconSize ?? 'size-[30px]'"
           :style="iconMaskStyle(item.icon)"
           aria-hidden="true"
         />
