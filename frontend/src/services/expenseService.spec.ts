@@ -112,6 +112,49 @@ describe('compareExpensesByDueDate', () => {
   })
 })
 
+describe('compareExpensesByDueDate — situação', () => {
+  const TODAY = '2026-08-15'
+  const sortByRule = (list: Expense[]) => [...list].sort((a, b) => compareExpensesByDueDate(a, b, TODAY))
+
+  it('vencidas ficam no topo, a que venceu há mais tempo primeiro', () => {
+    const pending = expense({ id: 'pendente', dueDate: '2026-08-20' })
+    const overdueRecent = expense({ id: 'vencida_recente', dueDate: '2026-08-10' })
+    const overdueOld = expense({ id: 'vencida_antiga', dueDate: '2026-08-01' })
+
+    expect(sortByRule([pending, overdueRecent, overdueOld]).map((e) => e.id)).toEqual([
+      'vencida_antiga',
+      'vencida_recente',
+      'pendente',
+    ])
+  })
+
+  it('pagas vão para o final, mesmo com vencimento mais próximo', () => {
+    const paid = expense({ id: 'paga', status: 'PAGO', dueDate: '2026-08-01' })
+    const pendingLate = expense({ id: 'pendente', dueDate: '2026-08-30' })
+    const pendingNoDue = expense({ id: 'sem_venc', dueDate: null })
+
+    expect(sortByRule([paid, pendingNoDue, pendingLate]).map((e) => e.id)).toEqual([
+      'pendente',
+      'sem_venc',
+      'paga',
+    ])
+  })
+
+  it('só pendentes mantém a ordem atual por vencimento', () => {
+    const late = expense({ id: 'tarde', dueDate: '2026-08-28' })
+    const early = expense({ id: 'cedo', dueDate: '2026-08-16' })
+
+    expect(sortByRule([late, early]).map((e) => e.id)).toEqual(['cedo', 'tarde'])
+  })
+
+  it('sem vencimento, ordena pelo instante de criação (hora, minuto e segundo) do mais recente para o mais antigo', () => {
+    const morning = expense({ id: 'manha', date: '2026-08-10', createdAt: '2026-08-10T09:00:00.000Z' })
+    const evening = expense({ id: 'noite', date: '2026-08-10', createdAt: '2026-08-10T21:30:15.000Z' })
+
+    expect(sortByRule([morning, evening]).map((e) => e.id)).toEqual(['noite', 'manha'])
+  })
+})
+
 describe('list', () => {
   it('filtra pelo período', async () => {
     db.expenses.push(

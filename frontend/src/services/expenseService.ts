@@ -1,21 +1,37 @@
 import type { Paginated, Period, SeriesChangeOptions } from '@/types/common'
 import type { ExpenseDto, ExpenseSummaryDto } from '@/types/dto'
+import { isExpenseOverdue } from '@/types/expense'
 import type { Expense, ExpenseFilter, ExpensePayload, ExpenseSummary, ExpenseType } from '@/types/expense'
-import { addMonths, isWithinPeriod, toReferenceMonth } from '@/utils/dateFormatter'
+import { addMonths, isWithinPeriod, toISODate, toReferenceMonth } from '@/utils/dateFormatter'
 import { asEditedMonthsError, EditedMonthsError, http, USE_MOCK } from './http'
 import { mapPage, toExpense, toExpensePayloadDto, toExpenseSummary } from './mappers'
 import { delay, matchesSearch, mockDb, paginate } from './mock'
 
+/** Vencida primeiro, depois pendente, e paga por último. */
+function expenseSortRank(expense: Expense, today: string): number {
+  if (isExpenseOverdue(expense, today)) return 0
+  return expense.status === 'PAGO' ? 2 : 1
+}
+
 /**
- * Ordena saídas por vencimento primeiro: as que têm data de vencimento vêm
- * antes, da mais próxima para a mais distante; as sem vencimento vêm depois,
- * ordenadas pela data de lançamento mais recente primeiro.
+ * Ordena saídas por situação e, dentro dela, por vencimento: as vencidas ficam no topo
+ * (a que venceu há mais tempo primeiro), depois as pendentes e, por último, as pagas.
+ * Dentro de pendentes e pagas, as que têm vencimento vêm antes, da mais próxima para a
+ * mais distante; as sem vencimento vêm depois, da mais recente para a mais antiga pelo
+ * instante de criação (hora, minuto e segundo, não só o dia), caindo na data de lançamento.
  */
-export function compareExpensesByDueDate(a: Expense, b: Expense): number {
+export function compareExpensesByDueDate(
+  a: Expense,
+  b: Expense,
+  today: string = toISODate(new Date()),
+): number {
+  const rank = expenseSortRank(a, today) - expenseSortRank(b, today)
+  if (rank !== 0) return rank
+
   if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
   if (a.dueDate) return -1
   if (b.dueDate) return 1
-  return b.date.localeCompare(a.date)
+  return (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || b.date.localeCompare(a.date)
 }
 
 export const expenseService = {
