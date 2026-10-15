@@ -87,7 +87,7 @@ onBeforeUnmount(() => {
       <!-- O SVG vira máscara para herdar a cor do botão (`currentColor`), já que o arquivo tem fill fixo. -->
       <span
         data-testid="notification-icon"
-        class="size-[37px] bg-current"
+        class="size-[37px] bg-[#D1D1D1]"
         :style="iconMaskStyle"
         aria-hidden="true"
       ></span>

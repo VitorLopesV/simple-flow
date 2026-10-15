@@ -65,12 +65,12 @@ const items: MenuItem[] = [
         v-for="item in items"
         :key="item.route"
         :to="{ name: item.route }"
-        class="text-foreground [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:focus-visible:bg-success/25 flex items-center gap-3 rounded-lg px-5 py-3 text-sm font-medium outline-none transition-colors"
+        class="text-[#D1D1D1] [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:focus-visible:bg-success/25 flex items-center gap-3 rounded-lg px-5 py-3 text-sm font-medium outline-none transition-colors"
         active-class="bg-success"
         @click="emit('close')"
       >
         <span
-          class="inline-block shrink-0 bg-current"
+          class="inline-block shrink-0 bg-[#D1D1D1]"
           :class="item.iconSize ?? 'size-8'"
           :style="iconMaskStyle(item.icon)"
           aria-hidden="true"
