@@ -112,6 +112,19 @@ export const dashboardService = {
           categoryName: category(expense.categoryId)?.name ?? 'Sem categoria',
           categoryColor: category(expense.categoryId)?.color ?? '#94a3b8',
         })),
+        // Lançamentos de cartão entram pela data da compra: a saída da fatura (acima) só
+        // mostra o total, e o usuário quer ver cada compra no cartão como movimentação.
+        ...db.cardTransactions
+          .filter((transaction) => isWithinPeriod(transaction.date, period))
+          .map<RecentTransaction>((transaction) => ({
+            id: transaction.id,
+            movement: 'SAIDA',
+            description: transaction.description,
+            amount: transaction.amount,
+            date: transaction.date,
+            categoryName: category(transaction.categoryId)?.name ?? 'Sem categoria',
+            categoryColor: category(transaction.categoryId)?.color ?? '#94a3b8',
+          })),
       ]
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 8)

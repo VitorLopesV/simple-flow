@@ -458,4 +458,34 @@ describe('período sem dados', () => {
     expect(summary.incomeSeries.every((p) => p.value === 0)).toBe(true)
     expect(summary.expenseSeries.every((p) => p.value === 0)).toBe(true)
   })
+
+  it('inclui os lançamentos de cartão pela data da compra, ignorando outros meses', async () => {
+    const base = {
+      cardId: 'car_a',
+      invoiceId: 'fat_x',
+      description: 'Compra no cartão',
+      amount: 80,
+      categoryId: catA.id,
+      type: 'CONTA' as const,
+      installment: 1,
+      totalInstallments: 1,
+      recurring: false,
+      createdAt: '',
+      updatedAt: '',
+    }
+    db.cardTransactions.push(
+      { ...base, id: 'tra_agosto', date: '2026-08-12' },
+      { ...base, id: 'tra_julho', date: '2026-07-30' },
+    )
+
+    const { recentTransactions } = await dashboardService.summary(AUGUST)
+
+    expect(recentTransactions.map((t) => t.id)).toEqual(['tra_agosto'])
+    expect(recentTransactions[0]).toMatchObject({
+      movement: 'SAIDA',
+      amount: 80,
+      description: 'Compra no cartão',
+      categoryName: catA.name,
+    })
+  })
 })
