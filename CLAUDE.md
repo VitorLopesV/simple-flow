@@ -8,7 +8,7 @@
 - `vue-router` 4, `pinia` 4 (setup stores), Tailwind CSS v4 (config 100% em CSS, sem `tailwind.config.js`).
 - `vee-validate` para formulários (parcialmente adotado — ver seção Formulários), `axios`, `chart.js`/`vue-chartjs`, `vue-sonner` (toasts), `jspdf` (export PDF), `@lucide/vue` (ícones).
 - **Sem ESLint/Prettier configurados.** Consistência é só por convenção — siga o código existente à risca.
-- **Testes com Vitest** (`@vue/test-utils` + `happy-dom`): rode `npm run test` (raiz ou `frontend`). Arquivos `*.spec.ts` ficam ao lado do código testado; sem pasta `__tests__`, sem helpers globais, sem snapshots. Valide também manualmente via `npm run dev` quando a mudança for visual.
+- **Testes com Vitest** (`@vue/test-utils` + `happy-dom`): rode `npm run test`. Arquivos `*.spec.ts` ficam ao lado do código testado; sem pasta `__tests__`, sem helpers globais, sem snapshots. Valide também manualmente via `npm run dev` quando a mudança for visual.
 
 ## Idioma do código — regra obrigatória
 
@@ -122,4 +122,4 @@ npm run preview       # vite preview
 npm run type-check    # vue-tsc --build --force
 ```
 
-Do monorepo raiz: `npm run dev`, `npm run build`, etc. Deploy: projeto Vercel separado, root directory `frontend/` — ver a seção "Segurança no deploy" do [`../README.md`](../README.md).
+Na raiz do projeto: `npm run dev`, `npm run build`, etc. Deploy: projeto Vercel separado, root directory na raiz do repositório — ver a seção "Segurança no deploy" do [`README.md`](README.md).

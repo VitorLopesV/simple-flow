@@ -21,7 +21,7 @@ O mês selecionado é global (store `period`) e se mantém ao navegar entre as p
 ## 🏗️ Arquitetura do frontend
 
 ```
-frontend/src/
+src/
 ├── assets/            # main.css: design tokens (oklch), tema escuro, base layer
 ├── components/
 │   ├── common/        # átomos/moléculas: BaseButton, BaseInput, BaseModal, CurrencyInput...
@@ -77,7 +77,7 @@ npm run build
 npm run preview
 ```
 
-Saída em `frontend/dist`, com separação automática de chunks:
+Saída em `dist`, com separação automática de chunks:
 
 | Chunk    | Conteúdo                                       |
 | -------- | ----------------------------------------------- |
@@ -114,7 +114,7 @@ O contrato esperado (rotas, payloads e respostas) está descrito no README desse
 
 ## 🚀 Deploy
 
-Frontend publicado na Vercel (Root Directory `frontend`, preset Vite). O backend tem deploy
+Frontend publicado na Vercel (Root Directory na raiz do repositório, preset Vite). O backend tem deploy
 próprio no repositório dele.
 
 ---
@@ -133,4 +133,4 @@ Com `VITE_USE_MOCK=true`:
   mock está desligado.
 
 Para conventions de código e detalhes voltados a agentes de IA, veja
-[`frontend/CLAUDE.md`](../frontend/CLAUDE.md).
+[`CLAUDE.md`](../CLAUDE.md).

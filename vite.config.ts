@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => ({
   },
   test: {
     environment: 'happy-dom',
+    include: ['src/**/*.spec.ts'],
   },
   server: {
     port: 5180,

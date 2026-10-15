@@ -28,3 +28,6 @@ Thumbs.db
 *.sw?
 
 *.tsbuildinfo
+
+# Serena (configuração local do MCP)
+.serena/
