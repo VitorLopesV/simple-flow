@@ -95,6 +95,7 @@ export const incomeService = {
         updatedAt: db.now(),
       }
       db.incomes.push(income)
+      db.logActivity('ENTRADA', 'ADICIONADO', income)
       db.ensureNextIncome(income)
       return delay(db.clone(income))
     }
@@ -134,9 +135,10 @@ export const incomeService = {
         updatedAt: db.now(),
       }
       db.incomes[index] = updated
+      db.logActivity('ENTRADA', 'ALTERADO', updated)
 
       // Desligar encerra a série a partir do mês seguinte; religar volta a gerar o próximo mês.
-      if (deactivating) db.removeRecords(db.incomes, db.laterInSeries(db.incomes, current))
+      if (deactivating) db.removeRecords(db.incomes, db.laterInSeries(db.incomes, current), 'ENTRADA')
       if (!current.recurring && recurring) db.ensureNextIncome(updated)
 
       return delay(db.clone(updated))
@@ -162,7 +164,7 @@ export const incomeService = {
       const edited = db.editedLaterMonths(db.incomes, income)
       if (edited.length && !options.confirm) throw new EditedMonthsError(edited)
       // Excluir um mês da série remove ele e os seguintes; os anteriores ficam intactos.
-      db.removeRecords(db.incomes, [income, ...db.laterInSeries(db.incomes, income)])
+      db.removeRecords(db.incomes, [income, ...db.laterInSeries(db.incomes, income)], 'ENTRADA')
       return delay(undefined)
     }
 

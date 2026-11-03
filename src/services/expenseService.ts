@@ -1,6 +1,6 @@
 import type { Paginated, Period, SeriesChangeOptions } from '@/types/common'
 import type { ExpenseDto, ExpenseSummaryDto } from '@/types/dto'
-import { isExpenseOverdue } from '@/types/expense'
+import { isExpenseOverdue, matchesExpenseStatus } from '@/types/expense'
 import type {
   Expense,
   ExpenseFilter,
@@ -60,7 +60,7 @@ export const expenseService = {
         .expensesWithInvoices()
         .filter((expense) => isWithinPeriod(expense.date, filter.period))
         .filter((expense) => !filter.categoryId || expense.categoryId === filter.categoryId)
-        .filter((expense) => !filter.status || expense.status === filter.status)
+        .filter((expense) => !filter.status || matchesExpenseStatus(expense, filter.status))
         .filter((expense) => matchesSearch(`${expense.description} ${expense.notes ?? ''}`, filter.search))
         .sort(compareExpensesByDueDate)
 
@@ -162,6 +162,7 @@ export const expenseService = {
         updatedAt: db.now(),
       }
       db.expenses.push(expense)
+      db.logActivity('SAIDA', 'ADICIONADO', expense)
       db.ensureNextExpense(expense)
       return delay(db.clone(expense))
     }
@@ -210,9 +211,10 @@ export const expenseService = {
         updatedAt: db.now(),
       }
       db.expenses[index] = updated
+      db.logActivity('SAIDA', 'ALTERADO', updated)
 
       // Desligar encerra a série a partir do mês seguinte; religar volta a gerar o próximo mês.
-      if (deactivating) db.removeRecords(db.expenses, db.laterInSeries(db.expenses, current))
+      if (deactivating) db.removeRecords(db.expenses, db.laterInSeries(db.expenses, current), 'SAIDA')
       if (!current.recurring && recurring) db.ensureNextExpense(updated)
 
       return delay(db.clone(updated))
@@ -254,7 +256,7 @@ export const expenseService = {
       const edited = db.editedLaterMonths(db.expenses, expense)
       if (edited.length && !options.confirm) throw new EditedMonthsError(edited)
       // Excluir um mês da série remove ele e os seguintes; os anteriores ficam intactos.
-      db.removeRecords(db.expenses, [expense, ...db.laterInSeries(db.expenses, expense)])
+      db.removeRecords(db.expenses, [expense, ...db.laterInSeries(db.expenses, expense)], 'SAIDA')
       return delay(undefined)
     }
 

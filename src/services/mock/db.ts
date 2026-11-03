@@ -511,8 +511,40 @@ function hasNextMonthInSeries<T extends SeriesRecord>(items: T[], record: T): bo
   return laterInSeries(items, record).some((item) => periodOrdinal(periodOfDate(item.date)) === next)
 }
 
-/** Remove os registros informados da coleção (por id), sem trocar a referência do array. */
-export function removeRecords<T extends { id: ID }>(items: T[], toRemove: T[]): void {
+// ------------------------------------------------------------- atividades
+
+export type ActivityKind = 'ENTRADA' | 'SAIDA' | 'CARTAO'
+
+/** Cópia dos dados do registro no momento da ação — a única que sobra de um registro removido. */
+export interface ActivityEntry {
+  kind: ActivityKind
+  action: 'ADICIONADO' | 'ALTERADO' | 'REMOVIDO'
+  at: string
+  record: { id: ID; description: string; amount: number; date: string; categoryId: ID }
+}
+
+/** Histórico em ordem cronológica de adições, alterações e remoções (alimenta "Últimas transações"). */
+export const activityLog: ActivityEntry[] = []
+
+export function logActivity(
+  kind: ActivityKind,
+  action: ActivityEntry['action'],
+  record: ActivityEntry['record'],
+): void {
+  const { id, description, amount, date, categoryId } = record
+  activityLog.push({ kind, action, at: now(), record: { id, description, amount, date, categoryId } })
+}
+
+/**
+ * Remove os registros informados da coleção (por id), sem trocar a referência do array.
+ * Com `kind`, cada um é registrado no histórico de atividades como removido.
+ */
+export function removeRecords<T extends ActivityEntry['record']>(
+  items: T[],
+  toRemove: T[],
+  kind?: ActivityKind,
+): void {
+  if (kind) toRemove.forEach((item) => logActivity(kind, 'REMOVIDO', item))
   const ids = new Set(toRemove.map((item) => item.id))
   for (let i = items.length - 1; i >= 0; i -= 1) {
     if (ids.has(items[i]!.id)) items.splice(i, 1)

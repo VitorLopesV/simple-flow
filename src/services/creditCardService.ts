@@ -124,6 +124,7 @@ export const creditCardService = {
 
       for (let i = db.cardTransactions.length - 1; i >= 0; i -= 1) {
         if (cardInvoices.includes(db.cardTransactions[i]!.invoiceId)) {
+          db.logActivity('CARTAO', 'REMOVIDO', db.cardTransactions[i]!)
           db.cardTransactions.splice(i, 1)
         }
       }
@@ -160,6 +161,7 @@ export const creditCardService = {
         updatedAt: db.now(),
       }
       db.cardTransactions.push(transaction)
+      db.logActivity('CARTAO', 'ADICIONADO', transaction)
       db.recalculateInvoiceTotal(invoice.id)
       // Recorrente: o débito do mês seguinte já entra na fatura daquele mês.
       db.ensureNextCardTransaction(transaction)
@@ -211,12 +213,13 @@ export const creditCardService = {
         updatedAt: db.now(),
       }
       db.cardTransactions[index] = updated
+      db.logActivity('CARTAO', 'ALTERADO', updated)
 
       const touched = new Set([previous.invoiceId, invoice.id])
       if (deactivating) {
         const later = db.laterInSeries(db.cardTransactions, previous)
         later.forEach((transaction) => touched.add(transaction.invoiceId))
-        db.removeRecords(db.cardTransactions, later)
+        db.removeRecords(db.cardTransactions, later, 'CARTAO')
       }
       touched.forEach((invoiceId) => db.recalculateInvoiceTotal(invoiceId))
       if (!previous.recurring && recurring) db.ensureNextCardTransaction(updated)
@@ -248,7 +251,7 @@ export const creditCardService = {
 
       // Excluir um mês da série remove ele e os seguintes; os anteriores ficam intactos.
       const removed = [transaction, ...db.laterInSeries(db.cardTransactions, transaction)]
-      db.removeRecords(db.cardTransactions, removed)
+      db.removeRecords(db.cardTransactions, removed, 'CARTAO')
       new Set(removed.map((item) => item.invoiceId)).forEach((invoiceId) =>
         db.recalculateInvoiceTotal(invoiceId),
       )

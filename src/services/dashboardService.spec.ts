@@ -81,6 +81,7 @@ beforeEach(async () => {
   db.expenses.length = 0
   db.invoices.length = 0
   db.cardTransactions.length = 0
+  db.activityLog.length = 0
   db.cards.length = 0
   db.cards.push(card())
   catA = db.categories[0]!
@@ -434,7 +435,61 @@ describe('recentTransactions', () => {
     const { recentTransactions } = await dashboardService.summary(AUGUST)
 
     expect(recentTransactions).toHaveLength(1)
-    expect(recentTransactions[0]).toMatchObject({ movement: 'SAIDA', amount: 450, description: 'Fatura – Alfa' })
+    expect(recentTransactions[0]).toMatchObject({ movement: 'CARTAO', amount: 450, description: 'Fatura – Alfa' })
+  })
+})
+
+describe('recentTransactions — histórico de atividades', () => {
+  const record = (id: string) => ({
+    id,
+    description: id,
+    amount: 10,
+    date: '2026-08-05',
+    categoryId: catA.id,
+  })
+
+  it('marca como removido o registro que sumiu, com os dados guardados no histórico', async () => {
+    db.logActivity('SAIDA', 'ADICIONADO', record('s1'))
+    db.logActivity('SAIDA', 'REMOVIDO', record('s1'))
+    db.logActivity('ENTRADA', 'REMOVIDO', record('e1'))
+
+    const { recentTransactions } = await dashboardService.summary(AUGUST)
+
+    expect(recentTransactions.map((t) => [t.id, t.movement, t.action]).sort()).toEqual([
+      ['e1', 'ENTRADA', 'REMOVIDO'],
+      ['s1', 'SAIDA', 'REMOVIDO'],
+    ])
+  })
+
+  it('mostra o registro alterado com os dados atuais e a ação "alterado"', async () => {
+    const saved = expense({ id: 's1', description: 'Novo nome', amount: 99 })
+    db.expenses.push(saved)
+    db.logActivity('SAIDA', 'ADICIONADO', { ...saved, description: 'Antigo' })
+    db.logActivity('SAIDA', 'ALTERADO', saved)
+
+    const { recentTransactions } = await dashboardService.summary(AUGUST)
+
+    expect(recentTransactions).toHaveLength(1)
+    expect(recentTransactions[0]).toMatchObject({ id: 's1', action: 'ALTERADO', description: 'Novo nome', amount: 99 })
+  })
+
+  it('ordena pela ação mais recente, mesmo que a data do registro seja antiga', async () => {
+    db.expenses.push(expense({ id: 'novo', date: '2026-08-20' }), expense({ id: 'velho', date: '2026-08-01' }))
+    db.logActivity('SAIDA', 'ADICIONADO', record('novo'))
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    db.logActivity('SAIDA', 'ALTERADO', { ...record('velho'), date: '2026-08-01' })
+
+    const { recentTransactions } = await dashboardService.summary(AUGUST)
+
+    expect(recentTransactions.map((t) => t.id)).toEqual(['velho', 'novo'])
+  })
+
+  it('ignora removidos de outro mês e registros que ainda existem', async () => {
+    db.logActivity('SAIDA', 'REMOVIDO', { ...record('julho'), date: '2026-07-10' })
+
+    const { recentTransactions } = await dashboardService.summary(AUGUST)
+
+    expect(recentTransactions).toEqual([])
   })
 })
 
@@ -482,7 +537,7 @@ describe('período sem dados', () => {
 
     expect(recentTransactions.map((t) => t.id)).toEqual(['tra_agosto'])
     expect(recentTransactions[0]).toMatchObject({
-      movement: 'SAIDA',
+      movement: 'CARTAO',
       amount: 80,
       description: 'Compra no cartão',
       categoryName: catA.name,

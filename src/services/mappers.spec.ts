@@ -368,6 +368,8 @@ describe('dashboard', () => {
         {
           id: 'e1',
           movement: 'ENTRADA',
+          action: 'ADICIONADO',
+          occurredAt: undefined,
           description: 'Salário',
           amount: 1000,
           date: '2026-08-05',

@@ -19,6 +19,7 @@ import { getErrorMessage } from '@/services/http'
 import { useAuthStore } from '@/stores/authStore'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { usePeriodStore } from '@/stores/periodStore'
+import { ACTIVITY_ACTION_LABEL, type RecentTransactionKind } from '@/types/dashboard'
 import { EXPENSE_TYPE_COLOR, EXPENSE_TYPE_LABEL } from '@/types/expense'
 import { formatCurrency, formatPercent } from '@/utils/currencyFormatter'
 import { formatDate, formatPeriod } from '@/utils/dateFormatter'
@@ -194,6 +195,16 @@ const typeSeries = computed(() => [
   { name: 'Gastos', data: types.value.map((item) => item.total), color: '#6366f1' },
 ])
 const typeColors = computed(() => types.value.map((item) => EXPENSE_TYPE_COLOR[item.type]))
+
+/** Entrada em verde, saída em vermelho e cartão de crédito em amarelo (ícone, valor e sinal). */
+const TRANSACTION_STYLE: Record<
+  RecentTransactionKind,
+  { icon: typeof ArrowUpCircle; badge: string; text: string; sign: string }
+> = {
+  ENTRADA: { icon: ArrowUpCircle, badge: 'bg-success-soft text-success', text: 'text-success', sign: '+' },
+  SAIDA: { icon: ArrowDownCircle, badge: 'bg-danger-soft text-danger', text: 'text-danger', sign: '−' },
+  CARTAO: { icon: CreditCard, badge: 'bg-warning-soft text-warning', text: 'text-warning', sign: '−' },
+}
 
 const incomes = computed(() => summary.value?.incomeByCategory.slice(0, 6) ?? [])
 const incomeLabels = computed(() => incomes.value.map((item) => item.name))
@@ -433,24 +444,20 @@ watch(
           <ul v-else class="divide-border divide-y">
             <li
               v-for="transaction in summary.recentTransactions"
-              :key="`${transaction.movement}-${transaction.id}`"
+              :key="`${transaction.movement}-${transaction.id}-${transaction.action}`"
+              :data-testid="`recent-transaction-${transaction.movement}`"
               class="flex items-center justify-between gap-3 px-5 py-3"
             >
               <div class="flex min-w-0 items-center gap-3">
                 <span
                   class="flex size-8 shrink-0 items-center justify-center rounded-full"
-                  :class="
-                    transaction.movement === 'ENTRADA'
-                      ? 'bg-success-soft text-success'
-                      : 'bg-danger-soft text-danger'
-                  "
+                  :class="TRANSACTION_STYLE[transaction.movement].badge"
                 >
-                  <ArrowUpCircle
-                    v-if="transaction.movement === 'ENTRADA'"
+                  <component
+                    :is="TRANSACTION_STYLE[transaction.movement].icon"
                     class="size-4"
                     aria-hidden="true"
                   />
-                  <ArrowDownCircle v-else class="size-4" aria-hidden="true" />
                 </span>
 
                 <div class="min-w-0">
@@ -458,15 +465,25 @@ watch(
                   <div class="mt-0.5 flex items-center gap-2">
                     <BaseBadge :color="transaction.categoryColor">{{ transaction.categoryName }}</BaseBadge>
                     <span class="text-muted-foreground text-xs">{{ formatDate(transaction.date) }}</span>
+                    <span
+                      v-if="transaction.action !== 'ADICIONADO'"
+                      data-testid="transaction-action"
+                      class="text-muted-foreground text-xs italic"
+                    >
+                      {{ ACTIVITY_ACTION_LABEL[transaction.action] }}
+                    </span>
                   </div>
                 </div>
               </div>
 
               <p
                 class="tabular-number shrink-0 text-sm font-semibold"
-                :class="transaction.movement === 'ENTRADA' ? 'text-success' : 'text-danger'"
+                :class="[
+                  TRANSACTION_STYLE[transaction.movement].text,
+                  transaction.action === 'REMOVIDO' && 'line-through opacity-70',
+                ]"
               >
-                {{ transaction.movement === 'ENTRADA' ? '+' : '−' }} {{ formatCurrency(transaction.amount) }}
+                {{ TRANSACTION_STYLE[transaction.movement].sign }} {{ formatCurrency(transaction.amount) }}
               </p>
             </li>
           </ul>

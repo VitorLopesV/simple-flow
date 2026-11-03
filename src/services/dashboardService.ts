@@ -93,40 +93,58 @@ export const dashboardService = {
         .sort((a, b) => b.total - a.total)
       const cardExpensesByCategory = byCategory(monthCardTransactions)
 
+      // Última ação de cada registro; sem histórico (dado semeado ou gerado pela recorrência),
+      // vale "adicionado" na data de criação. Removidos só existem no histórico.
+      const lastActivity = new Map<string, (typeof db.activityLog)[number]>()
+      for (const entry of db.activityLog) lastActivity.set(entry.record.id, entry)
+
+      const toRecent = (
+        kind: RecentTransaction['movement'],
+        record: { id: string; description: string; amount: number; date: string; categoryId: string; createdAt: string },
+      ): RecentTransaction => {
+        const last = lastActivity.get(record.id)
+        return {
+          id: record.id,
+          movement: kind,
+          action: last?.action ?? 'ADICIONADO',
+          occurredAt: last?.at ?? record.createdAt,
+          description: record.description,
+          amount: record.amount,
+          date: record.date,
+          categoryName: category(record.categoryId)?.name ?? 'Sem categoria',
+          categoryColor: category(record.categoryId)?.color ?? '#94a3b8',
+        }
+      }
+
+      const liveIds = new Set<string>([
+        ...db.incomes.map((income) => income.id),
+        ...allExpenses.map((expense) => expense.id),
+        ...db.cardTransactions.map((transaction) => transaction.id),
+      ])
+
       const recentTransactions: RecentTransaction[] = [
-        ...monthIncomes.map<RecentTransaction>((income) => ({
-          id: income.id,
-          movement: 'ENTRADA',
-          description: income.description,
-          amount: income.amount,
-          date: income.date,
-          categoryName: category(income.categoryId)?.name ?? 'Sem categoria',
-          categoryColor: category(income.categoryId)?.color ?? '#94a3b8',
-        })),
-        ...monthExpenses.map<RecentTransaction>((expense) => ({
-          id: expense.id,
-          movement: 'SAIDA',
-          description: expense.description,
-          amount: expense.amount,
-          date: expense.date,
-          categoryName: category(expense.categoryId)?.name ?? 'Sem categoria',
-          categoryColor: category(expense.categoryId)?.color ?? '#94a3b8',
-        })),
+        ...monthIncomes.map((income) => toRecent('ENTRADA', income)),
+        // A fatura vira uma saída derivada; no dashboard ela é movimentação de cartão.
+        ...monthExpenses.map((expense) => toRecent(isInvoice(expense) ? 'CARTAO' : 'SAIDA', expense)),
         // Lançamentos de cartão entram pela data da compra: a saída da fatura (acima) só
         // mostra o total, e o usuário quer ver cada compra no cartão como movimentação.
         ...db.cardTransactions
           .filter((transaction) => isWithinPeriod(transaction.date, period))
-          .map<RecentTransaction>((transaction) => ({
-            id: transaction.id,
-            movement: 'SAIDA',
-            description: transaction.description,
-            amount: transaction.amount,
-            date: transaction.date,
-            categoryName: category(transaction.categoryId)?.name ?? 'Sem categoria',
-            categoryColor: category(transaction.categoryId)?.color ?? '#94a3b8',
-          })),
+          .map((transaction) => toRecent('CARTAO', transaction)),
+        // Registros removidos: o que restou é a cópia guardada no histórico.
+        ...[...lastActivity.values()]
+          .filter(
+            (entry) =>
+              entry.action === 'REMOVIDO' &&
+              !liveIds.has(entry.record.id) &&
+              isWithinPeriod(entry.record.date, period),
+          )
+          .map((entry) => toRecent(entry.kind, { ...entry.record, createdAt: entry.at })),
       ]
-        .sort((a, b) => b.date.localeCompare(a.date))
+        .sort(
+          (a, b) =>
+            (b.occurredAt ?? '').localeCompare(a.occurredAt ?? '') || b.date.localeCompare(a.date),
+        )
         .slice(0, 8)
 
       return delay({

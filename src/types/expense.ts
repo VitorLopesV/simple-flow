@@ -6,6 +6,9 @@ import type { ID, PageRequest, Period, SelectOption } from './common'
 
 export type ExpenseStatus = 'PENDENTE' | 'PAGO'
 
+/** Situação filtrável na listagem: além das gravadas, inclui a derivada `VENCIDO`. */
+export type ExpenseStatusFilter = ExpenseStatus | 'VENCIDO'
+
 export type PaymentMethod = 'DINHEIRO' | 'PIX' | 'DEBITO' | 'BOLETO' | 'CARTAO_CREDITO'
 
 /** Classificação específica da despesa, independente da categoria (fixa/variável/investimento). */
@@ -69,7 +72,7 @@ export type ExpensePayload = Omit<
 export interface ExpenseFilter extends PageRequest {
   period: Period
   categoryId?: ID | null
-  status?: ExpenseStatus | null
+  status?: ExpenseStatusFilter | null
   search?: string
 }
 
@@ -106,6 +109,21 @@ export function isExpenseOverdue(
   return expense.status === 'PENDENTE' && Boolean(expense.dueDate) && expense.dueDate! < today
 }
 
+/**
+ * Confere se a saída pertence à situação do filtro. "Pendente" exclui as vencidas
+ * (que são pendentes com vencimento passado), para as três situações serem disjuntas.
+ */
+export function matchesExpenseStatus(
+  expense: Pick<Expense, 'status' | 'dueDate'>,
+  status: ExpenseStatusFilter,
+  today: string = toISODate(new Date()),
+): boolean {
+  const overdue = isExpenseOverdue(expense, today)
+  if (status === 'VENCIDO') return overdue
+  if (status === 'PENDENTE') return expense.status === 'PENDENTE' && !overdue
+  return expense.status === status
+}
+
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   DINHEIRO: 'Dinheiro',
   PIX: 'Pix',
@@ -128,6 +146,12 @@ export const PAYMENT_METHOD_OPTIONS: SelectOption<PaymentMethod>[] = (
 export const EXPENSE_STATUS_OPTIONS: SelectOption<ExpenseStatus>[] = (
   Object.keys(EXPENSE_STATUS_LABEL) as ExpenseStatus[]
 ).map((value) => ({ label: EXPENSE_STATUS_LABEL[value], value }))
+
+/** Opções do filtro de situação das saídas: as gravadas mais "Vencido". */
+export const EXPENSE_STATUS_FILTER_OPTIONS: SelectOption<ExpenseStatusFilter>[] = [
+  ...EXPENSE_STATUS_OPTIONS,
+  { label: EXPENSE_OVERDUE_LABEL, value: 'VENCIDO' },
+]
 
 export const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
   TRANSPORTE: 'Transporte',

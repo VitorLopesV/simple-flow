@@ -8,6 +8,7 @@
  */
 import type { CategoryType, Movement } from './category'
 import type { ID } from './common'
+import type { ActivityAction } from './dashboard'
 import type { CardBrand, InvoiceStatus } from './creditCard'
 import type { ExpenseStatus, ExpenseType, PaymentMethod } from './expense'
 import type { IncomeType } from './income'
@@ -222,7 +223,10 @@ export interface NavigationLimitsDto {
 
 export interface RecentTransactionDto {
   id: ID
-  tipo: Movement
+  tipo: Movement | 'CARTAO'
+  /** Opcional: um backend sem histórico de atividades não devolve o campo (vale 'ADICIONADO'). */
+  acao?: ActivityAction
+  ocorridoEm?: string
   descricao: string
   valor: number
   data: string

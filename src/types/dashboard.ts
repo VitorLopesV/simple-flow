@@ -2,9 +2,25 @@ import type { Movement } from './category'
 import type { ID, SeriesPoint } from './common'
 import type { ExpenseType } from './expense'
 
+/** Origem da movimentação: entrada, saída ou cartão de crédito (fatura e compras). */
+export type RecentTransactionKind = Movement | 'CARTAO'
+
+/** O que aconteceu com o registro; os valores são os devolvidos pela API. */
+export type ActivityAction = 'ADICIONADO' | 'ALTERADO' | 'REMOVIDO'
+
+export const ACTIVITY_ACTION_LABEL: Record<ActivityAction, string> = {
+  ADICIONADO: 'Adicionada',
+  ALTERADO: 'Alterada',
+  REMOVIDO: 'Removida',
+}
+
 export interface RecentTransaction {
   id: ID
-  movement: Movement
+  movement: RecentTransactionKind
+  /** Registro adicionado, alterado ou removido. */
+  action: ActivityAction
+  /** Instante (ISO) em que a ação aconteceu; ordena da mais recente para a mais antiga. */
+  occurredAt?: string
   description: string
   amount: number
   date: string

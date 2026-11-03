@@ -4,7 +4,13 @@ import { computed, ref } from 'vue'
 import { BatchStatusError, compareExpensesByDueDate, expenseService } from '@/services/expenseService'
 import { EditedMonthsError, getErrorMessage } from '@/services/http'
 import type { SeriesChangeOptions } from '@/types/common'
-import type { Expense, ExpensePayload, ExpenseStatus, ExpenseSummary } from '@/types/expense'
+import type {
+  Expense,
+  ExpensePayload,
+  ExpenseStatus,
+  ExpenseStatusFilter,
+  ExpenseSummary,
+} from '@/types/expense'
 import { calculateChange } from '@/utils/currencyFormatter'
 import { usePeriodStore } from './periodStore'
 
@@ -32,7 +38,7 @@ export const useExpenseStore = defineStore('expense', () => {
   const totalPages = ref(1)
 
   const categoryId = ref<string | null>(null)
-  const status = ref<ExpenseStatus | null>(null)
+  const status = ref<ExpenseStatusFilter | null>(null)
   const search = ref('')
 
   const periodTotal = computed(() => summary.value?.total ?? 0)
@@ -174,7 +180,7 @@ export const useExpenseStore = defineStore('expense', () => {
     void load()
   }
 
-  function filterByStatus(newStatus: ExpenseStatus | null): void {
+  function filterByStatus(newStatus: ExpenseStatusFilter | null): void {
     status.value = newStatus
     page.value = 1
     void load()

@@ -192,6 +192,23 @@ describe('list', () => {
     expect(pendentes.items.map((s) => s.id)).toEqual(['pending'])
   })
 
+  it('separa pendente no prazo, vencido e pago nos filtros de situação', async () => {
+    db.expenses.push(
+      expense({ id: 'overdue', status: 'PENDENTE', dueDate: '2000-01-01' }),
+      expense({ id: 'on-time', status: 'PENDENTE', dueDate: '2999-01-01' }),
+      expense({ id: 'no-due', status: 'PENDENTE', dueDate: null }),
+      expense({ id: 'paid-late', status: 'PAGO', paidAt: '2026-08-10', dueDate: '2000-01-01' }),
+    )
+
+    const pending = await expenseService.list(filter({ status: 'PENDENTE' }))
+    const paid = await expenseService.list(filter({ status: 'PAGO' }))
+    const overdue = await expenseService.list(filter({ status: 'VENCIDO' }))
+
+    expect(pending.items.map((s) => s.id).sort()).toEqual(['no-due', 'on-time'])
+    expect(paid.items.map((s) => s.id)).toEqual(['paid-late'])
+    expect(overdue.items.map((s) => s.id)).toEqual(['overdue'])
+  })
+
   it('busca sem diferenciar acento nem caixa, considerando a observação', async () => {
     db.expenses.push(
       expense({ id: 'cafe', description: 'Café da manhã' }),

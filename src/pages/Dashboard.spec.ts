@@ -315,6 +315,33 @@ describe('painel de últimas transações', () => {
     expect(screen.find('[aria-hidden="true"][inert]').exists()).toBe(false)
   })
 
+  it('mostra entrada em verde, saída em vermelho e cartão em amarelo, com o rótulo da ação', async () => {
+    const base = { categoryName: 'Casa', categoryColor: '#6366f1', date: '2026-08-05', amount: 10 }
+    const screen = await mountComponent(
+      summary({
+        recentTransactions: [
+          { ...base, id: 'e1', movement: 'ENTRADA', action: 'ADICIONADO', description: 'Salário' },
+          { ...base, id: 's1', movement: 'SAIDA', action: 'ALTERADO', description: 'Aluguel' },
+          { ...base, id: 'c1', movement: 'CARTAO', action: 'REMOVIDO', description: 'Mercado' },
+        ],
+      }),
+    )
+
+    const income = screen.find('[data-testid="recent-transaction-ENTRADA"]')
+    const expense = screen.find('[data-testid="recent-transaction-SAIDA"]')
+    const card = screen.find('[data-testid="recent-transaction-CARTAO"]')
+
+    expect(income.find('p.font-semibold').classes()).toContain('text-success')
+    expect(income.text()).toContain('+ ')
+    expect(income.find('[data-testid="transaction-action"]').exists()).toBe(false)
+
+    expect(expense.find('p.font-semibold').classes()).toContain('text-danger')
+    expect(expense.find('[data-testid="transaction-action"]').text()).toBe('Alterada')
+
+    expect(card.find('p.font-semibold').classes()).toContain('text-warning')
+    expect(card.find('[data-testid="transaction-action"]').text()).toBe('Removida')
+  })
+
   it('não fecha com a tecla Esc', async () => {
     const screen = await mountComponent(summary())
 

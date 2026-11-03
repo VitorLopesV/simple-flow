@@ -312,6 +312,8 @@ function toRecentTransaction(dto: RecentTransactionDto): RecentTransaction {
   return {
     id: dto.id,
     movement: dto.tipo,
+    action: dto.acao ?? 'ADICIONADO',
+    occurredAt: dto.ocorridoEm,
     description: dto.descricao,
     amount: dto.valor,
     date: dto.data,

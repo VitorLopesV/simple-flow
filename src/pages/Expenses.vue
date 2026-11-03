@@ -20,8 +20,8 @@ import { useCreditCardStore } from '@/stores/creditCardStore'
 import { useExpenseStore } from '@/stores/expenseStore'
 import { usePeriodStore } from '@/stores/periodStore'
 import type { CardTransactionPayload } from '@/types/creditCard'
-import type { Expense, ExpensePayload, ExpenseStatus } from '@/types/expense'
-import { EXPENSE_STATUS_OPTIONS, isExpenseOverdue } from '@/types/expense'
+import type { Expense, ExpensePayload, ExpenseStatus, ExpenseStatusFilter } from '@/types/expense'
+import { EXPENSE_STATUS_FILTER_OPTIONS, isExpenseOverdue } from '@/types/expense'
 import type { IncomePayload } from '@/types/income'
 import { formatPeriod } from '@/utils/dateFormatter'
 
@@ -45,7 +45,7 @@ const seriesChange = useEditedMonthsConfirmation()
 
 const categoryOptions = computed(() => categoryStore.options('SAIDA'))
 const statusOptions = computed(() =>
-  EXPENSE_STATUS_OPTIONS.map((option) => ({ label: option.label, value: option.value as string })),
+  EXPENSE_STATUS_FILTER_OPTIONS.map((option) => ({ label: option.label, value: option.value as string })),
 )
 const modalTitle = computed(() => (editing.value ? 'Editar saída' : 'Nova saída'))
 
@@ -292,7 +292,7 @@ async function toggleStatus(expense: Expense): Promise<void> {
           :has-active-filter="expenseStore.hasActiveFilter"
           @update:category-id="expenseStore.filterByCategory($event)"
           @update:search="expenseStore.setSearch($event)"
-          @update:extra-value="expenseStore.filterByStatus($event as ExpenseStatus | null)"
+          @update:extra-value="expenseStore.filterByStatus($event as ExpenseStatusFilter | null)"
           @clear="expenseStore.clearFilters()"
         />
       </div>
