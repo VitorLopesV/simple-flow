@@ -4,7 +4,7 @@ import { computed } from 'vue'
 
 import { cn } from '@/utils/cn'
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success'
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'warning'
 type Size = 'sm' | 'md' | 'lg' | 'icon'
 
 const props = withDefaults(
@@ -33,6 +33,8 @@ const VARIANTS: Record<Variant, string> = {
   ghost: 'text-muted-foreground hover:bg-success/25 hover:text-foreground',
   danger: 'bg-danger text-danger-foreground hover:bg-success/25 hover:text-foreground shadow-sm',
   success: 'bg-success text-success-foreground hover:bg-success/25 hover:text-foreground shadow-sm',
+  // Mesmo texto escuro do success: o amarelo do status Pendente é claro.
+  warning: 'bg-warning text-success-foreground hover:bg-warning/25 hover:text-foreground shadow-sm',
 }
 
 const SIZES: Record<Size, string> = {

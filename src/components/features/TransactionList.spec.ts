@@ -133,3 +133,92 @@ describe.each(['table', 'cards'] as const)('situação das saídas (%s)', (layou
     expect(badge.element.tagName).not.toBe('BUTTON')
   })
 })
+
+describe('seleção em lote', () => {
+  const AUTOMATIC = expense('fatura', { automatic: true, cardId: 'card_1' })
+
+  function mountSelectable(selectedIds: string[] = []) {
+    wrapper = mount(TransactionList, {
+      props: {
+        kind: 'SAIDA',
+        items: [expense('a'), expense('b'), AUTOMATIC],
+        page: 1,
+        totalPages: 1,
+        total: 3,
+        pageSize: 10,
+        selectable: true,
+        selectedIds,
+        'onUpdate:selectedIds': (ids: string[]) => wrapper!.setProps({ selectedIds: ids }),
+      },
+    })
+    return wrapper
+  }
+
+  function row(screen: VueWrapper, id: string) {
+    const found = screen.findAll('tbody tr').find((item) => item.text().includes(`Saída ${id}`))
+    if (!found) throw new Error(`Linha ${id} não encontrada`)
+    return found
+  }
+
+  it('não usa checkboxes', () => {
+    expect(mountSelectable().find('input[type="checkbox"]').exists()).toBe(false)
+  })
+
+  it('clicar na linha seleciona e clicar de novo desmarca', async () => {
+    const screen = mountSelectable()
+
+    await row(screen, 'a').trigger('click')
+    expect(screen.emitted('update:selectedIds')!.at(-1)).toEqual([['a']])
+    expect(row(screen, 'a').attributes('aria-selected')).toBe('true')
+
+    await row(screen, 'a').trigger('click')
+    expect(screen.emitted('update:selectedIds')!.at(-1)).toEqual([[]])
+  })
+
+  it('selecionar várias linhas acumula', async () => {
+    const screen = mountSelectable(['a'])
+
+    await row(screen, 'b').trigger('click')
+
+    expect(screen.emitted('update:selectedIds')!.at(-1)).toEqual([['a', 'b']])
+  })
+
+  it('Enter e Espaço na linha alternam a seleção (teclado)', async () => {
+    const screen = mountSelectable()
+
+    expect(row(screen, 'a').attributes('tabindex')).toBe('0')
+    await row(screen, 'a').trigger('keydown', { key: 'Enter' })
+    await row(screen, 'b').trigger('keydown', { key: ' ' })
+
+    expect(screen.emitted('update:selectedIds')!.at(-1)).toEqual([['a', 'b']])
+  })
+
+  it('clicar no botão de situação ou de ações não altera a seleção', async () => {
+    const screen = mountSelectable()
+
+    await row(screen, 'a').get('[data-testid="expense-status"]').trigger('click')
+    await row(screen, 'a').get('button[aria-label="Editar Saída a"]').trigger('click')
+
+    expect(screen.emitted('update:selectedIds')).toBeUndefined()
+  })
+
+  it('fatura de cartão não é selecionável', async () => {
+    const screen = mountSelectable()
+    const invoice = row(screen, 'fatura')
+
+    await invoice.trigger('click')
+
+    expect(invoice.attributes('tabindex')).toBeUndefined()
+    expect(screen.emitted('update:selectedIds')).toBeUndefined()
+  })
+
+  it('sem `selectable` a linha não é interativa', async () => {
+    const screen = mountComponent()
+    const first = screen.get('tbody tr')
+
+    await first.trigger('click')
+
+    expect(first.attributes('tabindex')).toBeUndefined()
+    expect(screen.emitted('update:selectedIds')).toBeUndefined()
+  })
+})

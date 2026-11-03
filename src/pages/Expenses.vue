@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDownCircle, CircleCheck, Clock, Plus } from '@lucide/vue'
+import { ArrowDownCircle, CircleCheck, Clock, Plus, X } from '@lucide/vue'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -39,6 +39,8 @@ const toPending = ref<Expense | null>(null)
 const paymentOpen = ref(false)
 const toPaid = ref<Expense | null>(null)
 
+const selectedIds = ref<string[]>([])
+
 const seriesChange = useEditedMonthsConfirmation()
 
 const categoryOptions = computed(() => categoryStore.options('SAIDA'))
@@ -54,6 +56,14 @@ onMounted(() => {
 })
 
 watch(() => periodStore.period, () => void expenseStore.load(), { deep: true })
+// A seleção só vale para o que está na tela: trocar de página/filtro/mês descarta o resto.
+watch(
+  () => expenseStore.items,
+  (items) => {
+    const present = new Set(items.map((item) => item.id))
+    selectedIds.value = selectedIds.value.filter((id) => present.has(id))
+  },
+)
 watch(
   () => expenseStore.error,
   (error) => error && notify.error(error),
@@ -172,6 +182,41 @@ async function confirmPaid(): Promise<void> {
   toPaid.value = null
 }
 
+/** Seleciona tudo que a página permite (fatura de cartão é derivada e fica de fora). */
+function selectAll(): void {
+  selectedIds.value = expenseStore.items.filter((item) => !item.automatic).map((item) => item.id)
+}
+
+const selectedItems = computed(() =>
+  expenseStore.items.filter((item) => selectedIds.value.includes(item.id)),
+)
+
+/**
+ * Situação comum da seleção, que define qual ação em lote faz sentido. Vencida é pendente
+ * por baixo, então vencidas e pendentes juntas contam como pendentes. Mistura de pagas com
+ * pendentes devolve `null`: nenhuma ação de situação é oferecida.
+ */
+const batchStatus = computed<ExpenseStatus | null>(() => {
+  const [first, ...rest] = selectedItems.value
+  if (!first) return null
+  return rest.every((item) => item.status === first.status) ? first.status : null
+})
+
+/** Ação em lote: sem confirmação, mas com toast; vencidas viram pagas como qualquer pendente. */
+async function applyBatchStatus(status: ExpenseStatus): Promise<void> {
+  const selected = expenseStore.items.filter((item) => selectedIds.value.includes(item.id))
+  const count = selected.length
+  if (!count) return
+
+  if (await expenseStore.setStatusBatch(selected, status)) {
+    notify.success(
+      status === 'PAGO' ? 'Saídas marcadas como pagas' : 'Saídas marcadas como pendentes',
+      `${count} saída(s) atualizada(s)`,
+    )
+  }
+  selectedIds.value = []
+}
+
 async function toggleStatus(expense: Expense): Promise<void> {
   if (await expenseStore.toggleStatus(expense)) {
     notify.success(
@@ -252,7 +297,65 @@ async function toggleStatus(expense: Expense): Promise<void> {
         />
       </div>
 
+      <div
+        v-if="selectedIds.length"
+        class="border-border bg-muted/30 flex flex-wrap items-center gap-2 border-b px-5 py-3"
+        role="region"
+        aria-label="Ações em lote"
+        data-testid="batch-bar"
+      >
+        <p class="text-sm font-medium" aria-live="polite">{{ selectedIds.length }} selecionada(s)</p>
+        <div class="ml-auto flex flex-wrap gap-2">
+          <BaseButton
+            v-if="batchStatus === 'PENDENTE'"
+            variant="success"
+            size="sm"
+            :loading="expenseStore.saving"
+            aria-label="Marcar saídas selecionadas como pagas"
+            data-testid="batch-paid"
+            @click="applyBatchStatus('PAGO')"
+          >
+            <CircleCheck class="size-4" aria-hidden="true" />
+            Marcar como pago
+          </BaseButton>
+          <BaseButton
+            v-if="batchStatus === 'PAGO'"
+            variant="warning"
+            size="sm"
+            :loading="expenseStore.saving"
+            aria-label="Marcar saídas selecionadas como pendentes"
+            data-testid="batch-pending"
+            @click="applyBatchStatus('PENDENTE')"
+          >
+            <Clock class="size-4" aria-hidden="true" />
+            Marcar como pendente
+          </BaseButton>
+          <BaseButton
+            variant="ghost"
+            size="sm"
+            :disabled="expenseStore.saving"
+            aria-label="Selecionar todas as saídas da página"
+            data-testid="batch-select-all"
+            @click="selectAll"
+          >
+            Selecionar todas
+          </BaseButton>
+          <BaseButton
+            variant="ghost"
+            size="sm"
+            :disabled="expenseStore.saving"
+            aria-label="Limpar seleção"
+            @click="selectedIds = []"
+          >
+            <X class="size-4" aria-hidden="true" />
+            Limpar
+          </BaseButton>
+        </div>
+      </div>
+
       <TransactionList
+        v-model:selected-ids="selectedIds"
+        selectable
         kind="SAIDA"
         :items="expenseStore.sortedItems"
         :loading="expenseStore.loading"

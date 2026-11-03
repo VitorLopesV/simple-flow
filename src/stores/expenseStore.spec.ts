@@ -2,7 +2,7 @@ import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { expenseService } from '@/services/expenseService'
+import { BatchStatusError, expenseService } from '@/services/expenseService'
 import { EditedMonthsError } from '@/services/http'
 import { usePeriodStore } from '@/stores/periodStore'
 import { useExpenseStore } from '@/stores/expenseStore'
@@ -19,6 +19,7 @@ vi.mock('@/services/expenseService', async (importOriginal) => {
       create: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      updateStatusBatch: vi.fn(),
     },
   }
 })
@@ -93,6 +94,7 @@ beforeEach(() => {
   service.create.mockResolvedValue(expense('created'))
   service.update.mockResolvedValue(expense('s1'))
   service.remove.mockResolvedValue(undefined)
+  service.updateStatusBatch.mockResolvedValue(undefined)
 })
 
 describe('estado inicial', () => {
@@ -425,6 +427,50 @@ describe('toggleStatus', () => {
 
     expect(ok).toBe(false)
     expect(store.error).toBe('falhou')
+  })
+})
+
+describe('setStatusBatch', () => {
+  it('envia as saídas e o novo status ao service e recarrega a lista', async () => {
+    const store = useExpenseStore()
+    const selected = [expense('s1'), expense('s2')]
+
+    const ok = await store.setStatusBatch(selected, 'PAGO')
+
+    expect(ok).toBe(true)
+    expect(service.updateStatusBatch).toHaveBeenCalledWith(selected, 'PAGO')
+    expect(service.list).toHaveBeenCalledTimes(1)
+    expect(service.summary).toHaveBeenCalledTimes(1)
+    expect(store.saving).toBe(false)
+  })
+
+  it('não chama o service sem saídas selecionadas', async () => {
+    const store = useExpenseStore()
+
+    expect(await store.setStatusBatch([], 'PAGO')).toBe(true)
+    expect(service.updateStatusBatch).not.toHaveBeenCalled()
+  })
+
+  it('devolve false e guarda o erro quando falha', async () => {
+    const store = useExpenseStore()
+    service.updateStatusBatch.mockRejectedValue(new Error('falhou'))
+
+    const ok = await store.setStatusBatch([expense('s1')], 'PENDENTE')
+
+    expect(ok).toBe(false)
+    expect(store.error).toBe('falhou')
+    expect(service.list).not.toHaveBeenCalled()
+  })
+
+  it('em falha parcial recarrega a lista e informa quantas falharam', async () => {
+    const store = useExpenseStore()
+    service.updateStatusBatch.mockRejectedValue(new BatchStatusError(1, 2))
+
+    const ok = await store.setStatusBatch([expense('s1'), expense('s2')], 'PAGO')
+
+    expect(ok).toBe(false)
+    expect(store.error).toBe('Não foi possível alterar 1 de 2 saída(s).')
+    expect(service.list).toHaveBeenCalledTimes(1)
   })
 })
 

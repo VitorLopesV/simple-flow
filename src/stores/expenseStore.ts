@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import { compareExpensesByDueDate, expenseService } from '@/services/expenseService'
+import { BatchStatusError, compareExpensesByDueDate, expenseService } from '@/services/expenseService'
 import { EditedMonthsError, getErrorMessage } from '@/services/http'
 import type { SeriesChangeOptions } from '@/types/common'
 import type { Expense, ExpensePayload, ExpenseStatus, ExpenseSummary } from '@/types/expense'
@@ -146,6 +146,23 @@ export const useExpenseStore = defineStore('expense', () => {
     return update(id, { ...rest, status: expense.status === 'PAGO' ? 'PENDENTE' : 'PAGO' })
   }
 
+  /** Marca várias saídas como pagas ou pendentes; recarrega mesmo em falha parcial. */
+  async function setStatusBatch(expenses: Expense[], newStatus: ExpenseStatus): Promise<boolean> {
+    if (!expenses.length) return true
+    saving.value = true
+    try {
+      await expenseService.updateStatusBatch(expenses, newStatus)
+      await load()
+      return true
+    } catch (e) {
+      if (e instanceof BatchStatusError) await load()
+      error.value = getErrorMessage(e, 'Não foi possível alterar a situação das saídas.')
+      return false
+    } finally {
+      saving.value = false
+    }
+  }
+
   function goToPage(newPage: number): void {
     page.value = Math.min(Math.max(1, newPage), totalPages.value)
     void load()
@@ -201,6 +218,7 @@ export const useExpenseStore = defineStore('expense', () => {
     update,
     remove,
     toggleStatus,
+    setStatusBatch,
     goToPage,
     filterByCategory,
     filterByStatus,

@@ -8,7 +8,7 @@ vi.hoisted(() => {
 
 import { EditedMonthsError, USE_MOCK } from '@/services/http'
 import { mockDb } from '@/services/mock'
-import { compareExpensesByDueDate, expenseService } from '@/services/expenseService'
+import { BatchStatusError, compareExpensesByDueDate, expenseService } from '@/services/expenseService'
 import type { Expense, ExpenseFilter, ExpensePayload } from '@/types/expense'
 
 type Db = Awaited<ReturnType<typeof mockDb>>
@@ -428,6 +428,45 @@ describe('update', () => {
     await expect(expenseService.update('sai_nao_existe', payload())).rejects.toThrow(
       'Saída não encontrada.',
     )
+  })
+})
+
+describe('updateStatusBatch', () => {
+  it('marca todas como pagas, inclusive vencidas, carimbando hoje', async () => {
+    const overdue = expense({ id: 'a', dueDate: '2020-01-01' })
+    const pending = expense({ id: 'b' })
+    db.expenses.push(overdue, pending)
+
+    await expenseService.updateStatusBatch([overdue, pending], 'PAGO')
+
+    expect(db.expenses.map((item) => item.status)).toEqual(['PAGO', 'PAGO'])
+    expect(db.expenses.map((item) => item.paidAt)).toEqual([db.todayISO, db.todayISO])
+  })
+
+  it('marca todas como pendentes e limpa paidAt', async () => {
+    const paid = [
+      expense({ id: 'a', status: 'PAGO', paidAt: '2026-08-01' }),
+      expense({ id: 'b', status: 'PAGO', paidAt: '2026-08-02' }),
+    ]
+    db.expenses.push(...paid)
+
+    await expenseService.updateStatusBatch(paid, 'PENDENTE')
+
+    expect(db.expenses.map((item) => item.status)).toEqual(['PENDENTE', 'PENDENTE'])
+    expect(db.expenses.map((item) => item.paidAt)).toEqual([null, null])
+  })
+
+  it('altera as demais e rejeita com BatchStatusError quando alguma falha', async () => {
+    const ok = expense({ id: 'a' })
+    db.expenses.push(ok)
+
+    const error = await expenseService
+      .updateStatusBatch([ok, expense({ id: 'inexistente' })], 'PAGO')
+      .catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(BatchStatusError)
+    expect(error).toMatchObject({ failed: 1, total: 2 })
+    expect(db.expenses[0]!.status).toBe('PAGO')
   })
 })
 

@@ -1,7 +1,14 @@
 import type { Paginated, Period, SeriesChangeOptions } from '@/types/common'
 import type { ExpenseDto, ExpenseSummaryDto } from '@/types/dto'
 import { isExpenseOverdue } from '@/types/expense'
-import type { Expense, ExpenseFilter, ExpensePayload, ExpenseSummary, ExpenseType } from '@/types/expense'
+import type {
+  Expense,
+  ExpenseFilter,
+  ExpensePayload,
+  ExpenseStatus,
+  ExpenseSummary,
+  ExpenseType,
+} from '@/types/expense'
 import { addMonths, isWithinPeriod, toISODate, toReferenceMonth } from '@/utils/dateFormatter'
 import { asEditedMonthsError, EditedMonthsError, http, USE_MOCK } from './http'
 import { mapPage, toExpense, toExpensePayloadDto, toExpenseSummary } from './mappers'
@@ -32,6 +39,17 @@ export function compareExpensesByDueDate(
   if (a.dueDate) return -1
   if (b.dueDate) return 1
   return (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || b.date.localeCompare(a.date)
+}
+
+/** Alteração em lote em que parte das saídas falhou (as demais foram alteradas). */
+export class BatchStatusError extends Error {
+  constructor(
+    readonly failed: number,
+    readonly total: number,
+  ) {
+    super(`Não foi possível alterar ${failed} de ${total} saída(s).`)
+    this.name = 'BatchStatusError'
+  }
 }
 
 export const expenseService = {
@@ -208,6 +226,22 @@ export const expenseService = {
     } catch (error) {
       throw asEditedMonthsError(error)
     }
+  },
+
+  /**
+   * Altera a situação (pago/pendente) de várias saídas de uma vez. O backend não tem
+   * endpoint em lote, então cada saída passa pelo `update` (mock e real compartilham a
+   * regra do `paidAt`). Falhas isoladas não abortam as demais: rejeita com a quantidade
+   * de saídas que não puderam ser alteradas, depois de tentar todas.
+   */
+  async updateStatusBatch(expenses: Expense[], status: ExpenseStatus): Promise<void> {
+    const results = await Promise.allSettled(
+      expenses.map(({ id, createdAt: _createdAt, updatedAt: _updatedAt, ...payload }) =>
+        expenseService.update(id, { ...payload, status }),
+      ),
+    )
+    const failed = results.filter((result) => result.status === 'rejected').length
+    if (failed) throw new BatchStatusError(failed, expenses.length)
   },
 
   /** Remove o mês e os seguintes da série; meses seguintes alterados exigem `options.confirm`. */

@@ -36,9 +36,12 @@ const props = withDefaults(
     pageSize: number
     emptyTitle?: string
     emptyDescription?: string
+    /** Permite selecionar linhas clicando nelas, para ações em lote (só saídas). */
+    selectable?: boolean
   }>(),
   {
     loading: false,
+    selectable: false,
     emptyTitle: 'Nenhum lançamento encontrado',
     emptyDescription: 'Ajuste os filtros ou adicione um novo lançamento neste período.',
   },
@@ -50,6 +53,8 @@ const emit = defineEmits<{
   toggleStatus: [transaction: Expense]
   changePage: [page: number]
 }>()
+
+const selectedIds = defineModel<string[]>('selectedIds', { default: () => [] })
 
 const categoryStore = useCategoryStore()
 const creditCardStore = useCreditCardStore()
@@ -102,6 +107,54 @@ function isAutomatic(transaction: Transaction): boolean {
 // pode ser editado e removido. Só a fatura de cartão é derivada e fica bloqueada aqui.
 function canEdit(transaction: Transaction): boolean {
   return !isAutomatic(transaction)
+}
+
+// Fatura de cartão é derivada: não entra na seleção em lote.
+function isSelectable(transaction: Transaction): boolean {
+  return props.selectable && canEdit(transaction)
+}
+
+function isSelected(transaction: Transaction): boolean {
+  return selectedIds.value.includes(transaction.id)
+}
+
+function toggleSelected(transaction: Transaction): void {
+  if (!isSelectable(transaction)) return
+  selectedIds.value = isSelected(transaction)
+    ? selectedIds.value.filter((id) => id !== transaction.id)
+    : [...selectedIds.value, transaction.id]
+}
+
+/** Clicar num botão da linha (situação, editar, excluir) não deve alternar a seleção. */
+function onRowClick(event: MouseEvent, transaction: Transaction): void {
+  if ((event.target as HTMLElement).closest('button, a, input')) return
+  toggleSelected(transaction)
+}
+
+/** Teclado: Enter/Espaço na própria linha (não nos botões internos) alterna a seleção. */
+function onRowKeydown(event: KeyboardEvent, transaction: Transaction): void {
+  if (event.target !== event.currentTarget) return
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  toggleSelected(transaction)
+}
+
+/** Atributos de seleção da linha/card: foco por teclado, estado e clique. */
+function rowSelection(transaction: Transaction) {
+  if (!isSelectable(transaction)) return {}
+  return {
+    tabindex: 0,
+    'aria-selected': isSelected(transaction),
+    onClick: (event: MouseEvent) => onRowClick(event, transaction),
+    onKeydown: (event: KeyboardEvent) => onRowKeydown(event, transaction),
+  }
+}
+
+function rowClass(transaction: Transaction): string {
+  return [
+    isSelectable(transaction) ? 'cursor-pointer focus-visible:outline-ring' : '',
+    isSelected(transaction) ? 'bg-success/20 outline-success outline-2 -outline-offset-2' : '',
+  ].join(' ')
 }
 </script>
 
@@ -168,6 +221,8 @@ function canEdit(transaction: Transaction): boolean {
               :key="transaction.id"
               :style="rowStyle(transaction)"
               class="border-border hover:bg-success/10 border-b transition-colors last:border-0"
+              :class="rowClass(transaction)"
+              v-bind="rowSelection(transaction)"
             >
               <td class="px-2 py-3 lg:px-3 xl:px-5">
                 <div class="flex items-center gap-2">
@@ -265,6 +320,8 @@ function canEdit(transaction: Transaction): boolean {
           :key="transaction.id"
           :style="rowStyle(transaction)"
           class="flex flex-col gap-2 px-4 py-3"
+          :class="rowClass(transaction)"
+          v-bind="rowSelection(transaction)"
         >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
