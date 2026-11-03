@@ -74,12 +74,12 @@ const items: MenuItem[] = [
         v-for="item in items"
         :key="item.route"
         :to="{ name: item.route }"
-        class="text-[#D1D1D1] [&.router-link-active]:text-[#212121] [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:focus-visible:bg-success/25 flex items-center gap-3 rounded-lg px-5 py-3 text-sm font-medium group outline-none transition-colors"
+        class="text-[#D1D1D1] [&.router-link-active]:text-[#212121] [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:focus-visible:bg-success/25 flex items-center gap-3 rounded-lg px-5 py-3 text-sm font-medium group outline-none transition duration-200 motion-safe:hover:scale-105 motion-safe:hover:-translate-y-0.5 motion-safe:focus-visible:scale-105 motion-safe:focus-visible:-translate-y-0.5 motion-safe:active:scale-100 motion-safe:active:translate-y-0"
         active-class="router-link-active bg-success"
         @click="emit('close')"
       >
         <span
-          class="inline-block shrink-0 bg-current transition-transform duration-200 motion-safe:group-hover:scale-110 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-focus-visible:scale-110 motion-safe:group-focus-visible:-translate-y-0.5"
+          class="inline-block shrink-0 bg-current"
           :class="item.iconSize ?? 'size-[30px]'"
           :style="iconMaskStyle(item.icon)"
           aria-hidden="true"
