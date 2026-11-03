@@ -45,16 +45,16 @@ const items: MenuItem[] = [
     :aria-hidden="!open ? 'true' : undefined"
   >
     <div class="relative flex justify-center pt-6 pb-[43px]">
-      <!-- Hover/foco suavizam o brilho como os itens do menu; o clique encolhe a logo (só sem prefers-reduced-motion). -->
+      <!-- Hover/foco dão zoom e um brilho verde, como nos ícones do menu; o clique "afunda" a logo. Zoom só sem prefers-reduced-motion. -->
       <RouterLink
         :to="{ name: 'dashboard' }"
-        class="group focus-visible:ring-success/50 rounded-lg outline-none transition-opacity duration-200 hover:opacity-80 focus-visible:opacity-80 focus-visible:ring-2"
+        class="group focus-visible:ring-success/50 cursor-pointer rounded-lg outline-none focus-visible:ring-2"
         @click="emit('close')"
       >
         <img
           :src="simpleFlowLogo"
           alt="SimpleFlow"
-          class="mx-auto -mt-[38px] -mb-[9px] block w-[130px] max-w-full transition-transform duration-150 motion-safe:group-active:scale-95"
+          class="mx-auto -mt-[38px] -mb-[9px] block w-[130px] max-w-full transition duration-200 group-hover:drop-shadow-[0_0_10px_var(--success)] group-focus-visible:drop-shadow-[0_0_10px_var(--success)] motion-safe:group-hover:scale-110 motion-safe:group-focus-visible:scale-110 motion-safe:group-active:scale-95"
         />
       </RouterLink>
 
