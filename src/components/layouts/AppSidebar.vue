@@ -6,8 +6,10 @@ import cardsIcon from '@/img/cards_pane_icon.svg'
 import dashboardIcon from '@/img/dashboard_pane_icon.svg'
 import inflowIcon from '@/img/financial_inflow_pane_icon.svg'
 import outflowIcon from '@/img/financial_outflow_pane_icon.svg'
-import simpleFlowLogo from '@/img/simple-flow-logo.svg'
 import { iconMaskStyle } from '@/utils/iconMask'
+
+// Mesma imagem do favicon (public/logo_website.svg).
+const simpleFlowLogo = '/logo_website.svg'
 
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -44,18 +46,15 @@ const items: MenuItem[] = [
     :class="open ? 'translate-x-0' : '-translate-x-full'"
     :aria-hidden="!open ? 'true' : undefined"
   >
-    <div class="relative flex justify-center pt-6 pb-[43px]">
-      <!-- Hover/foco dão zoom e um brilho verde, como nos ícones do menu; o clique "afunda" a logo. Zoom só sem prefers-reduced-motion. -->
+    <div class="relative flex items-center px-9 pt-[45px] pb-[35px]">
+      <!-- Logo (favicon) alinhada à esquerda, onde começam os botões do menu, com o nome ao lado, formando um único botão. Hover/foco dão zoom e brilho verde no conjunto; o clique "afunda" ambos. Zoom só sem prefers-reduced-motion. -->
       <RouterLink
         :to="{ name: 'dashboard' }"
-        class="group focus-visible:ring-success/50 cursor-pointer rounded-lg outline-none focus-visible:ring-2"
+        class="focus-visible:ring-success/50 flex cursor-pointer items-center gap-[15px] rounded-lg outline-none transition duration-200 hover:drop-shadow-[0_0_10px_var(--success)] focus-visible:ring-2 focus-visible:drop-shadow-[0_0_10px_var(--success)] motion-safe:hover:scale-105 motion-safe:focus-visible:scale-105 motion-safe:active:scale-95"
         @click="emit('close')"
       >
-        <img
-          :src="simpleFlowLogo"
-          alt="SimpleFlow"
-          class="mx-auto -mt-[38px] -mb-[9px] block w-[130px] max-w-full transition duration-200 group-hover:drop-shadow-[0_0_10px_var(--success)] group-focus-visible:drop-shadow-[0_0_10px_var(--success)] motion-safe:group-hover:scale-110 motion-safe:group-focus-visible:scale-110 motion-safe:group-active:scale-95"
-        />
+        <img :src="simpleFlowLogo" alt="" class="block size-[90px] shrink-0" />
+        <span class="text-foreground text-2xl font-semibold">SimpleFlow</span>
       </RouterLink>
 
       <BaseButton
