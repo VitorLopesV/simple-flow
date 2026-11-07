@@ -9,6 +9,6 @@ defineProps<{ photoUrl?: string | null }>()
     class="bg-muted text-muted-foreground flex shrink-0 items-center justify-center overflow-hidden rounded-full"
   >
     <img v-if="photoUrl" :src="photoUrl" alt="" class="size-full object-cover" />
-    <User v-else class="size-1/2" aria-hidden="true" />
+    <User v-else class="pointer-events-none size-1/2" aria-hidden="true" />
   </span>
 </template>

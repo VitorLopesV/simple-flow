@@ -50,7 +50,8 @@ async function logOut(): Promise<void> {
     <BaseButton
       variant="ghost"
       size="icon"
-      class="border-border !size-[56px] !rounded-full border-2 !p-0"
+      class="border-border !size-[56px] !rounded-full border-2 !p-0 !transition !duration-200 hover:!bg-transparent hover:border-success hover:drop-shadow-[0_0_10px_var(--success)] focus-visible:border-success focus-visible:drop-shadow-[0_0_10px_var(--success)] motion-safe:hover:scale-105 motion-safe:focus-visible:scale-105 motion-safe:active:scale-95"
+      :class="menuOpen && 'border-success drop-shadow-[0_0_10px_var(--success)]'"
       aria-label="Menu de usuário"
       aria-haspopup="menu"
       :aria-expanded="menuOpen"
