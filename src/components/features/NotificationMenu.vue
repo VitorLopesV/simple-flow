@@ -83,11 +83,11 @@ onBeforeUnmount(() => {
       :aria-controls="popupId"
       @click="open = !open"
     >
-      <!-- O sino desenhado ocupa 800/960 da altura do SVG; 37px de caixa dão ~31px visíveis (o avatar tem 56px). -->
+      <!-- O sino preenche toda a caixa do SVG, então 31px de caixa são 31px visíveis (o avatar tem 56px). -->
       <!-- O SVG vira máscara para herdar a cor do botão (`currentColor`), já que o arquivo tem fill fixo; assim o hover/foco/aberto trocam a cor do sino. -->
       <span
         data-testid="notification-icon"
-        class="size-[37px] bg-current"
+        class="size-[31px] bg-current"
         :style="iconMaskStyle"
         aria-hidden="true"
       ></span>
