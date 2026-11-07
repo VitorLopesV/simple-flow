@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
       ref="trigger"
       variant="ghost"
       size="icon"
-      class="relative !size-10 !p-0 !text-foreground hover:!bg-transparent hover:!text-success"
+      class="relative !size-10 !p-0 !text-[#D1D1D1] !transition !duration-200 hover:!bg-transparent hover:!text-success hover:drop-shadow-[0_0_10px_var(--success)] focus-visible:!text-success focus-visible:drop-shadow-[0_0_10px_var(--success)] motion-safe:hover:scale-105 motion-safe:focus-visible:scale-105 motion-safe:active:scale-95"
       :class="open && '!text-success'"
       :aria-label="triggerLabel"
       aria-haspopup="dialog"
@@ -84,10 +84,10 @@ onBeforeUnmount(() => {
       @click="open = !open"
     >
       <!-- O sino desenhado ocupa 800/960 da altura do SVG; 37px de caixa dão ~31px visíveis (o avatar tem 56px). -->
-      <!-- O SVG vira máscara para herdar a cor do botão (`currentColor`), já que o arquivo tem fill fixo. -->
+      <!-- O SVG vira máscara para herdar a cor do botão (`currentColor`), já que o arquivo tem fill fixo; assim o hover/foco/aberto trocam a cor do sino. -->
       <span
         data-testid="notification-icon"
-        class="size-[37px] bg-[#D1D1D1]"
+        class="size-[37px] bg-current"
         :style="iconMaskStyle"
         aria-hidden="true"
       ></span>
