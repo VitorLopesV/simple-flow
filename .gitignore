@@ -31,3 +31,6 @@ Thumbs.db
 
 # Serena (configuração local do MCP)
 .serena/
+
+# Exemplos de relatório PDF usados só na análise (issue #137)
+exemplos-relatorio/
