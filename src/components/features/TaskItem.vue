@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Archive, ArchiveRestore, ArrowRightLeft, Pencil, Trash2, TriangleAlert } from '@lucide/vue'
+import { Archive, ArchiveRestore, ArrowRightLeft, CalendarPlus, Pencil, Trash2, TriangleAlert } from '@lucide/vue'
 import { computed } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
@@ -7,6 +7,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import type { Task } from '@/types/task'
 import { missingSprintFields, TASK_DIFFICULTIES, TASK_ESTIMATES, TASK_PRIORITIES } from '@/types/task'
 import { formatDate } from '@/utils/dateFormatter'
+import { buildGoogleCalendarUrl } from '@/utils/googleCalendar'
 
 const props = defineProps<{ task: Task }>()
 
@@ -17,6 +18,9 @@ const emit = defineEmits<{
   unarchive: []
   remove: []
 }>()
+
+/** Link da Google Agenda; `null` (sem botão) se a tarefa não tem dia e hora. */
+const calendarUrl = computed(() => buildGoogleCalendarUrl(props.task))
 
 const missing = computed(() => missingSprintFields(props.task))
 
@@ -60,6 +64,18 @@ const priority = computed(() => labelOf(TASK_PRIORITIES, props.task.priority))
 
     <div class="flex gap-1">
       <template v-if="!task.archived">
+        <a
+          v-if="calendarUrl"
+          :href="calendarUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-muted-foreground hover:bg-success/25 hover:text-foreground focus-visible:outline-ring inline-flex h-9 w-9 items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+          :aria-label="`Adicionar ${task.title} à Google Agenda (abre em nova aba)`"
+          title="Adicionar à Google Agenda"
+          data-testid="add-to-calendar"
+        >
+          <CalendarPlus class="size-4" aria-hidden="true" />
+        </a>
         <BaseButton variant="ghost" size="icon" :aria-label="`Editar ${task.title}`" @click="emit('edit')">
           <Pencil class="size-4" aria-hidden="true" />
         </BaseButton>
