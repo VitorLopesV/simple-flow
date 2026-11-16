@@ -9,6 +9,7 @@
 import type { Area, AreaPayload } from '@/types/area'
 import type { User, UserSession, LoginPayload, ProfilePayload, RegisterPayload } from '@/types/auth'
 import type { Category } from '@/types/category'
+import type { Task, TaskEdit, TaskPayload } from '@/types/task'
 import type { Paginated, SeriesPoint } from '@/types/common'
 import type {
   CardTransaction,
@@ -29,6 +30,9 @@ import type {
   CreditCardDto,
   CreditCardPayloadDto,
   CreditCardWithInvoiceDto,
+  TaskDto,
+  TaskEditDto,
+  TaskPayloadDto,
   DashboardSummaryDto,
   DetailedInvoiceDto,
   ExpenseDto,
@@ -358,4 +362,39 @@ export function toArea(dto: AreaDto): Area {
 
 export function toAreaPayloadDto(payload: AreaPayload): AreaPayloadDto {
   return { nome: payload.name, cor: payload.color }
+}
+
+// ----------------------------------------------------------------- tarefas
+
+export function toTask(dto: TaskDto): Task {
+  return {
+    id: dto.id,
+    areaId: dto.areaId,
+    title: dto.titulo,
+    day: dto.dia,
+    time: dto.hora,
+    estimateMinutes: dto.tempoEstimado,
+    difficulty: dto.dificuldade,
+    priority: dto.prioridade,
+    notes: dto.notas,
+    archived: dto.arquivada,
+    archivedAt: dto.arquivadaEm,
+    createdAt: dto.criadoEm,
+  }
+}
+
+export function toTaskEditDto(edit: TaskEdit): TaskEditDto {
+  return {
+    titulo: edit.title,
+    dia: edit.day,
+    hora: edit.time,
+    tempoEstimado: edit.estimateMinutes,
+    dificuldade: edit.difficulty,
+    prioridade: edit.priority,
+    notas: edit.notes,
+  }
+}
+
+export function toTaskPayloadDto(payload: TaskPayload): TaskPayloadDto {
+  return { ...toTaskEditDto(payload), areaId: payload.areaId }
 }

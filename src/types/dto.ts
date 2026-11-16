@@ -262,3 +262,26 @@ export interface AreaDto {
 }
 
 export type AreaPayloadDto = Pick<AreaDto, 'nome' | 'cor'>
+
+// ------------------------------------------------------------------ tarefas
+
+export interface TaskDto {
+  id: ID
+  areaId: ID
+  titulo: string
+  /** YYYY-MM-DD */
+  dia: string | null
+  /** HH:MM */
+  hora: string | null
+  tempoEstimado: 15 | 30 | 60 | 120 | 240 | null
+  dificuldade: 'FACIL' | 'MEDIA' | 'DIFICIL' | null
+  prioridade: 'BAIXA' | 'MEDIA' | 'ALTA' | null
+  notas: string | null
+  arquivada: boolean
+  arquivadaEm: string | null
+  criadoEm: string
+}
+
+/** Criação (`POST /tarefas`) e edição (`PUT /tarefas/:id`, sem `areaId`). */
+export type TaskEditDto = Omit<TaskDto, 'id' | 'areaId' | 'arquivada' | 'arquivadaEm' | 'criadoEm'>
+export type TaskPayloadDto = TaskEditDto & Pick<TaskDto, 'areaId'>
