@@ -15,6 +15,7 @@ const TASK: Task = {
   priority: null,
   notes: null,
   archived: false,
+  sprintId: null,
   archivedAt: null,
   createdAt: '',
 }

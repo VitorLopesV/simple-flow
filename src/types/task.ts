@@ -24,13 +24,25 @@ export interface Task {
   difficulty: TaskDifficulty | null
   priority: TaskPriority | null
   notes: string | null
+  /** Sprint em que a tarefa está; `null` = só no backlog. */
+  sprintId: ID | null
+  /**
+   * Ainda não vêm da API (conclusão é da issue #144 e a Super task da #65): ficam opcionais
+   * para o front não quebrar quando o backend passar a devolvê-los.
+   */
+  done?: boolean
+  /** Nome da Super task pai, quando a tarefa é filha de uma. */
+  superTaskName?: string | null
   archived: boolean
   archivedAt: string | null
   createdAt: string
 }
 
 /** Campos editáveis; a área muda só por `move`, que valida o destino. */
-export type TaskEdit = Omit<Task, 'id' | 'areaId' | 'archived' | 'archivedAt' | 'createdAt'>
+export type TaskEdit = Omit<
+  Task,
+  'id' | 'areaId' | 'sprintId' | 'done' | 'superTaskName' | 'archived' | 'archivedAt' | 'createdAt'
+>
 
 export type TaskPayload = TaskEdit & Pick<Task, 'areaId'>
 

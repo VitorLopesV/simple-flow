@@ -20,6 +20,8 @@ import {
   toRegisterDto,
   toRoutineItem,
   toRoutinePayloadDto,
+  toSprintScoreboard,
+  toSprintView,
   toTask,
   toTaskEditDto,
   toTaskPayloadDto,
@@ -428,6 +430,7 @@ describe('tarefas', () => {
     dificuldade: 'MEDIA' as const,
     prioridade: 'ALTA' as const,
     notas: 'Comprar tinta',
+    sprintId: 'spr_1',
     arquivada: false,
     arquivadaEm: null,
     criadoEm: '2026-11-01T10:00:00.000Z',
@@ -444,9 +447,19 @@ describe('tarefas', () => {
       difficulty: 'MEDIA',
       priority: 'ALTA',
       notes: 'Comprar tinta',
+      sprintId: 'spr_1',
+      done: false,
+      superTaskName: null,
       archived: false,
       archivedAt: null,
       createdAt: '2026-11-01T10:00:00.000Z',
+    })
+  })
+
+  it('lê conclusão e Super task quando a API passar a devolvê-las', () => {
+    expect(toTask({ ...DTO, concluida: true, superTaskNome: 'Mudança' })).toMatchObject({
+      done: true,
+      superTaskName: 'Mudança',
     })
   })
 
@@ -575,6 +588,90 @@ describe('mappers de rotina', () => {
       nome: 'Regar plantas',
       repeticao: { modo: 'A_CADA_N_DIAS', intervalo: 3, dataInicial: '2026-11-16' },
       vezes: [{ hora: null }],
+    })
+  })
+})
+
+describe('sprint', () => {
+  it('converte o sprint com ocorrências e lembretes', () => {
+    const occurrence = {
+      id: 'o1',
+      itemId: 'r1',
+      nome: 'Treinar',
+      data: '2026-11-16',
+      hora: '07:00',
+      indice: 0,
+      ordem: 1,
+      concluidaEm: null,
+    }
+    const view = toSprintView({
+      sprint: {
+        id: 'spr_1',
+        inicio: '2026-11-16',
+        fim: '2026-11-20',
+        situacao: 'ABERTO',
+        rotinaGeradaEm: '2026-11-16T03:00:00.000Z',
+        criadoEm: '2026-11-15T00:00:00.000Z',
+      },
+      iniciado: true,
+      previa: false,
+      ocorrencias: [occurrence],
+      lembretes: [{ ...occurrence, id: null, itemId: null, data: '2026-11-21', hora: null }],
+    })
+
+    expect(view.sprint).toEqual({
+      id: 'spr_1',
+      startDate: '2026-11-16',
+      endDate: '2026-11-20',
+      status: 'ABERTO',
+      startedRoutineAt: '2026-11-16T03:00:00.000Z',
+      createdAt: '2026-11-15T00:00:00.000Z',
+    })
+    expect(view).toMatchObject({ started: true, preview: false })
+    expect(view.occurrences[0]).toEqual({
+      id: 'o1',
+      itemId: 'r1',
+      name: 'Treinar',
+      date: '2026-11-16',
+      time: '07:00',
+      index: 0,
+      order: 1,
+      completedAt: null,
+    })
+    expect(view.reminders[0]).toMatchObject({ id: null, itemId: null, date: '2026-11-21', time: null })
+  })
+
+  it('converte o placar mantendo o bônus vindo da API (não o percentual)', () => {
+    const result = toSprintScoreboard({
+      sprintId: 'spr_1',
+      inicio: '2026-11-16',
+      fim: '2026-11-20',
+      iniciado: true,
+      previa: false,
+      placar: {
+        total: 5000,
+        feitos: 4498,
+        percentual: 90,
+        bonus: false,
+        rotina: { diasComRotina: 5, diasCumpridos: 5, pontosPorDia: 40, total: 200, feitos: 200 },
+        tarefas: { quantidade: 10, concluidas: 9, total: 4800, feitos: 4298 },
+      },
+    })
+
+    expect(result).toEqual({
+      sprintId: 'spr_1',
+      startDate: '2026-11-16',
+      endDate: '2026-11-20',
+      started: true,
+      preview: false,
+      scoreboard: {
+        total: 5000,
+        done: 4498,
+        percentage: 90,
+        bonus: false,
+        routine: { daysWithRoutine: 5, daysCompleted: 5, pointsPerDay: 40, total: 200, done: 200 },
+        tasks: { count: 10, completed: 9, total: 4800, done: 4298 },
+      },
     })
   })
 })
