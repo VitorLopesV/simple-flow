@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X } from '@lucide/vue'
+import { House, X } from '@lucide/vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
 import cardsIcon from '@/img/cards_pane_icon.svg'
@@ -17,17 +17,32 @@ const emit = defineEmits<{ close: [] }>()
 interface MenuItem {
   route: string
   label: string
-  /** URL do SVG; vira máscara para herdar a cor do item (hover e ativo). */
-  icon: string
-  /** Classe de tamanho do ícone; o padrão é `size-8`. */
+  /** URL do SVG; vira máscara para herdar a cor do item (hover e ativo). Sem ele, o item usa o ícone Lucide da Home. */
+  icon?: string
+  /** Classe de tamanho do ícone; o padrão é `size-[30px]`. */
   iconSize?: string
 }
 
-const items: MenuItem[] = [
-  { route: 'dashboard', label: 'Dashboard', icon: dashboardIcon },
-  { route: 'incomes', label: 'Entradas', icon: inflowIcon, iconSize: 'size-8' },
-  { route: 'expenses', label: 'Saídas', icon: outflowIcon, iconSize: 'size-8' },
-  { route: 'cards', label: 'Cartões', icon: cardsIcon },
+interface MenuGroup {
+  id: string
+  /** Título do módulo; sem ele (Home) o grupo não exibe cabeçalho. */
+  title?: string
+  items: MenuItem[]
+}
+
+/** Itens agrupados por módulo; novos módulos entram como novos grupos. */
+const groups: MenuGroup[] = [
+  { id: 'home', items: [{ route: 'home', label: 'Início' }] },
+  {
+    id: 'finance',
+    title: 'Finanças',
+    items: [
+      { route: 'dashboard', label: 'Dashboard', icon: dashboardIcon },
+      { route: 'incomes', label: 'Entradas', icon: inflowIcon, iconSize: 'size-8' },
+      { route: 'expenses', label: 'Saídas', icon: outflowIcon, iconSize: 'size-8' },
+      { route: 'cards', label: 'Cartões', icon: cardsIcon },
+    ],
+  },
 ]
 </script>
 
@@ -49,7 +64,7 @@ const items: MenuItem[] = [
     <div class="relative flex items-center px-9 pt-[45px] pb-[35px]">
       <!-- Logo (favicon) alinhada à esquerda, onde começam os botões do menu, com o nome ao lado, formando um único botão. Hover/foco dão zoom e brilho verde no conjunto; o clique "afunda" ambos. Zoom só sem prefers-reduced-motion. -->
       <RouterLink
-        :to="{ name: 'dashboard' }"
+        :to="{ name: 'home' }"
         class="focus-visible:ring-success/50 flex cursor-pointer items-center gap-[15px] rounded-lg outline-none transition duration-200 hover:drop-shadow-[0_0_10px_var(--success)] focus-visible:ring-2 focus-visible:drop-shadow-[0_0_10px_var(--success)] motion-safe:hover:scale-105 motion-safe:focus-visible:scale-105 motion-safe:active:scale-95"
         @click="emit('close')"
       >
@@ -68,23 +83,37 @@ const items: MenuItem[] = [
       </BaseButton>
     </div>
 
-    <nav class="flex flex-1 flex-col space-y-1 px-4 pb-4" aria-label="Navegação principal">
-      <RouterLink
-        v-for="item in items"
-        :key="item.route"
-        :to="{ name: item.route }"
-        class="text-[#D1D1D1] [&.router-link-active]:text-[#212121] [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:focus-visible:bg-success/25 flex items-center gap-3 rounded-lg px-5 py-3 text-sm font-medium group outline-none transition duration-200 motion-safe:hover:scale-105 motion-safe:hover:-translate-y-0.5 motion-safe:focus-visible:scale-105 motion-safe:focus-visible:-translate-y-0.5 motion-safe:active:scale-100 motion-safe:active:translate-y-0"
-        active-class="router-link-active bg-success"
-        @click="emit('close')"
-      >
-        <span
-          class="inline-block shrink-0 bg-current"
-          :class="item.iconSize ?? 'size-[30px]'"
-          :style="iconMaskStyle(item.icon)"
-          aria-hidden="true"
-        />
-        {{ item.label }}
-      </RouterLink>
+    <nav class="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4" aria-label="Navegação principal">
+      <section v-for="group in groups" :key="group.id" :aria-labelledby="group.title ? `menu-group-${group.id}` : undefined">
+        <h2
+          v-if="group.title"
+          :id="`menu-group-${group.id}`"
+          class="text-muted-foreground mb-1 px-5 text-xs font-semibold uppercase tracking-wide"
+        >
+          {{ group.title }}
+        </h2>
+        <ul class="space-y-1">
+          <li v-for="item in group.items" :key="item.route">
+            <!-- O vue-router já define aria-current="page" no link da rota ativa. -->
+            <RouterLink
+              :to="{ name: item.route }"
+              class="text-[#D1D1D1] [&.router-link-active]:text-[#212121] [&:not(.router-link-active)]:hover:bg-success/25 [&:not(.router-link-active)]:focus-visible:bg-success/25 flex items-center gap-3 rounded-lg px-5 py-3 text-sm font-medium group outline-none transition duration-200 motion-safe:hover:scale-105 motion-safe:hover:-translate-y-0.5 motion-safe:focus-visible:scale-105 motion-safe:focus-visible:-translate-y-0.5 motion-safe:active:scale-100 motion-safe:active:translate-y-0"
+              active-class="router-link-active bg-success"
+              @click="emit('close')"
+            >
+              <span
+                v-if="item.icon"
+                class="inline-block shrink-0 bg-current"
+                :class="item.iconSize ?? 'size-[30px]'"
+                :style="iconMaskStyle(item.icon)"
+                aria-hidden="true"
+              />
+              <House v-else class="size-[30px] shrink-0" aria-hidden="true" />
+              {{ item.label }}
+            </RouterLink>
+          </li>
+        </ul>
+      </section>
     </nav>
 
     <div class="p-4">

@@ -72,7 +72,7 @@ const handleSubmit = async () => {
     authStore.setSession(session)
 
     toast.success('Cadastro realizado com sucesso!')
-    await router.push({ name: 'dashboard' })
+    await router.push({ name: 'home' })
   } catch (error) {
     toast.error(getErrorMessage(error, 'Erro ao registrar. Tente novamente.'))
   } finally {

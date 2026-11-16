@@ -71,7 +71,7 @@ describe('Login', () => {
     expect(loginMock).not.toHaveBeenCalled()
   })
 
-  it('envia as credenciais e vai para o dashboard', async () => {
+  it('envia as credenciais e vai para a Home', async () => {
     loginMock.mockResolvedValue({
       user: { id: 'u1', email: 'a@b.com', name: null },
       accessToken: 'a',
@@ -86,6 +86,6 @@ describe('Login', () => {
     await flushPromises()
 
     expect(loginMock).toHaveBeenCalledWith({ email: 'a@b.com', password: '123456' })
-    expect(push).toHaveBeenCalledWith({ name: 'dashboard' })
+    expect(push).toHaveBeenCalledWith({ name: 'home' })
   })
 })

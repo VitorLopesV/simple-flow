@@ -85,7 +85,7 @@ describe('Register', () => {
     )
   })
 
-  it('registra e vai para o dashboard', async () => {
+  it('registra e vai para a Home', async () => {
     registerMock.mockResolvedValue({
       user: { id: 'u1', email: 'a@b.com', name: 'vitor' },
       accessToken: 'a',
@@ -102,6 +102,6 @@ describe('Register', () => {
     await flushPromises()
 
     expect(registerMock).toHaveBeenCalledWith({ email: 'a@b.com', password: '123456', name: 'vitor' })
-    expect(push).toHaveBeenCalledWith({ name: 'dashboard' })
+    expect(push).toHaveBeenCalledWith({ name: 'home' })
   })
 })
