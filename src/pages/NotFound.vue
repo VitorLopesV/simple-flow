@@ -13,11 +13,11 @@ import BaseButton from '@/components/common/BaseButton.vue'
       <p class="text-muted-foreground text-sm font-medium">Erro 404</p>
       <h1 class="mt-1 text-2xl font-semibold">Página não encontrada</h1>
       <p class="text-muted-foreground mt-2 max-w-md text-sm">
-        O endereço acessado não existe ou foi movido. Volte para o painel para continuar.
+        O endereço acessado não existe ou foi movido. Volte para o início para continuar.
       </p>
     </div>
-    <BaseButton @click="$router.push({ name: 'dashboard' })">
-      Ir para o Dashboard
+    <BaseButton @click="$router.push({ name: 'home' })">
+      Ir para o Início
     </BaseButton>
   </main>
 </template>

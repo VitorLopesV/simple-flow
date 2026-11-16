@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/authStore'
 const emptyComponent = vi.hoisted(() => ({ default: { render: () => null } }))
 vi.mock('@/components/layouts/AppLayout.vue', () => emptyComponent)
 vi.mock('@/components/layouts/AuthLayout.vue', () => emptyComponent)
+vi.mock('@/pages/Home.vue', () => emptyComponent)
 vi.mock('@/pages/Dashboard.vue', () => emptyComponent)
 vi.mock('@/pages/Incomes.vue', () => emptyComponent)
 vi.mock('@/pages/Expenses.vue', () => emptyComponent)
@@ -31,7 +32,7 @@ async function go(destination: string) {
   return { name: router.currentRoute.value.name, path: router.currentRoute.value.fullPath }
 }
 
-const PRIVATE_ROUTES = ['/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes']
+const PRIVATE_ROUTES = ['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes']
 
 beforeEach(async () => {
   localStorage.clear()
@@ -74,16 +75,16 @@ describe('com sessão', () => {
     expect(path).toBe(route)
   })
 
-  it.each(['/auth/login', '/auth/registro'])('%s redireciona para o dashboard', async (route) => {
-    expect(await go(route)).toEqual({ name: 'dashboard', path: '/app/dashboard' })
+  it.each(['/auth/login', '/auth/registro'])('%s redireciona para a Home', async (route) => {
+    expect(await go(route)).toEqual({ name: 'home', path: '/app/inicio' })
   })
 
-  it('/app redireciona para o dashboard', async () => {
-    expect(await go('/app')).toEqual({ name: 'dashboard', path: '/app/dashboard' })
+  it('/app redireciona para a Home', async () => {
+    expect(await go('/app')).toEqual({ name: 'home', path: '/app/inicio' })
   })
 
-  it('/ redireciona para o login e, já autenticado, segue para o dashboard', async () => {
-    expect(await go('/')).toEqual({ name: 'dashboard', path: '/app/dashboard' })
+  it('/ redireciona para o login e, já autenticado, segue para a Home', async () => {
+    expect(await go('/')).toEqual({ name: 'home', path: '/app/inicio' })
   })
 
   it('rota desconhecida dentro de /app resolve para not-found', async () => {
@@ -122,7 +123,7 @@ describe('rota inexistente', () => {
 })
 
 describe('título da página', () => {
-  it.each(['/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes'])(
+  it.each(['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes'])(
     '%s mantém apenas "SimpleFlow"',
     async (route) => {
       authenticate()

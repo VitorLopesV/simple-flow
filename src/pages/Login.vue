@@ -45,7 +45,7 @@ const handleSubmit = async () => {
     authStore.setSession(session)
 
     toast.success('Login realizado com sucesso!')
-    await router.push({ name: 'dashboard' })
+    await router.push({ name: 'home' })
   } catch (error) {
     toast.error(getErrorMessage(error, 'Erro ao fazer login. Verifique seus dados.'))
   } finally {

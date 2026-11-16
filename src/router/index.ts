@@ -20,7 +20,13 @@ const routes: RouteRecordRaw[] = [
     path: '/app',
     component: AppLayout,
     children: [
-      { path: '', redirect: { name: 'dashboard' } },
+      { path: '', redirect: { name: 'home' } },
+      {
+        path: 'inicio',
+        name: 'home',
+        component: () => import('@/pages/Home.vue'),
+        meta: { title: 'Início', description: 'Página inicial do SimpleFlow' },
+      },
       {
         path: 'dashboard',
         name: 'dashboard',
@@ -84,7 +90,7 @@ router.beforeEach((to) => {
   const isAuthRoute = to.path.startsWith('/auth')
 
   if (requiresAuth && !isAuthenticated) return { name: 'login' }
-  if (isAuthRoute && isAuthenticated) return { name: 'dashboard' }
+  if (isAuthRoute && isAuthenticated) return { name: 'home' }
 })
 
 router.afterEach(() => {
