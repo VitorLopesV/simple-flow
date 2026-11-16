@@ -35,6 +35,8 @@ export interface RoutineItem {
 /** Corpo de criação e de edição (o `PUT` substitui o item inteiro). */
 export type RoutinePayload = Pick<RoutineItem, 'name' | 'repeat' | 'times'>
 
+/** Limites do schema do backend (`rotina.schema.ts`). */
+export const ROUTINE_MAX_NAME = 120
 export const ROUTINE_MAX_TIMES = 12
 export const ROUTINE_MAX_INTERVAL = 365
 

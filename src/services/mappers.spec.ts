@@ -539,6 +539,12 @@ describe('mappers de rotina', () => {
     expect(toRoutineItem(dto).repeat).toEqual({ mode: 'A_CADA_N_DIAS', interval: 3, startDate: '2026-11-16' })
   })
 
+  it('mantém hora null na ida e na volta', () => {
+    const item = toRoutineItem({ ...WEEKLY_DTO, vezes: [{ hora: null }] })
+    expect(item.times).toEqual([{ time: null }])
+    expect(toRoutinePayloadDto(item).vezes).toEqual([{ hora: null }])
+  })
+
   it('trata hora ausente como null', () => {
     const dto = { ...WEEKLY_DTO, vezes: [{} as { hora: string | null }] }
     expect(toRoutineItem(dto).times).toEqual([{ time: null }])

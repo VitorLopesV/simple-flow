@@ -1,6 +1,7 @@
 import type { RoutineItemDto } from '@/types/dto'
 import type { RoutineItem, RoutinePayload } from '@/types/routine'
-import { ROUTINE_MAX_INTERVAL, ROUTINE_MAX_TIMES } from '@/types/routine'
+import { ROUTINE_MAX_INTERVAL, ROUTINE_MAX_NAME, ROUTINE_MAX_TIMES } from '@/types/routine'
+import { toDate, toISODate } from '@/utils/dateFormatter'
 import { http, USE_MOCK } from './http'
 import { toRoutineItem, toRoutinePayloadDto } from './mappers'
 import { delay, mockDb } from './mock'
@@ -16,6 +17,9 @@ function findItem(db: Db, id: string): RoutineItem {
 /** Mesmas regras do backend, para o mock não aceitar o que a API recusaria. */
 function assertValid(payload: RoutinePayload): void {
   if (!payload.name.trim()) throw new Error('Informe o nome do item.')
+  if (payload.name.trim().length > ROUTINE_MAX_NAME) {
+    throw new Error(`O nome pode ter no máximo ${ROUTINE_MAX_NAME} caracteres.`)
+  }
   if (payload.repeat.mode === 'DIAS_DA_SEMANA' && payload.repeat.days.length === 0) {
     throw new Error('Marque ao menos um dia da semana.')
   }
@@ -26,6 +30,16 @@ function assertValid(payload: RoutinePayload): void {
       payload.repeat.interval > ROUTINE_MAX_INTERVAL)
   ) {
     throw new Error(`O intervalo deve ficar entre 1 e ${ROUTINE_MAX_INTERVAL} dias.`)
+  }
+  if (payload.repeat.mode === 'A_CADA_N_DIAS') {
+    const start = payload.repeat.startDate
+    // `Date` normaliza dias inexistentes (31/02 vira 03/03); o round-trip os detecta.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || toISODate(toDate(start)) !== start) {
+      throw new Error('Data inicial inválida, use o formato YYYY-MM-DD.')
+    }
+  }
+  if (payload.times.some((slot) => slot.time !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(slot.time))) {
+    throw new Error('Hora inválida, use o formato HH:MM.')
   }
   if (payload.times.length < 1 || payload.times.length > ROUTINE_MAX_TIMES) {
     throw new Error(`Informe de 1 a ${ROUTINE_MAX_TIMES} vezes por dia.`)

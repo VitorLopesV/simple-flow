@@ -10,6 +10,7 @@ import RoutinePreview from '@/components/features/RoutinePreview.vue'
 import type { RoutineItem, RoutinePayload, RoutineRepeatMode, RoutineWeekday } from '@/types/routine'
 import {
   ROUTINE_MAX_INTERVAL,
+  ROUTINE_MAX_NAME,
   ROUTINE_MAX_TIMES,
   ROUTINE_REPEAT_MODES,
   ROUTINE_WEEKDAYS,
@@ -62,6 +63,8 @@ const onlyIn =
 const daysRule: Rule = (value) =>
   Array.isArray(value) && value.length > 0 ? true : 'Marque ao menos um dia da semana.'
 
+const integerRule: Rule = (value) => (Number.isInteger(Number(value)) ? true : 'Intervalo deve ser um número inteiro.')
+
 const timesRule: Rule = (value) => {
   const times = Array.isArray(value) ? (value as string[]) : []
   if (times.length < 1) return 'Informe ao menos uma vez por dia.'
@@ -74,9 +77,9 @@ const timesRule: Rule = (value) => {
 const { handleSubmit, resetForm, setErrors } = useForm<FormValues>({
   initialValues: initialValues(),
   validationSchema: {
-    name: compose(required('Nome'), maxLength(200, 'Nome')),
+    name: compose(required('Nome'), maxLength(ROUTINE_MAX_NAME, 'Nome')),
     days: onlyIn('DIAS_DA_SEMANA', daysRule),
-    interval: onlyIn('A_CADA_N_DIAS', numberBetween(1, ROUTINE_MAX_INTERVAL, 'Intervalo')),
+    interval: onlyIn('A_CADA_N_DIAS', compose(integerRule, numberBetween(1, ROUTINE_MAX_INTERVAL, 'Intervalo'))),
     startDate: onlyIn('A_CADA_N_DIAS', isoDate('Data inicial')),
     times: timesRule,
   },
@@ -171,7 +174,7 @@ const onSubmit = handleSubmit((form) => emit('save', buildPayload(form)))
       placeholder="Ex.: Tomar remédio"
       :error="nameError"
       required
-      :maxlength="200"
+      :maxlength="ROUTINE_MAX_NAME"
       autocomplete="off"
     />
 

@@ -147,6 +147,32 @@ describe('RoutineForm', () => {
     ])
   })
 
+  it('aceita nome de 120 caracteres e recusa 121 (limite do backend)', async () => {
+    const ok = mount(RoutineForm)
+    await fillName(ok, 'a'.repeat(120))
+    await chip(ok, 'Seg').trigger('click')
+    await submit(ok)
+    expect(ok.emitted('save')).toHaveLength(1)
+
+    const tooLong = mount(RoutineForm)
+    await fillName(tooLong, 'a'.repeat(121))
+    await chip(tooLong, 'Seg').trigger('click')
+    await submit(tooLong)
+    expect(tooLong.emitted('save')).toBeUndefined()
+    expect(tooLong.text()).toContain('no máximo 120')
+  })
+
+  it('recusa intervalo fracionado', async () => {
+    const wrapper = mount(RoutineForm)
+    await fillName(wrapper)
+    await chip(wrapper, 'A cada N dias').trigger('click')
+    await wrapper.get('input[type="number"]').setValue('2.5')
+    await submit(wrapper)
+
+    expect(wrapper.emitted('save')).toBeUndefined()
+    expect(wrapper.text()).toContain('número inteiro')
+  })
+
   it('emite cancelar', async () => {
     const wrapper = mount(RoutineForm)
     await button(wrapper, 'Cancelar').trigger('click')

@@ -69,6 +69,21 @@ describe('routineService (mock)', () => {
     expect(await routineService.list()).toEqual([])
   })
 
+  it('aceita nome de 120 caracteres e barra 121 (limite do backend)', async () => {
+    await expect(routineService.create({ ...WEEKLY, name: 'a'.repeat(120) })).resolves.toBeTruthy()
+    await expect(routineService.create({ ...WEEKLY, name: 'a'.repeat(121) })).rejects.toThrow('120 caracteres')
+  })
+
+  it('barra data inicial inexistente, hora inválida e intervalo fracionado', async () => {
+    const every = (interval: number, startDate: string) => ({
+      ...WEEKLY,
+      repeat: { mode: 'A_CADA_N_DIAS' as const, interval, startDate },
+    })
+    await expect(routineService.create(every(2, '2026-02-31'))).rejects.toThrow('Data inicial')
+    await expect(routineService.create(every(2.5, '2026-02-10'))).rejects.toThrow('intervalo')
+    await expect(routineService.create({ ...WEEKLY, times: [{ time: '25:00' }] })).rejects.toThrow('Hora inválida')
+  })
+
   it('barra o que a API recusaria', async () => {
     await expect(routineService.create({ ...WEEKLY, name: ' ' })).rejects.toThrow('nome')
     await expect(
