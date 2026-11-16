@@ -48,6 +48,14 @@ describe('areaService (mock)', () => {
     await expect(areaService.remove(routine!.id)).rejects.toThrow('Rotina')
   })
 
+  it('recusa a Rotina como destino das tarefas', async () => {
+    const [routine] = await areaService.list()
+    const created = await areaService.create(PAYLOAD)
+    await expect(
+      areaService.remove(created.id, { action: 'move', targetAreaId: routine!.id }),
+    ).rejects.toThrow('não aceita tarefas')
+  })
+
   it('exclui a área e valida o destino ao mover as tarefas', async () => {
     const created = await areaService.create(PAYLOAD)
     await expect(

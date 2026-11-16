@@ -10,9 +10,12 @@ function area(id: string, name: string, system = false): Area {
 
 const AREAS = [area('r', 'Rotina', true), area('t', 'Trabalho'), area('f', 'Faculdade')]
 
-async function mountDialog() {
+const values = () =>
+  Array.from(document.body.querySelectorAll('option')).map((option) => option.textContent?.trim())
+
+async function mountDialog(areas = AREAS) {
   const wrapper = mount(AreaDeleteDialog, {
-    props: { open: false, area: AREAS[1]!, areas: AREAS },
+    props: { open: false, area: AREAS[1]!, areas },
     attachTo: document.body,
   })
   await wrapper.setProps({ open: true })
@@ -23,10 +26,24 @@ const button = (label: string) =>
   Array.from(document.body.querySelectorAll('button')).find((b) => b.textContent?.includes(label))!
 
 describe('AreaDeleteDialog', () => {
-  it('move as tarefas para a primeira outra área por padrão', async () => {
+  it('move as tarefas para a primeira área do usuário, nunca a Rotina', async () => {
     const wrapper = await mountDialog()
     button('Excluir área').click()
-    expect(wrapper.emitted('confirm')?.[0]).toEqual([{ action: 'move', targetAreaId: 'r' }])
+    expect(wrapper.emitted('confirm')?.[0]).toEqual([{ action: 'move', targetAreaId: 'f' }])
+    wrapper.unmount()
+  })
+
+  it('não lista a Rotina como destino', async () => {
+    const wrapper = await mountDialog()
+    expect(values()).toEqual(['Faculdade'])
+    wrapper.unmount()
+  })
+
+  it('sem outra área, desabilita mover e deixa só excluir junto', async () => {
+    const wrapper = await mountDialog([AREAS[0]!, AREAS[1]!])
+    expect(document.body.querySelector<HTMLInputElement>('input[value="move"]')!.disabled).toBe(true)
+    button('Excluir área').click()
+    expect(wrapper.emitted('confirm')?.[0]).toEqual([{ action: 'delete' }])
     wrapper.unmount()
   })
 

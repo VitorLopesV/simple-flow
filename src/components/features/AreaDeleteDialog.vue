@@ -17,14 +17,14 @@ const emit = defineEmits<{ confirm: [destination: AreaTasksDestination] }>()
 const choice = ref<'move' | 'delete'>('move')
 const targetAreaId = ref<string | null>(null)
 
-/** Destinos possíveis: qualquer outra área, inclusive a Rotina. */
+/** Destinos possíveis: outras áreas do usuário (a Rotina não aceita tarefas). */
 function targets(): Area[] {
-  return props.areas.filter((item) => item.id !== props.area?.id)
+  return props.areas.filter((item) => item.id !== props.area?.id && !item.system)
 }
 
 watch(open, (isOpen) => {
   if (!isOpen) return
-  choice.value = 'move'
+  choice.value = targets().length ? 'move' : 'delete'
   targetAreaId.value = targets()[0]?.id ?? null
 })
 
@@ -49,8 +49,20 @@ function confirm(): void {
       <legend class="sr-only">Destino das tarefas</legend>
 
       <label class="flex cursor-pointer items-start gap-2">
-        <input v-model="choice" type="radio" name="area-tasks" value="move" class="mt-1" />
-        <span>Mover as tarefas para outra área</span>
+        <input
+          v-model="choice"
+          type="radio"
+          name="area-tasks"
+          value="move"
+          class="mt-1"
+          :disabled="!targets().length"
+        />
+        <span>
+          Mover as tarefas para outra área
+          <span v-if="!targets().length" class="text-muted-foreground block text-xs">
+            Crie outra área para poder mover as tarefas.
+          </span>
+        </span>
       </label>
       <BaseSelect
         v-if="choice === 'move'"

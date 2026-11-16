@@ -63,8 +63,12 @@ export const areaService = {
       const index = db.areas.findIndex((area) => area.id === id)
       if (index < 0) throw new Error('Área não encontrada.')
       if (db.areas[index]!.system) throw new Error('A área Rotina não pode ser excluída.')
-      if (destination?.action === 'move' && !db.areas.some((area) => area.id === destination.targetAreaId)) {
+      const target = destination?.action === 'move' ? db.areas.find((area) => area.id === destination.targetAreaId) : null
+      if (destination?.action === 'move' && !target) {
         throw new Error('Área de destino inválida.')
+      }
+      if (target?.system) {
+        throw new Error('A área Rotina não aceita tarefas.')
       }
 
       // As tarefas só passam a existir na próxima issue; aqui só sai a área.
