@@ -16,6 +16,7 @@ const task: Task = {
   priority: null,
   notes: null,
   archived: false,
+  sprintId: null,
   archivedAt: null,
   createdAt: '2026-11-01T00:00:00Z',
 }

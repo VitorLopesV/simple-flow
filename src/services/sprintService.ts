@@ -1,0 +1,257 @@
+import type { SprintScoreboardDto, SprintViewDto, TaskDto } from '@/types/dto'
+import type { RoutineItem } from '@/types/routine'
+import type { RoutineOccurrence, Scoreboard, SprintScoreboard, SprintView, SprintWhich } from '@/types/sprint'
+import type { Task } from '@/types/task'
+import { missingSprintFields } from '@/types/task'
+import { toDate, toISODate } from '@/utils/dateFormatter'
+import { addDays, mondayOf, taskPoints } from '@/utils/sprint'
+import { http, USE_MOCK } from './http'
+import { toSprintScoreboard, toSprintView, toTask } from './mappers'
+import { delay, mockDb } from './mock'
+
+type Db = Awaited<ReturnType<typeof mockDb>>
+
+const ROUTE: Record<SprintWhich, string> = { current: 'atual', next: 'proximo' }
+const ROUTINE_DAY_POINTS = 40
+
+function today(): string {
+  return toISODate(new Date())
+}
+
+function startOf(which: SprintWhich): string {
+  const monday = mondayOf(today())
+  return which === 'current' ? monday : addDays(monday, 7)
+}
+
+function sprintId(startDate: string): string {
+  return `spr_${startDate}`
+}
+
+function isWeekend(iso: string): boolean {
+  const weekday = toDate(iso).getDay()
+  return weekday === 0 || weekday === 6
+}
+
+function daysBetween(from: string, to: string): number {
+  return Math.round((toDate(to).getTime() - toDate(from).getTime()) / 86_400_000)
+}
+
+/** Vezes do item que caem em `date`, como `calcularOcorrencias` do backend (versão simplificada). */
+function occurrencesOn(item: RoutineItem, date: string): RoutineOccurrence[] {
+  const { repeat } = item
+  const matches =
+    repeat.mode === 'DIAS_DA_SEMANA'
+      ? (repeat.days as number[]).includes(toDate(date).getDay())
+      : daysBetween(repeat.startDate, date) >= 0 && daysBetween(repeat.startDate, date) % repeat.interval === 0
+  if (!matches) return []
+  return item.times.map((slot, index) => ({
+    id: null,
+    itemId: item.id,
+    name: item.name,
+    date,
+    time: slot.time,
+    index,
+    order: 0,
+    completedAt: null,
+  }))
+}
+
+/** Por dia: vezes sem hora primeiro, depois por horário e nome. */
+function sortOccurrences(list: RoutineOccurrence[], withIds: boolean): RoutineOccurrence[] {
+  const sorted = [...list].sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) ||
+      (a.time ?? '').localeCompare(b.time ?? '') ||
+      a.name.localeCompare(b.name, 'pt-BR'),
+  )
+  return sorted.map((occurrence, order) => ({
+    ...occurrence,
+    order,
+    id: withIds ? `ocr_${occurrence.itemId}_${occurrence.date}_${occurrence.index}` : null,
+  }))
+}
+
+function mockView(db: Db, which: SprintWhich): SprintView {
+  const startDate = startOf(which)
+  const started = which === 'current'
+  const occurrences: RoutineOccurrence[] = []
+  const reminders: RoutineOccurrence[] = []
+  for (let offset = 0; offset < 7; offset += 1) {
+    const date = addDays(startDate, offset)
+    const target = offset < 5 ? occurrences : reminders
+    db.routineItems.forEach((item) => {
+      // Sáb/dom só existem no modo "a cada N dias" e viram lembretes, sem pontos.
+      if (offset >= 5 && item.repeat.mode !== 'A_CADA_N_DIAS') return
+      target.push(...occurrencesOn(item, date))
+    })
+  }
+  return {
+    sprint: {
+      id: sprintId(startDate),
+      startDate,
+      endDate: addDays(startDate, 4),
+      status: 'ABERTO',
+      startedRoutineAt: started ? db.now() : null,
+      createdAt: db.now(),
+    },
+    started,
+    preview: !started,
+    occurrences: sortOccurrences(occurrences, started),
+    reminders: sortOccurrences(reminders, started),
+  }
+}
+
+/** Placar com a mesma fórmula do backend: rotina 40 pts por dia útil (tudo ou nada) + tarefas. */
+function mockScoreboard(db: Db, which: SprintWhich): SprintScoreboard {
+  const view = mockView(db, which)
+  const byDay = new Map<string, RoutineOccurrence[]>()
+  view.occurrences.forEach((entry) => byDay.set(entry.date, [...(byDay.get(entry.date) ?? []), entry]))
+  const daysCompleted = [...byDay.values()].filter((list) => list.every((entry) => entry.completedAt)).length
+  const sprintTasks = db.tasks.filter((task) => task.sprintId === view.sprint.id && !task.archived)
+  const points = (task: Task) => taskPoints(task.estimateMinutes!, task.difficulty!, task.priority!)
+  const tasksTotal = sprintTasks.reduce((sum, task) => sum + points(task), 0)
+  const tasksDone = sprintTasks.filter((task) => task.done).reduce((sum, task) => sum + points(task), 0)
+
+  const total = byDay.size * ROUTINE_DAY_POINTS + tasksTotal
+  const done = daysCompleted * ROUTINE_DAY_POINTS + tasksDone
+  const scoreboard: Scoreboard = {
+    total,
+    done,
+    percentage: total === 0 ? 0 : Math.round((done / total) * 1000) / 10,
+    // Comparação em inteiros: 89,96% arredonda para 90,0 mas não dá bônus.
+    bonus: total > 0 && done * 10 >= total * 9,
+    routine: {
+      daysWithRoutine: byDay.size,
+      daysCompleted,
+      pointsPerDay: ROUTINE_DAY_POINTS,
+      total: byDay.size * ROUTINE_DAY_POINTS,
+      done: daysCompleted * ROUTINE_DAY_POINTS,
+    },
+    tasks: {
+      count: sprintTasks.length,
+      completed: sprintTasks.filter((task) => task.done).length,
+      total: tasksTotal,
+      done: tasksDone,
+    },
+  }
+  return {
+    sprintId: view.sprint.id,
+    startDate: view.sprint.startDate,
+    endDate: view.sprint.endDate,
+    started: view.started,
+    preview: view.preview,
+    scoreboard,
+  }
+}
+
+function findTask(db: Db, id: string): Task {
+  const task = db.tasks.find((item) => item.id === id)
+  if (!task) throw new Error('Tarefa não encontrada.')
+  return task
+}
+
+/** Mesmas recusas do backend (422) para o dia escolhido; devolve o id do sprint do dia. */
+function assertValidDay(day: string): string {
+  if (isWeekend(day)) throw new Error('O sprint só tem dias úteis, de segunda a sexta.')
+  if (day < today()) throw new Error('Esse dia já passou: escolha hoje ou um dia futuro.')
+  const monday = mondayOf(day)
+  if (monday !== startOf('current') && monday !== startOf('next')) {
+    throw new Error('O dia precisa estar no sprint atual ou no próximo.')
+  }
+  return sprintId(monday)
+}
+
+/** Tarefa de dia que já passou fica travada (409 no backend): só poderá ser concluída. */
+function assertUnlocked(task: Task): void {
+  if (task.day && task.day < today()) {
+    throw new Error('Essa tarefa é de um dia que já passou: ela só pode ser concluída.')
+  }
+}
+
+function assertInSprint(task: Task): void {
+  if (!task.sprintId) throw new Error('A tarefa não está no sprint.')
+}
+
+export const sprintService = {
+  /** Sprint com a rotina da semana. */
+  async get(which: SprintWhich): Promise<SprintView> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      return delay(mockView(db, which))
+    }
+
+    const { data } = await http.get<SprintViewDto>(`/sprints/${ROUTE[which]}`)
+    return toSprintView(data)
+  },
+
+  async getScoreboard(which: SprintWhich): Promise<SprintScoreboard> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      return delay(mockScoreboard(db, which))
+    }
+
+    const { data } = await http.get<SprintScoreboardDto>(`/sprints/${ROUTE[which]}/placar`)
+    return toSprintScoreboard(data)
+  },
+
+  /** Tarefas do sprint `id`: a API de tarefas devolve `sprintId` em cada uma. */
+  async listTasks(id: string): Promise<Task[]> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      return delay(db.clone(db.tasks).filter((task) => task.sprintId === id && !task.archived))
+    }
+
+    const { data } = await http.get<TaskDto[]>('/tarefas')
+    return data.map(toTask).filter((task) => task.sprintId === id)
+  },
+
+  /** Põe uma tarefa do backlog no sprint do `day` (sem `day`, usa o que a tarefa já tem). */
+  async addTask(taskId: string, day?: string): Promise<Task> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      const task = findTask(db, taskId)
+      if (task.archived) throw new Error('Tarefa arquivada não entra no sprint.')
+      if (task.sprintId) throw new Error('A tarefa já está no sprint.')
+      const target = day ?? task.day
+      if (!target) throw new Error('Informe o dia da tarefa.')
+      const missing = missingSprintFields({ ...task, day: target })
+      if (missing.length) throw new Error(`Faltam para entrar no sprint: ${missing.join(', ')}.`)
+      task.sprintId = assertValidDay(target)
+      task.day = target
+      return delay(db.clone(task))
+    }
+
+    const { data } = await http.post<TaskDto>('/sprints/tarefas', { tarefaId: taskId, dia: day })
+    return toTask(data)
+  },
+
+  async moveTask(taskId: string, day: string): Promise<Task> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      const task = findTask(db, taskId)
+      assertInSprint(task)
+      assertUnlocked(task)
+      task.sprintId = assertValidDay(day)
+      task.day = day
+      return delay(db.clone(task))
+    }
+
+    const { data } = await http.patch<TaskDto>(`/sprints/tarefas/${taskId}/dia`, { dia: day })
+    return toTask(data)
+  },
+
+  /** Devolve a tarefa ao backlog (mantém o dia). */
+  async removeTask(taskId: string): Promise<Task> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      const task = findTask(db, taskId)
+      assertInSprint(task)
+      assertUnlocked(task)
+      task.sprintId = null
+      return delay(db.clone(task))
+    }
+
+    const { data } = await http.delete<TaskDto>(`/sprints/tarefas/${taskId}`)
+    return toTask(data)
+  },
+}

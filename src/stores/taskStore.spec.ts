@@ -31,6 +31,7 @@ function task(id: string, areaId = 'a'): Task {
     priority: null,
     notes: null,
     archived: false,
+    sprintId: null,
     archivedAt: null,
     createdAt: '',
   }

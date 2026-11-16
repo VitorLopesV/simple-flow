@@ -277,13 +277,20 @@ export interface TaskDto {
   dificuldade: 'FACIL' | 'MEDIA' | 'DIFICIL' | null
   prioridade: 'BAIXA' | 'MEDIA' | 'ALTA' | null
   notas: string | null
+  sprintId: ID | null
+  /** Ainda não vêm do backend (#144 e #65); opcionais por segurança. */
+  concluida?: boolean
+  superTaskNome?: string | null
   arquivada: boolean
   arquivadaEm: string | null
   criadoEm: string
 }
 
 /** Criação (`POST /tarefas`) e edição (`PUT /tarefas/:id`, sem `areaId`). */
-export type TaskEditDto = Omit<TaskDto, 'id' | 'areaId' | 'arquivada' | 'arquivadaEm' | 'criadoEm'>
+export type TaskEditDto = Omit<
+  TaskDto,
+  'id' | 'areaId' | 'sprintId' | 'concluida' | 'superTaskNome' | 'arquivada' | 'arquivadaEm' | 'criadoEm'
+>
 export type TaskPayloadDto = TaskEditDto & Pick<TaskDto, 'areaId'>
 
 // ------------------------------------------------------------------- rotina
@@ -303,3 +310,51 @@ export interface RoutineItemDto {
 
 /** Criação (`POST /rotinas`) e edição (`PUT /rotinas/:id`); o item vai sempre para a área Rotina. */
 export type RoutinePayloadDto = Pick<RoutineItemDto, 'nome' | 'repeticao' | 'vezes'>
+
+// ------------------------------------------------------------------- sprint
+
+export interface SprintDto {
+  id: ID
+  inicio: string
+  fim: string
+  situacao: 'ABERTO' | 'FECHADO'
+  rotinaGeradaEm: string | null
+  criadoEm: string
+}
+
+export interface RoutineOccurrenceDto {
+  id: ID | null
+  itemId: ID | null
+  nome: string
+  data: string
+  hora: string | null
+  indice: number
+  ordem: number
+  concluidaEm: string | null
+}
+
+/** `GET /sprints/atual` e `GET /sprints/proximo`. */
+export interface SprintViewDto {
+  sprint: SprintDto
+  iniciado: boolean
+  previa: boolean
+  ocorrencias: RoutineOccurrenceDto[]
+  lembretes: RoutineOccurrenceDto[]
+}
+
+/** `GET /sprints/atual/placar` e `GET /sprints/proximo/placar`. */
+export interface SprintScoreboardDto {
+  sprintId: ID
+  inicio: string
+  fim: string
+  iniciado: boolean
+  previa: boolean
+  placar: {
+    total: number
+    feitos: number
+    percentual: number
+    bonus: boolean
+    rotina: { diasComRotina: number; diasCumpridos: number; pontosPorDia: number; total: number; feitos: number }
+    tarefas: { quantidade: number; concluidas: number; total: number; feitos: number }
+  }
+}

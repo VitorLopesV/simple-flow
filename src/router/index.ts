@@ -63,6 +63,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/Routine.vue'),
         meta: { title: 'Rotina', description: 'Itens de rotina e regras de repetição' },
       },
+      {
+        path: 'sprint',
+        name: 'sprint',
+        component: () => import('@/pages/Sprint.vue'),
+        meta: { title: 'Sprint', description: 'Semana planejada em colunas, de segunda a sexta' },
+      },
     ],
   },
   {

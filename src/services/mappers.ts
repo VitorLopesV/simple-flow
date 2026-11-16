@@ -10,6 +10,7 @@ import type { Area, AreaPayload } from '@/types/area'
 import type { User, UserSession, LoginPayload, ProfilePayload, RegisterPayload } from '@/types/auth'
 import type { Category } from '@/types/category'
 import type { RoutineItem, RoutinePayload } from '@/types/routine'
+import type { RoutineOccurrence, Sprint, SprintScoreboard, SprintView } from '@/types/sprint'
 import type { Task, TaskEdit, TaskPayload } from '@/types/task'
 import type { Paginated, SeriesPoint } from '@/types/common'
 import type {
@@ -32,7 +33,11 @@ import type {
   CreditCardPayloadDto,
   CreditCardWithInvoiceDto,
   RoutineItemDto,
+  RoutineOccurrenceDto,
   RoutinePayloadDto,
+  SprintDto,
+  SprintScoreboardDto,
+  SprintViewDto,
   TaskDto,
   TaskEditDto,
   TaskPayloadDto,
@@ -380,6 +385,9 @@ export function toTask(dto: TaskDto): Task {
     difficulty: dto.dificuldade,
     priority: dto.prioridade,
     notes: dto.notas,
+    sprintId: dto.sprintId ?? null,
+    done: dto.concluida ?? false,
+    superTaskName: dto.superTaskNome ?? null,
     archived: dto.arquivada,
     archivedAt: dto.arquivadaEm,
     createdAt: dto.criadoEm,
@@ -428,5 +436,71 @@ export function toRoutinePayloadDto(payload: RoutinePayload): RoutinePayloadDto 
         ? { modo: 'DIAS_DA_SEMANA', dias: repeat.days }
         : { modo: 'A_CADA_N_DIAS', intervalo: repeat.interval, dataInicial: repeat.startDate },
     vezes: payload.times.map((slot) => ({ hora: slot.time })),
+  }
+}
+
+// ------------------------------------------------------------------ sprint
+
+export function toSprint(dto: SprintDto): Sprint {
+  return {
+    id: dto.id,
+    startDate: dto.inicio,
+    endDate: dto.fim,
+    status: dto.situacao,
+    startedRoutineAt: dto.rotinaGeradaEm,
+    createdAt: dto.criadoEm,
+  }
+}
+
+export function toRoutineOccurrence(dto: RoutineOccurrenceDto): RoutineOccurrence {
+  return {
+    id: dto.id,
+    itemId: dto.itemId,
+    name: dto.nome,
+    date: dto.data,
+    time: dto.hora,
+    index: dto.indice,
+    order: dto.ordem,
+    completedAt: dto.concluidaEm,
+  }
+}
+
+export function toSprintView(dto: SprintViewDto): SprintView {
+  return {
+    sprint: toSprint(dto.sprint),
+    started: dto.iniciado,
+    preview: dto.previa,
+    occurrences: dto.ocorrencias.map(toRoutineOccurrence),
+    reminders: dto.lembretes.map(toRoutineOccurrence),
+  }
+}
+
+export function toSprintScoreboard(dto: SprintScoreboardDto): SprintScoreboard {
+  const { placar } = dto
+  return {
+    sprintId: dto.sprintId,
+    startDate: dto.inicio,
+    endDate: dto.fim,
+    started: dto.iniciado,
+    preview: dto.previa,
+    scoreboard: {
+      total: placar.total,
+      done: placar.feitos,
+      percentage: placar.percentual,
+      bonus: placar.bonus,
+      routine: {
+        daysWithRoutine: placar.rotina.diasComRotina,
+        daysCompleted: placar.rotina.diasCumpridos,
+        pointsPerDay: placar.rotina.pontosPorDia,
+        total: placar.rotina.total,
+        done: placar.rotina.feitos,
+      },
+      tasks: {
+        count: placar.tarefas.quantidade,
+        completed: placar.tarefas.concluidas,
+        total: placar.tarefas.total,
+        done: placar.tarefas.feitos,
+      },
+    },
   }
 }

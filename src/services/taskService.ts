@@ -60,6 +60,7 @@ export const taskService = {
         ...payload,
         title: payload.title.trim(),
         id: db.newId('tar'),
+        sprintId: null,
         archived: false,
         archivedAt: null,
         createdAt: db.now(),
