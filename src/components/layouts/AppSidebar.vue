@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { House, X } from '@lucide/vue'
+import { House, ListChecks, X } from '@lucide/vue'
+import type { Component } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
 import cardsIcon from '@/img/cards_pane_icon.svg'
@@ -17,6 +18,8 @@ const emit = defineEmits<{ close: [] }>()
 interface MenuItem {
   route: string
   label: string
+  /** Ícone Lucide, para itens sem SVG próprio. */
+  lucide?: Component
   /** URL do SVG; vira máscara para herdar a cor do item (hover e ativo). Sem ele, o item usa o ícone Lucide da Home. */
   icon?: string
   /** Classe de tamanho do ícone; o padrão é `size-[30px]`. */
@@ -42,6 +45,11 @@ const groups: MenuGroup[] = [
       { route: 'expenses', label: 'Saídas', icon: outflowIcon, iconSize: 'size-8' },
       { route: 'cards', label: 'Cartões', icon: cardsIcon },
     ],
+  },
+  {
+    id: 'organization',
+    title: 'Organização',
+    items: [{ route: 'tasks', label: 'Tarefas', lucide: ListChecks }],
   },
 ]
 </script>
@@ -108,7 +116,7 @@ const groups: MenuGroup[] = [
                 :style="iconMaskStyle(item.icon)"
                 aria-hidden="true"
               />
-              <House v-else class="size-[30px] shrink-0" aria-hidden="true" />
+              <component :is="item.lucide ?? House" v-else class="size-[30px] shrink-0" aria-hidden="true" />
               {{ item.label }}
             </RouterLink>
           </li>

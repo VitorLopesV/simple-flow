@@ -1,3 +1,4 @@
+export { areaService } from './areaService'
 export { categoryService } from './categoryService'
 export { creditCardService } from './creditCardService'
 export { dashboardService } from './dashboardService'

@@ -12,6 +12,7 @@ import {
   digitsOnly,
   optionalPhone,
   positiveAmount,
+  oneOf,
 } from '@/utils/validators'
 
 describe('required', () => {
@@ -184,5 +185,12 @@ describe('optionalPhone', () => {
 
   it.each(['123', '(11) 9999-88', '119999988887'])('rejeita %j', (value) => {
     expect(optionalPhone()(value)).toBe('Telefone inválido.')
+  })
+})
+
+describe('oneOf', () => {
+  it('aceita só valores da lista', () => {
+    expect(oneOf(['#fff'], 'Cor')('#fff')).toBe(true)
+    expect(oneOf(['#fff'], 'Cor')('#000')).toBe('Cor inválida.')
   })
 })

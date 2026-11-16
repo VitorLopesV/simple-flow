@@ -32,7 +32,7 @@ async function go(destination: string) {
   return { name: router.currentRoute.value.name, path: router.currentRoute.value.fullPath }
 }
 
-const PRIVATE_ROUTES = ['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes']
+const PRIVATE_ROUTES = ['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes', '/app/tarefas']
 
 beforeEach(async () => {
   localStorage.clear()
@@ -123,7 +123,7 @@ describe('rota inexistente', () => {
 })
 
 describe('título da página', () => {
-  it.each(['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes'])(
+  it.each(['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes', '/app/tarefas'])(
     '%s mantém apenas "SimpleFlow"',
     async (route) => {
       authenticate()
