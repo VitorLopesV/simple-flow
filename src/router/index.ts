@@ -51,6 +51,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/CreditCards.vue'),
         meta: { title: 'Cartões de Crédito', description: 'Cartões, faturas e transações' },
       },
+      {
+        path: 'tarefas',
+        name: 'tasks',
+        component: () => import('@/pages/Tasks.vue'),
+        meta: { title: 'Tarefas', description: 'Áreas e tarefas do módulo Organização' },
+      },
     ],
   },
   {

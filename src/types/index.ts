@@ -1,3 +1,4 @@
+export * from './area'
 export * from './category'
 export * from './common'
 export * from './creditCard'

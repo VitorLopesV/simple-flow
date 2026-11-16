@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   mapPage,
+  toArea,
+  toAreaPayloadDto,
   toCardTransactionPayloadDto,
   toCreditCardPayloadDto,
   toCreditCardWithInvoice,
@@ -395,5 +397,17 @@ describe('mapPage', () => {
     expect(
       mapPage({ items: [INCOME_DTO], page: 2, pageSize: 20, total: 21, totalPages: 2 }, toIncome),
     ).toEqual({ items: [toIncome(INCOME_DTO)], page: 2, pageSize: 20, total: 21, totalPages: 2 })
+  })
+})
+
+describe('áreas', () => {
+  it('converte a área da API', () => {
+    expect(
+      toArea({ id: 'are_1', nome: 'Rotina', cor: '#6366f1', sistema: true, criadoEm: '2026-01-01T00:00:00.000Z' }),
+    ).toEqual({ id: 'are_1', name: 'Rotina', color: '#6366f1', system: true, createdAt: '2026-01-01T00:00:00.000Z' })
+  })
+
+  it('converte o payload para o formato da API', () => {
+    expect(toAreaPayloadDto({ name: 'Trabalho', color: '#3b82f6' })).toEqual({ nome: 'Trabalho', cor: '#3b82f6' })
   })
 })

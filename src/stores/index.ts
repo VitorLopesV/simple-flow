@@ -1,3 +1,4 @@
+export { useAreaStore } from './areaStore'
 export { useAuthStore } from './authStore'
 export { useCategoryStore } from './categoryStore'
 export { useCreditCardStore } from './creditCardStore'

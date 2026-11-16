@@ -6,6 +6,7 @@
  * os dados no formato de domínio. Quando o backend migrar o contrato, só este
  * arquivo e `types/dto.ts` mudam.
  */
+import type { Area, AreaPayload } from '@/types/area'
 import type { User, UserSession, LoginPayload, ProfilePayload, RegisterPayload } from '@/types/auth'
 import type { Category } from '@/types/category'
 import type { Paginated, SeriesPoint } from '@/types/common'
@@ -19,6 +20,8 @@ import type {
 } from '@/types/creditCard'
 import type { CategoryTotal, DashboardSummary, RecentTransaction } from '@/types/dashboard'
 import type {
+  AreaDto,
+  AreaPayloadDto,
   CardTransactionDto,
   CardTransactionPayloadDto,
   CategoryDto,
@@ -345,4 +348,14 @@ export function toDashboardSummary(dto: DashboardSummaryDto): DashboardSummary {
     cardExpensesByCategory: dto.gastosCartoesPorCategoria?.map(toCategoryTotal),
     recentTransactions: dto.transacoesRecentes.map(toRecentTransaction),
   }
+}
+
+// -------------------------------------------------------------------- áreas
+
+export function toArea(dto: AreaDto): Area {
+  return { id: dto.id, name: dto.nome, color: dto.cor, system: dto.sistema, createdAt: dto.criadoEm }
+}
+
+export function toAreaPayloadDto(payload: AreaPayload): AreaPayloadDto {
+  return { nome: payload.name, cor: payload.color }
 }

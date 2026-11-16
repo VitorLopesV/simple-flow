@@ -250,3 +250,15 @@ export interface DashboardSummaryDto {
   gastosCartoesPorCategoria?: CategoryTotalDto[]
   transacoesRecentes: RecentTransactionDto[]
 }
+
+// -------------------------------------------------------------------- áreas
+
+export interface AreaDto {
+  id: ID
+  nome: string
+  cor: string
+  sistema: boolean
+  criadoEm: string
+}
+
+export type AreaPayloadDto = Pick<AreaDto, 'nome' | 'cor'>

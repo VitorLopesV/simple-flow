@@ -99,3 +99,9 @@ export const optionalPhone =
     if (digits === '') return true
     return digits.length === 10 || digits.length === 11 ? true : `${field} inválido.`
   }
+
+/** Valor precisa estar entre as opções permitidas (ex.: paleta fixa de cores). */
+export const oneOf =
+  (options: readonly string[], field = 'Valor'): Rule =>
+  (value) =>
+    options.includes(String(value ?? '')) ? true : `${field} inválida.`
