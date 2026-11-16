@@ -9,6 +9,7 @@
 import type { Area, AreaPayload } from '@/types/area'
 import type { User, UserSession, LoginPayload, ProfilePayload, RegisterPayload } from '@/types/auth'
 import type { Category } from '@/types/category'
+import type { RoutineItem, RoutinePayload } from '@/types/routine'
 import type { Task, TaskEdit, TaskPayload } from '@/types/task'
 import type { Paginated, SeriesPoint } from '@/types/common'
 import type {
@@ -30,6 +31,8 @@ import type {
   CreditCardDto,
   CreditCardPayloadDto,
   CreditCardWithInvoiceDto,
+  RoutineItemDto,
+  RoutinePayloadDto,
   TaskDto,
   TaskEditDto,
   TaskPayloadDto,
@@ -397,4 +400,33 @@ export function toTaskEditDto(edit: TaskEdit): TaskEditDto {
 
 export function toTaskPayloadDto(payload: TaskPayload): TaskPayloadDto {
   return { ...toTaskEditDto(payload), areaId: payload.areaId }
+}
+
+// ------------------------------------------------------------------ rotina
+
+export function toRoutineItem(dto: RoutineItemDto): RoutineItem {
+  const { repeticao } = dto
+  return {
+    id: dto.id,
+    areaId: dto.areaId,
+    name: dto.nome,
+    repeat:
+      repeticao.modo === 'DIAS_DA_SEMANA'
+        ? { mode: 'DIAS_DA_SEMANA', days: repeticao.dias }
+        : { mode: 'A_CADA_N_DIAS', interval: repeticao.intervalo, startDate: repeticao.dataInicial },
+    times: dto.vezes.map((slot) => ({ time: slot.hora ?? null })),
+    createdAt: dto.criadoEm,
+  }
+}
+
+export function toRoutinePayloadDto(payload: RoutinePayload): RoutinePayloadDto {
+  const { repeat } = payload
+  return {
+    nome: payload.name,
+    repeticao:
+      repeat.mode === 'DIAS_DA_SEMANA'
+        ? { modo: 'DIAS_DA_SEMANA', dias: repeat.days }
+        : { modo: 'A_CADA_N_DIAS', intervalo: repeat.interval, dataInicial: repeat.startDate },
+    vezes: payload.times.map((slot) => ({ hora: slot.time })),
+  }
 }

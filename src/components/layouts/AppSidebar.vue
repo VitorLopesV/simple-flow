@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { House, ListChecks, X } from '@lucide/vue'
+import { CalendarCheck, House, ListChecks, X } from '@lucide/vue'
 import type { Component } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -49,7 +49,10 @@ const groups: MenuGroup[] = [
   {
     id: 'organization',
     title: 'Organização',
-    items: [{ route: 'tasks', label: 'Tarefas', lucide: ListChecks }],
+    items: [
+      { route: 'tasks', label: 'Tarefas', lucide: ListChecks },
+      { route: 'routine', label: 'Rotina', lucide: CalendarCheck },
+    ],
   },
 ]
 </script>

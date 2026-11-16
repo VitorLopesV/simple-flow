@@ -9,7 +9,7 @@ const stub = { render: () => null }
 async function mountSidebar(initialPath: string) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: ['home', 'dashboard', 'incomes', 'expenses', 'cards', 'tasks'].map((name) => ({
+    routes: ['home', 'dashboard', 'incomes', 'expenses', 'cards', 'tasks', 'routine'].map((name) => ({
       path: `/${name}`,
       name,
       component: stub,

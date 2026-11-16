@@ -285,3 +285,21 @@ export interface TaskDto {
 /** Criação (`POST /tarefas`) e edição (`PUT /tarefas/:id`, sem `areaId`). */
 export type TaskEditDto = Omit<TaskDto, 'id' | 'areaId' | 'arquivada' | 'arquivadaEm' | 'criadoEm'>
 export type TaskPayloadDto = TaskEditDto & Pick<TaskDto, 'areaId'>
+
+// ------------------------------------------------------------------- rotina
+
+export type RoutineRepeatDto =
+  | { modo: 'DIAS_DA_SEMANA'; dias: (1 | 2 | 3 | 4 | 5)[] }
+  | { modo: 'A_CADA_N_DIAS'; intervalo: number; dataInicial: string }
+
+export interface RoutineItemDto {
+  id: ID
+  areaId: ID
+  nome: string
+  repeticao: RoutineRepeatDto
+  vezes: { hora: string | null }[]
+  criadoEm: string
+}
+
+/** Criação (`POST /rotinas`) e edição (`PUT /rotinas/:id`); o item vai sempre para a área Rotina. */
+export type RoutinePayloadDto = Pick<RoutineItemDto, 'nome' | 'repeticao' | 'vezes'>

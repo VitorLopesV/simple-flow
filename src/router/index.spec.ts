@@ -14,6 +14,7 @@ vi.mock('@/pages/Incomes.vue', () => emptyComponent)
 vi.mock('@/pages/Expenses.vue', () => emptyComponent)
 vi.mock('@/pages/CreditCards.vue', () => emptyComponent)
 vi.mock('@/pages/Tasks.vue', () => emptyComponent)
+vi.mock('@/pages/Routine.vue', () => emptyComponent)
 vi.mock('@/pages/Login.vue', () => emptyComponent)
 vi.mock('@/pages/Register.vue', () => emptyComponent)
 vi.mock('@/pages/NotFound.vue', () => emptyComponent)
@@ -33,7 +34,7 @@ async function go(destination: string) {
   return { name: router.currentRoute.value.name, path: router.currentRoute.value.fullPath }
 }
 
-const PRIVATE_ROUTES = ['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes', '/app/tarefas']
+const PRIVATE_ROUTES = ['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes', '/app/tarefas', '/app/rotina']
 
 beforeEach(async () => {
   localStorage.clear()
@@ -124,7 +125,7 @@ describe('rota inexistente', () => {
 })
 
 describe('título da página', () => {
-  it.each(['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes', '/app/tarefas'])(
+  it.each(['/app/inicio', '/app/dashboard', '/app/entradas', '/app/saidas', '/app/cartoes', '/app/tarefas', '/app/rotina'])(
     '%s mantém apenas "SimpleFlow"',
     async (route) => {
       authenticate()

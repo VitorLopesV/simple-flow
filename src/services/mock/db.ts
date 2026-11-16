@@ -14,6 +14,7 @@ import type { Category } from '@/types/category'
 import { isFixedCategory } from '@/types/category'
 import type { ID, Period } from '@/types/common'
 import type { Area } from '@/types/area'
+import type { RoutineItem } from '@/types/routine'
 import type { Task } from '@/types/task'
 import type { CardTransaction, CreditCard, Invoice } from '@/types/creditCard'
 import type { Expense, ExpenseType, PaymentMethod } from '@/types/expense'
@@ -122,6 +123,9 @@ export const areas: Area[] = [
 
 /** Backlog de tarefas; começa vazio, como uma conta nova. */
 export const tasks: Task[] = []
+
+/** Itens de rotina; começam vazios, como uma conta nova. */
+export const routineItems: RoutineItem[] = []
 
 export const incomes: Income[] = []
 export const expenses: Expense[] = []
