@@ -57,6 +57,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/Tasks.vue'),
         meta: { title: 'Tarefas', description: 'Áreas e tarefas do módulo Organização' },
       },
+      {
+        path: 'rotina',
+        name: 'routine',
+        component: () => import('@/pages/Routine.vue'),
+        meta: { title: 'Rotina', description: 'Itens de rotina e regras de repetição' },
+      },
     ],
   },
   {

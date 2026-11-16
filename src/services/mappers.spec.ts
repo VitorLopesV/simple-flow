@@ -18,12 +18,14 @@ import {
   toLoginDto,
   toProfileDto,
   toRegisterDto,
+  toRoutineItem,
+  toRoutinePayloadDto,
   toTask,
   toTaskEditDto,
   toTaskPayloadDto,
   toUserSession,
 } from '@/services/mappers'
-import type { DashboardSummaryDto, ExpenseDto, IncomeDto } from '@/types/dto'
+import type { DashboardSummaryDto, ExpenseDto, IncomeDto, RoutineItemDto } from '@/types/dto'
 
 const INCOME_DTO: IncomeDto = {
   id: 'ent_1',
@@ -503,6 +505,70 @@ describe('tarefas', () => {
       dificuldade: null,
       prioridade: null,
       notas: null,
+    })
+  })
+})
+
+describe('mappers de rotina', () => {
+  const WEEKLY_DTO: RoutineItemDto = {
+    id: 'rot_1',
+    areaId: 'are_1',
+    nome: 'Tomar remédio',
+    repeticao: { modo: 'DIAS_DA_SEMANA', dias: [1, 3, 5] },
+    vezes: [{ hora: '08:00' }, { hora: null }],
+    criadoEm: '2026-11-16T10:00:00.000Z',
+  }
+
+  it('converte o item de dias da semana da API', () => {
+    expect(toRoutineItem(WEEKLY_DTO)).toEqual({
+      id: 'rot_1',
+      areaId: 'are_1',
+      name: 'Tomar remédio',
+      repeat: { mode: 'DIAS_DA_SEMANA', days: [1, 3, 5] },
+      times: [{ time: '08:00' }, { time: null }],
+      createdAt: '2026-11-16T10:00:00.000Z',
+    })
+  })
+
+  it('converte o item de "a cada N dias" da API', () => {
+    const dto: RoutineItemDto = {
+      ...WEEKLY_DTO,
+      repeticao: { modo: 'A_CADA_N_DIAS', intervalo: 3, dataInicial: '2026-11-16' },
+      vezes: [{ hora: null }],
+    }
+    expect(toRoutineItem(dto).repeat).toEqual({ mode: 'A_CADA_N_DIAS', interval: 3, startDate: '2026-11-16' })
+  })
+
+  it('trata hora ausente como null', () => {
+    const dto = { ...WEEKLY_DTO, vezes: [{} as { hora: string | null }] }
+    expect(toRoutineItem(dto).times).toEqual([{ time: null }])
+  })
+
+  it('converte o payload de dias da semana para a API, sem areaId', () => {
+    expect(
+      toRoutinePayloadDto({
+        name: 'Tomar remédio',
+        repeat: { mode: 'DIAS_DA_SEMANA', days: [1, 3, 5] },
+        times: [{ time: '08:00' }, { time: null }],
+      }),
+    ).toEqual({
+      nome: 'Tomar remédio',
+      repeticao: { modo: 'DIAS_DA_SEMANA', dias: [1, 3, 5] },
+      vezes: [{ hora: '08:00' }, { hora: null }],
+    })
+  })
+
+  it('converte o payload de "a cada N dias" para a API', () => {
+    expect(
+      toRoutinePayloadDto({
+        name: 'Regar plantas',
+        repeat: { mode: 'A_CADA_N_DIAS', interval: 3, startDate: '2026-11-16' },
+        times: [{ time: null }],
+      }),
+    ).toEqual({
+      nome: 'Regar plantas',
+      repeticao: { modo: 'A_CADA_N_DIAS', intervalo: 3, dataInicial: '2026-11-16' },
+      vezes: [{ hora: null }],
     })
   })
 })
