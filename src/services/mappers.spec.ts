@@ -18,6 +18,9 @@ import {
   toLoginDto,
   toProfileDto,
   toRegisterDto,
+  toTask,
+  toTaskEditDto,
+  toTaskPayloadDto,
   toUserSession,
 } from '@/services/mappers'
 import type { DashboardSummaryDto, ExpenseDto, IncomeDto } from '@/types/dto'
@@ -409,5 +412,97 @@ describe('áreas', () => {
 
   it('converte o payload para o formato da API', () => {
     expect(toAreaPayloadDto({ name: 'Trabalho', color: '#3b82f6' })).toEqual({ nome: 'Trabalho', cor: '#3b82f6' })
+  })
+})
+
+describe('tarefas', () => {
+  const DTO = {
+    id: 'tar_1',
+    areaId: 'are_2',
+    titulo: 'Pintar a casa',
+    dia: '2026-12-01',
+    hora: '09:30',
+    tempoEstimado: 120 as const,
+    dificuldade: 'MEDIA' as const,
+    prioridade: 'ALTA' as const,
+    notas: 'Comprar tinta',
+    arquivada: false,
+    arquivadaEm: null,
+    criadoEm: '2026-11-01T10:00:00.000Z',
+  }
+
+  it('converte a tarefa da API', () => {
+    expect(toTask(DTO)).toEqual({
+      id: 'tar_1',
+      areaId: 'are_2',
+      title: 'Pintar a casa',
+      day: '2026-12-01',
+      time: '09:30',
+      estimateMinutes: 120,
+      difficulty: 'MEDIA',
+      priority: 'ALTA',
+      notes: 'Comprar tinta',
+      archived: false,
+      archivedAt: null,
+      createdAt: '2026-11-01T10:00:00.000Z',
+    })
+  })
+
+  it('preserva os campos vazios como null', () => {
+    const dto = { ...DTO, dia: null, hora: null, tempoEstimado: null, dificuldade: null, prioridade: null, notas: null }
+    expect(toTask(dto)).toMatchObject({
+      day: null,
+      time: null,
+      estimateMinutes: null,
+      difficulty: null,
+      priority: null,
+      notes: null,
+    })
+  })
+
+  it('converte a edição para o formato da API, sem a área', () => {
+    expect(
+      toTaskEditDto({
+        title: 'Pintar a casa',
+        day: '2026-12-01',
+        time: '09:30',
+        estimateMinutes: 120,
+        difficulty: 'MEDIA',
+        priority: 'ALTA',
+        notes: 'Comprar tinta',
+      }),
+    ).toEqual({
+      titulo: 'Pintar a casa',
+      dia: '2026-12-01',
+      hora: '09:30',
+      tempoEstimado: 120,
+      dificuldade: 'MEDIA',
+      prioridade: 'ALTA',
+      notas: 'Comprar tinta',
+    })
+  })
+
+  it('converte o payload de criação incluindo a área', () => {
+    expect(
+      toTaskPayloadDto({
+        areaId: 'are_2',
+        title: 'Ligar',
+        day: null,
+        time: null,
+        estimateMinutes: null,
+        difficulty: null,
+        priority: null,
+        notes: null,
+      }),
+    ).toEqual({
+      areaId: 'are_2',
+      titulo: 'Ligar',
+      dia: null,
+      hora: null,
+      tempoEstimado: null,
+      dificuldade: null,
+      prioridade: null,
+      notas: null,
+    })
   })
 })

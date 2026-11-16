@@ -14,6 +14,7 @@ import type { Category } from '@/types/category'
 import { isFixedCategory } from '@/types/category'
 import type { ID, Period } from '@/types/common'
 import type { Area } from '@/types/area'
+import type { Task } from '@/types/task'
 import type { CardTransaction, CreditCard, Invoice } from '@/types/creditCard'
 import type { Expense, ExpenseType, PaymentMethod } from '@/types/expense'
 import type { Income } from '@/types/income'
@@ -118,6 +119,9 @@ export const cards: CreditCard[] = [
 export const areas: Area[] = [
   { id: newId('are'), name: 'Rotina', color: '#6366f1', system: true, createdAt: now() },
 ]
+
+/** Backlog de tarefas; começa vazio, como uma conta nova. */
+export const tasks: Task[] = []
 
 export const incomes: Income[] = []
 export const expenses: Expense[] = []

@@ -65,4 +65,31 @@ describe('areaService (mock)', () => {
     await areaService.remove(created.id, { action: 'delete' })
     expect((await areaService.list()).map((area) => area.id)).not.toContain(created.id)
   })
+
+  it('move ou exclui as tarefas da área junto com ela', async () => {
+    const db = await mockDb()
+    const from = await areaService.create(PAYLOAD)
+    const to = await areaService.create({ ...PAYLOAD, name: 'Faculdade' })
+    db.tasks.push({
+      id: 't1',
+      areaId: from.id,
+      title: 't1',
+      day: null,
+      time: null,
+      estimateMinutes: null,
+      difficulty: null,
+      priority: null,
+      notes: null,
+      archived: false,
+      archivedAt: null,
+      createdAt: '',
+    })
+
+    await expect(areaService.remove(from.id)).rejects.toThrow('tem tarefas')
+    await areaService.remove(from.id, { action: 'move', targetAreaId: to.id })
+    expect(db.tasks.find((task) => task.id === 't1')?.areaId).toBe(to.id)
+
+    await areaService.remove(to.id, { action: 'delete' })
+    expect(db.tasks.some((task) => task.id === 't1')).toBe(false)
+  })
 })

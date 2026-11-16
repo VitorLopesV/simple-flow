@@ -71,7 +71,13 @@ export const areaService = {
         throw new Error('A área Rotina não aceita tarefas.')
       }
 
-      // As tarefas só passam a existir na próxima issue; aqui só sai a área.
+      const areaTasks = db.tasks.filter((task) => task.areaId === id)
+      if (areaTasks.length && !destination) {
+        throw new Error('A área tem tarefas: escolha mover ou excluir.')
+      }
+      if (destination?.action === 'move') areaTasks.forEach((task) => (task.areaId = destination.targetAreaId))
+      else db.tasks.splice(0, db.tasks.length, ...db.tasks.filter((task) => task.areaId !== id))
+
       db.areas.splice(index, 1)
       return delay(undefined)
     }
