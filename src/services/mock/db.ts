@@ -154,6 +154,12 @@ export function syncSuperTaskCompletion(superTaskId: ID | null | undefined): voi
 /** Ocorrências de rotina concluídas: id da ocorrência -> instante (ISO). A conclusão é definitiva. */
 export const completedOccurrences = new Map<string, string>()
 
+/** Recompensa própria de cada sprint (id do sprint -> texto); sem entrada = usa a padrão. */
+export const sprintRewards = new Map<string, string>()
+
+/** Recompensa padrão do usuário; começa vazia, como uma conta nova. */
+export const defaultReward: { value: string | null } = { value: null }
+
 /** Itens de rotina; começam vazios, como uma conta nova. */
 export const routineItems: RoutineItem[] = []
 

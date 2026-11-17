@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { Trophy } from '@lucide/vue'
+import { Gift, Trophy } from '@lucide/vue'
 import { computed } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
 import type { Scoreboard } from '@/types/sprint'
 
-const props = defineProps<{ scoreboard: Scoreboard; preview?: boolean }>()
+const props = defineProps<{
+  scoreboard: Scoreboard
+  preview?: boolean
+  /** Sprint fechado: o placar é a foto gravada no fechamento. */
+  closed?: boolean
+  /** Recompensa em jogo (efetiva); sempre visível no placar. */
+  reward?: string | null
+}>()
 
 const percentage = computed(
   () => `${props.scoreboard.percentage.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}%`,
@@ -27,7 +34,15 @@ const barWidth = computed(() => `${Math.min(100, Math.max(0, props.scoreboard.pe
         Bônus conquistado
       </BaseBadge>
       <BaseBadge v-if="preview" tone="info">Planejamento: o sprint ainda não começou</BaseBadge>
+      <BaseBadge v-if="closed" data-testid="closed-badge">Sprint encerrado: resultado final</BaseBadge>
     </div>
+
+    <p class="flex items-center gap-2 text-sm" data-testid="scoreboard-reward">
+      <Gift class="text-primary size-4 shrink-0" aria-hidden="true" />
+      <span class="text-muted-foreground">Recompensa:</span>
+      <span v-if="reward" class="font-medium">{{ reward }}</span>
+      <span v-else class="text-muted-foreground">nenhuma definida</span>
+    </p>
 
     <!-- A marca em 90% é a faixa do bônus (o selo vem de `bonus`, não desta posição). -->
     <div class="relative">

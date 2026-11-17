@@ -46,6 +46,8 @@ describe('sprintService (mock)', () => {
     const db = await mockDb()
     db.tasks.splice(0)
     db.routineItems.splice(0)
+    db.sprintRewards.clear()
+    db.defaultReward.value = null
   })
 
   afterEach(() => vi.useRealTimers())
@@ -257,5 +259,49 @@ describe('sprintService (mock) — conclusão', () => {
     await expect(sprintService.moveTask('t1', '2026-11-20')).rejects.toThrow('definitiva')
     await expect(sprintService.removeTask('t1')).rejects.toThrow('definitiva')
     await expect(sprintService.addTask('t1', '2026-11-20')).rejects.toThrow('definitiva')
+  })
+
+  describe('recompensa', () => {
+    it('a efetiva é a do sprint e, sem ela, a padrão', async () => {
+      expect((await sprintService.get('next')).effectiveReward).toBeNull()
+
+      await sprintService.setDefaultReward('  Pizza  ')
+      expect(await sprintService.getDefaultReward()).toBe('Pizza')
+      expect(await sprintService.get('next')).toMatchObject({ defaultReward: 'Pizza', effectiveReward: 'Pizza' })
+
+      const saved = await sprintService.setReward('next', 'Cinema')
+      expect(saved).toMatchObject({ sprintId: NEXT, reward: 'Cinema', defaultReward: 'Pizza', effectiveReward: 'Cinema' })
+      const view = await sprintService.get('next')
+      expect(view.sprint.reward).toBe('Cinema')
+      expect(view.effectiveReward).toBe('Cinema')
+      expect((await sprintService.getScoreboard('next')).reward).toBe('Cinema')
+      // O sprint atual não é afetado.
+      expect((await sprintService.get('current')).effectiveReward).toBe('Pizza')
+    })
+
+    it('texto vazio limpa a recompensa do sprint e volta a usar a padrão', async () => {
+      await sprintService.setDefaultReward('Pizza')
+      await sprintService.setReward('next', 'Cinema')
+      const cleared = await sprintService.setReward('next', '   ')
+      expect(cleared).toMatchObject({ reward: null, effectiveReward: 'Pizza' })
+    })
+
+    it('recusa mais de 120 caracteres (422)', async () => {
+      await expect(sprintService.setReward('next', 'a'.repeat(121))).rejects.toThrow('no máximo 120')
+      await expect(sprintService.setDefaultReward('a'.repeat(121))).rejects.toThrow('no máximo 120')
+      await expect(sprintService.setReward('next', 'a'.repeat(120))).resolves.toMatchObject({ reward: 'a'.repeat(120) })
+    })
+
+    it('no sábado o sprint atual está fechado: placar fechado e recompensa imutável (409)', async () => {
+      vi.setSystemTime(new Date(2026, 10, 21, 12, 0, 0))
+      const current = await sprintService.get('current')
+      expect(current.sprint).toMatchObject({ startDate: '2026-11-16', status: 'FECHADO' })
+      expect((await sprintService.getScoreboard('current')).closed).toBe(true)
+      await expect(sprintService.setReward('current', 'Cinema')).rejects.toThrow('já foi fechado')
+
+      // O planejamento é do próximo sprint, que continua aberto.
+      expect((await sprintService.get('next')).sprint).toMatchObject({ startDate: '2026-11-23', status: 'ABERTO' })
+      await expect(sprintService.setReward('next', 'Cinema')).resolves.toMatchObject({ sprintId: NEXT })
+    })
   })
 })

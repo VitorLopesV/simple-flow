@@ -50,6 +50,8 @@ export const useSprintStore = defineStore('sprint', () => {
   /** Dias que ainda aceitam tarefas (hoje e futuros): destino de adicionar e mover. */
   const openDays = computed(() => columns.value.filter((column) => !column.locked))
   const isPreview = computed(() => view.value?.preview ?? false)
+  /** Sprint fechado (sáb/dom, o "atual" é o que acabou de fechar): só leitura, sem editar recompensa. */
+  const isClosed = computed(() => view.value?.sprint.status === 'FECHADO')
 
   async function load(): Promise<void> {
     const current = ++loadId
@@ -114,6 +116,12 @@ export const useSprintStore = defineStore('sprint', () => {
     if (success) await useSuperTaskStore().load()
     return success
   }
+
+  /** Define a recompensa do sprint exibido (`null` volta a usar a padrão); recarrega para refletir a efetiva. */
+  const setReward = (reward: string | null) =>
+    mutate(() => sprintService.setReward(which.value, reward), 'Não foi possível salvar a recompensa.')
+  const setDefaultReward = (reward: string | null) =>
+    mutate(() => sprintService.setDefaultReward(reward), 'Não foi possível salvar a recompensa padrão.')
   const completeOccurrence = (occurrenceId: string) =>
     mutate(() => sprintService.completeOccurrence(occurrenceId), 'Não foi possível concluir a rotina.')
 
@@ -128,6 +136,7 @@ export const useSprintStore = defineStore('sprint', () => {
     columns,
     openDays,
     isPreview,
+    isClosed,
     load,
     select,
     addTask,
@@ -135,5 +144,7 @@ export const useSprintStore = defineStore('sprint', () => {
     removeTask,
     completeTask,
     completeOccurrence,
+    setReward,
+    setDefaultReward,
   }
 })

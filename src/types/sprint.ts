@@ -14,6 +14,8 @@ export interface Sprint {
   status: SprintStatus
   startedRoutineAt: string | null
   createdAt: string
+  /** Recompensa própria do sprint; `null` = usa a padrão do usuário. */
+  reward: string | null
 }
 
 /** Vez de um item de rotina num dia: a "missão do dia". */
@@ -39,6 +41,10 @@ export interface SprintView {
   preview: boolean
   occurrences: RoutineOccurrence[]
   reminders: RoutineOccurrence[]
+  /** Recompensa padrão do usuário. */
+  defaultReward: string | null
+  /** A que vale: a do sprint, senão a padrão (num sprint fechado, a gravada no fechamento). */
+  effectiveReward: string | null
 }
 
 export interface Scoreboard {
@@ -57,7 +63,30 @@ export interface SprintScoreboard {
   endDate: string
   started: boolean
   preview: boolean
+  /** Sprint fechado: o placar é a foto gravada no fechamento, sem edição. */
+  closed: boolean
+  /** Recompensa em jogo (efetiva). */
+  reward: string | null
   scoreboard: Scoreboard
+}
+
+/** Resposta de `PUT /sprints/{atual|proximo}/recompensa`. */
+export interface SprintReward {
+  sprintId: ID
+  startDate: string
+  endDate: string
+  reward: string | null
+  defaultReward: string | null
+  effectiveReward: string | null
+}
+
+/** Limite de caracteres da recompensa (a API recusa mais com 422). */
+export const REWARD_MAX_LENGTH = 120
+
+/** Texto salvo na API: aparado, e vazio vira `null` (volta a usar a padrão). */
+export function normalizeReward(text: string | null | undefined): string | null {
+  const trimmed = (text ?? '').trim()
+  return trimmed === '' ? null : trimmed
 }
 
 /** Um dia útil do sprint, já com o que a tela precisa. */

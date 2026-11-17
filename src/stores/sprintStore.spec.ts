@@ -17,6 +17,8 @@ vi.mock('@/services/sprintService', () => ({
     moveTask: vi.fn(),
     removeTask: vi.fn(),
     completeOccurrence: vi.fn(),
+    setReward: vi.fn(),
+    setDefaultReward: vi.fn(),
   },
 }))
 
@@ -33,6 +35,7 @@ const VIEW: SprintView = {
     status: 'ABERTO',
     startedRoutineAt: null,
     createdAt: '',
+    reward: null,
   },
   started: true,
   preview: false,
@@ -40,6 +43,8 @@ const VIEW: SprintView = {
     { id: 'o1', itemId: 'r1', name: 'Treinar', date: '2026-11-18', time: null, index: 0, order: 0, completedAt: null },
   ],
   reminders: [],
+  defaultReward: 'Pizza',
+  effectiveReward: 'Pizza',
 }
 
 const SCOREBOARD: SprintScoreboard = {
@@ -48,6 +53,8 @@ const SCOREBOARD: SprintScoreboard = {
   endDate: '2026-11-20',
   started: true,
   preview: false,
+  closed: false,
+  reward: 'Pizza',
   scoreboard: {
     total: 0,
     done: 0,
@@ -188,5 +195,46 @@ describe('sprintStore', () => {
 
     expect(await store.completeOccurrence('ocr_1')).toBe(false)
     expect(store.error).toBe('A rotina só pode ser concluída no próprio dia.')
+  })
+
+  describe('recompensa', () => {
+    it('salva a recompensa do sprint exibido e recarrega para refletir a efetiva', async () => {
+      const store = useSprintStore()
+      await store.select('next')
+      service.setReward.mockResolvedValue({
+        sprintId: 'spr_2',
+        startDate: '2026-11-23',
+        endDate: '2026-11-27',
+        reward: 'Cinema',
+        defaultReward: 'Pizza',
+        effectiveReward: 'Cinema',
+      })
+      service.get.mockClear()
+
+      expect(await store.setReward('Cinema')).toBe(true)
+      expect(service.setReward).toHaveBeenCalledWith('next', 'Cinema')
+      expect(service.get).toHaveBeenCalledTimes(1)
+    })
+
+    it('salva a recompensa padrão', async () => {
+      const store = useSprintStore()
+      service.setDefaultReward.mockResolvedValue('Pizza')
+      expect(await store.setDefaultReward('Pizza')).toBe(true)
+      expect(service.setDefaultReward).toHaveBeenCalledWith('Pizza')
+    })
+
+    it('recusa do servidor (sprint fechado) devolve false e guarda a mensagem', async () => {
+      const store = useSprintStore()
+      service.setReward.mockRejectedValue(new Error('O sprint já foi fechado: a recompensa dele não pode mais ser alterada.'))
+      expect(await store.setReward('X')).toBe(false)
+      expect(store.error).toContain('já foi fechado')
+    })
+
+    it('isClosed vem da situação do sprint', async () => {
+      const store = useSprintStore()
+      service.get.mockResolvedValue({ ...VIEW, sprint: { ...VIEW.sprint, status: 'FECHADO' } })
+      await store.load()
+      expect(store.isClosed).toBe(true)
+    })
   })
 })

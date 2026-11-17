@@ -18,7 +18,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import TaskDeadlineBadge from '@/components/features/TaskDeadlineBadge.vue'
 import { SUPER_TASK_REASON } from '@/types/superTask'
 import type { Task } from '@/types/task'
-import { missingSprintFields, TASK_DIFFICULTIES, TASK_ESTIMATES, TASK_PRIORITIES } from '@/types/task'
+import { missingSprintFields, returnedFromSprint, TASK_DIFFICULTIES, TASK_ESTIMATES, TASK_PRIORITIES } from '@/types/task'
 import { formatDate } from '@/utils/dateFormatter'
 import { buildGoogleCalendarUrl } from '@/utils/googleCalendar'
 
@@ -54,6 +54,9 @@ const unlinkReason = computed(() => (props.task.done ? SUPER_TASK_REASON.childDo
 
 const missing = computed(() => missingSprintFields(props.task))
 
+/** Segunda do sprint de onde a tarefa foi devolvida (replanejamento); `null` se não foi. */
+const returnedFrom = computed(() => returnedFromSprint(props.task))
+
 function labelOf<V>(options: readonly { value: V; label: string }[], value: V | null): string | null {
   return options.find((option) => option.value === value)?.label ?? null
 }
@@ -83,6 +86,9 @@ const priority = computed(() => labelOf(TASK_PRIORITIES, props.task.priority))
           Prioridade {{ priority.toLowerCase() }}
         </BaseBadge>
         <BaseBadge v-if="task.archived" tone="info">Arquivada</BaseBadge>
+        <BaseBadge v-if="returnedFrom && !task.archived" tone="warning" data-testid="returned-badge">
+          Não concluída no sprint de {{ formatDate(returnedFrom).slice(0, 5) }}
+        </BaseBadge>
         <TaskDeadlineBadge v-if="!task.archived" :task="task" />
         <span
           v-if="missing.length && !task.archived"

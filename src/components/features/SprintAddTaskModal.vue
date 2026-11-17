@@ -9,7 +9,7 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import type { Area } from '@/types/area'
 import type { SprintColumn } from '@/stores/sprintStore'
 import type { Task } from '@/types/task'
-import { missingSprintFields, TASK_DIFFICULTIES, TASK_PRIORITIES } from '@/types/task'
+import { missingSprintFields, returnedFromSprint, TASK_DIFFICULTIES, TASK_PRIORITIES } from '@/types/task'
 import { formatDate } from '@/utils/dateFormatter'
 import { formatMinutes } from '@/utils/sprint'
 
@@ -55,7 +55,10 @@ const groups = computed(() =>
     .filter((area) => !area.system)
     .map((area) => ({
       area,
-      tasks: props.tasks.filter((task) => task.areaId === area.id && !task.archived && !task.sprintId),
+      // As devolvidas pelo sprint anterior vêm primeiro (a ordenação é estável: o resto mantém a ordem).
+      tasks: props.tasks
+        .filter((task) => task.areaId === area.id && !task.archived && !task.sprintId)
+        .sort((a, b) => Number(Boolean(returnedFromSprint(b))) - Number(Boolean(returnedFromSprint(a)))),
     }))
     .filter((group) => group.tasks.length > 0),
 )
@@ -89,12 +92,16 @@ const groups = computed(() =>
           <li
             v-for="task in group.tasks"
             :key="task.id"
-            class="border-border flex flex-col gap-2 rounded-lg border p-2 sm:flex-row sm:items-center"
+            class="flex flex-col gap-2 rounded-lg border p-2 sm:flex-row sm:items-center"
+            :class="returnedFromSprint(task) ? 'border-warning/50 bg-warning-soft/30' : 'border-border'"
             :data-testid="`backlog-${task.id}`"
           >
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-medium">{{ task.title }}</p>
               <div class="mt-1 flex flex-wrap items-center gap-1">
+                <BaseBadge v-if="returnedFromSprint(task)" tone="warning" data-testid="returned-badge">
+                  Não concluída no sprint de {{ formatDate(returnedFromSprint(task)).slice(0, 5) }}
+                </BaseBadge>
                 <BaseBadge v-if="task.estimateMinutes">{{ formatMinutes(task.estimateMinutes) }}</BaseBadge>
                 <BaseBadge v-if="task.difficulty">{{ labelOf(TASK_DIFFICULTIES, task.difficulty) }}</BaseBadge>
                 <BaseBadge v-if="task.priority">{{ labelOf(TASK_PRIORITIES, task.priority) }}</BaseBadge>
