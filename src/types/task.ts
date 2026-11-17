@@ -32,8 +32,8 @@ export interface Task {
   completedAt: string | null
   /** Concluída fora do prazo: vale 20% dos pontos. O backend só marca depois de concluir. */
   late: boolean
-  /** Nome da Super task pai, quando a tarefa é filha de uma. */
-  superTaskName?: string | null
+  /** Super task pai, quando a tarefa é filha de uma (o nome vem do `superTaskStore`). */
+  superTaskId: ID | null
   archived: boolean
   archivedAt: string | null
   createdAt: string
@@ -42,7 +42,7 @@ export interface Task {
 /** Campos editáveis; a área muda só por `move`, que valida o destino. */
 export type TaskEdit = Omit<
   Task,
-  'id' | 'areaId' | 'sprintId' | 'done' | 'completedAt' | 'late' | 'superTaskName' | 'archived' | 'archivedAt' | 'createdAt'
+  'id' | 'areaId' | 'sprintId' | 'done' | 'completedAt' | 'late' | 'superTaskId' | 'archived' | 'archivedAt' | 'createdAt'
 >
 
 export type TaskPayload = TaskEdit & Pick<Task, 'areaId'>

@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { sprintService } from '@/services/sprintService'
+import { superTaskService } from '@/services/superTaskService'
 import { taskService } from '@/services/taskService'
 import { useSprintStore } from '@/stores/sprintStore'
 import type { SprintScoreboard, SprintView } from '@/types/sprint'
@@ -20,6 +21,7 @@ vi.mock('@/services/sprintService', () => ({
 }))
 
 vi.mock('@/services/taskService', () => ({ taskService: { complete: vi.fn() } }))
+vi.mock('@/services/superTaskService', () => ({ superTaskService: { list: vi.fn().mockResolvedValue([]) } }))
 
 const service = vi.mocked(sprintService)
 
@@ -71,6 +73,7 @@ function task(id: string, day: string, time: string | null, minutes: 15 | 60): T
     archived: false,
     done: false,
     completedAt: null,
+    superTaskId: null,
     late: false,
     archivedAt: null,
     createdAt: '',
@@ -165,6 +168,18 @@ describe('sprintStore', () => {
     expect(service.completeOccurrence).toHaveBeenCalledWith('ocr_1')
     // Uma carga inicial + uma por conclusão: o placar vem sempre do servidor.
     expect(service.getScoreboard).toHaveBeenCalledTimes(3)
+  })
+
+  it('recarrega as Super tasks ao concluir uma tarefa (conclusão automática da pai)', async () => {
+    const store = useSprintStore()
+    service.get.mockResolvedValue(VIEW)
+    service.getScoreboard.mockResolvedValue(SCOREBOARD)
+    service.listTasks.mockResolvedValue([])
+    vi.mocked(taskService.complete).mockResolvedValue(task('1', '2026-11-18', null, 15))
+    vi.mocked(superTaskService.list).mockClear()
+
+    expect(await store.completeTask('1')).toBe(true)
+    expect(superTaskService.list).toHaveBeenCalledTimes(1)
   })
 
   it('falha ao concluir devolve false e guarda a mensagem', async () => {

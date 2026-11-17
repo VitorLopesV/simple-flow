@@ -21,6 +21,7 @@ const TASK: Task = {
   archived: false,
   done: false,
   completedAt: null,
+  superTaskId: null,
   late: false,
   archivedAt: null,
   createdAt: '',
@@ -74,11 +75,12 @@ describe('SprintDayColumn', () => {
     const wrapper = mount(SprintDayColumn, {
       props: {
         column: column({
-          tasks: [{ ...TASK, superTaskName: 'Reforma' }],
+          tasks: [{ ...TASK, superTaskId: 'sup_1' }],
           occurrences: [
             { id: 'o1', itemId: 'r', name: 'Treinar', date: '2026-11-18', time: '07:00', index: 0, order: 0, completedAt: null },
           ],
         }),
+        superTaskNames: { sup_1: 'Reforma' },
       },
     })
 

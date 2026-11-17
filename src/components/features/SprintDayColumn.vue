@@ -12,7 +12,12 @@ import { TASK_DIFFICULTIES, TASK_PRIORITIES } from '@/types/task'
 import { formatDate } from '@/utils/dateFormatter'
 import { formatMinutes } from '@/utils/sprint'
 
-const props = defineProps<{ column: SprintColumn; busy?: boolean }>()
+const props = defineProps<{
+  column: SprintColumn
+  busy?: boolean
+  /** Nome da Super task por id, para a etiqueta nas filhas. */
+  superTaskNames?: Record<string, string>
+}>()
 
 const emit = defineEmits<{
   add: []
@@ -108,8 +113,12 @@ function labelOf<V>(options: readonly { value: V; label: string }[], value: V | 
           </div>
           <div class="flex flex-wrap items-center gap-1">
             <TaskDeadlineBadge :task="task" />
-            <BaseBadge v-if="task.superTaskName" tone="info" data-testid="super-task-badge">
-              Super task: {{ task.superTaskName }}
+            <BaseBadge
+              v-if="task.superTaskId && superTaskNames?.[task.superTaskId]"
+              tone="info"
+              data-testid="super-task-badge"
+            >
+              Super task: {{ superTaskNames[task.superTaskId] }}
             </BaseBadge>
             <BaseBadge v-if="task.estimateMinutes">{{ formatMinutes(task.estimateMinutes) }}</BaseBadge>
             <BaseBadge v-if="task.difficulty">{{ labelOf(TASK_DIFFICULTIES, task.difficulty) }}</BaseBadge>

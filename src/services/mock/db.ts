@@ -124,6 +124,33 @@ export const areas: Area[] = [
 /** Backlog de tarefas; começa vazio, como uma conta nova. */
 export const tasks: Task[] = []
 
+/** Super task como o backend grava: progresso e estado são derivados das filhas, na leitura. */
+export interface SuperTaskRecord {
+  id: ID
+  areaId: ID
+  title: string
+  notes: string | null
+  endDate: string | null
+  completedAt: string | null
+  archived: boolean
+  archivedAt: string | null
+  createdAt: string
+}
+
+/** Super tasks; começam vazias, como uma conta nova. */
+export const superTasks: SuperTaskRecord[] = []
+
+/**
+ * Conclusão automática do backend: a Super task aberta com filhas e todas concluídas conclui sozinha
+ * (ao concluir a última filha, ou ao excluir/retirar a que faltava). Reabrir não reconclui.
+ */
+export function syncSuperTaskCompletion(superTaskId: ID | null | undefined): void {
+  const record = superTasks.find((item) => item.id === superTaskId)
+  if (!record || record.completedAt) return
+  const children = tasks.filter((task) => task.superTaskId === record.id)
+  if (children.length && children.every((task) => task.done)) record.completedAt = now()
+}
+
 /** Ocorrências de rotina concluídas: id da ocorrência -> instante (ISO). A conclusão é definitiva. */
 export const completedOccurrences = new Map<string, string>()
 

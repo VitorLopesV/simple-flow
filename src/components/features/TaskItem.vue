@@ -1,16 +1,32 @@
 <script setup lang="ts">
-import { Archive, ArchiveRestore, ArrowRightLeft, CalendarPlus, CircleCheck, Pencil, Trash2, TriangleAlert } from '@lucide/vue'
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowRightLeft,
+  CalendarPlus,
+  CircleCheck,
+  Layers,
+  Pencil,
+  Trash2,
+  TriangleAlert,
+  Unlink,
+} from '@lucide/vue'
 import { computed } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import TaskDeadlineBadge from '@/components/features/TaskDeadlineBadge.vue'
+import { SUPER_TASK_REASON } from '@/types/superTask'
 import type { Task } from '@/types/task'
 import { missingSprintFields, TASK_DIFFICULTIES, TASK_ESTIMATES, TASK_PRIORITIES } from '@/types/task'
 import { formatDate } from '@/utils/dateFormatter'
 import { buildGoogleCalendarUrl } from '@/utils/googleCalendar'
 
-const props = defineProps<{ task: Task }>()
+const props = defineProps<{
+  task: Task
+  /** Filha dentro de um bloco de Super task: não muda de área sozinha e ganha "retirar". */
+  inSuperTask?: boolean
+}>()
 
 const emit = defineEmits<{
   edit: []
@@ -19,10 +35,22 @@ const emit = defineEmits<{
   unarchive: []
   complete: []
   remove: []
+  convert: []
+  unlink: []
 }>()
 
 /** Link da Google Agenda; `null` (sem botão) se a tarefa não tem dia e hora. */
 const calendarUrl = computed(() => buildGoogleCalendarUrl(props.task))
+
+/** Por que "virar Super task" está desabilitado; `null` = disponível. */
+const convertReason = computed(() => {
+  if (props.task.done) return SUPER_TASK_REASON.convertDone
+  if (props.task.sprintId) return SUPER_TASK_REASON.convertInSprint
+  return null
+})
+
+/** Por que "retirar da Super task" está desabilitado; `null` = disponível. */
+const unlinkReason = computed(() => (props.task.done ? SUPER_TASK_REASON.childDone : null))
 
 const missing = computed(() => missingSprintFields(props.task))
 
@@ -68,6 +96,40 @@ const priority = computed(() => labelOf(TASK_PRIORITIES, props.task.priority))
       </div>
     </div>
 
+    <!-- Ações de Super task: ficam visíveis, desabilitadas e explicadas, mesmo em tarefa concluída. -->
+    <div v-if="!task.archived" class="flex gap-1">
+      <template v-if="inSuperTask">
+        <BaseButton
+          variant="ghost"
+          size="icon"
+          :aria-label="`Retirar ${task.title} da Super task`"
+          :title="unlinkReason ?? 'Retirar da Super task'"
+          :disabled="Boolean(unlinkReason)"
+          :aria-describedby="unlinkReason ? `unlink-reason-${task.id}` : undefined"
+          data-testid="unlink-task"
+          @click="emit('unlink')"
+        >
+          <Unlink class="size-4" aria-hidden="true" />
+        </BaseButton>
+        <span v-if="unlinkReason" :id="`unlink-reason-${task.id}`" class="sr-only">{{ unlinkReason }}</span>
+      </template>
+      <template v-else>
+        <BaseButton
+          variant="ghost"
+          size="icon"
+          :aria-label="`Transformar ${task.title} em Super task`"
+          :title="convertReason ?? 'Transformar em Super task'"
+          :disabled="Boolean(convertReason)"
+          :aria-describedby="convertReason ? `convert-reason-${task.id}` : undefined"
+          data-testid="convert-task"
+          @click="emit('convert')"
+        >
+          <Layers class="size-4" aria-hidden="true" />
+        </BaseButton>
+        <span v-if="convertReason" :id="`convert-reason-${task.id}`" class="sr-only">{{ convertReason }}</span>
+      </template>
+    </div>
+
     <!-- Tarefa concluída é só leitura: a conclusão é definitiva, sem ações. -->
     <div v-if="!task.done" class="flex gap-1">
       <template v-if="!task.archived">
@@ -96,7 +158,15 @@ const priority = computed(() => labelOf(TASK_PRIORITIES, props.task.priority))
         <BaseButton variant="ghost" size="icon" :aria-label="`Editar ${task.title}`" @click="emit('edit')">
           <Pencil class="size-4" aria-hidden="true" />
         </BaseButton>
-        <BaseButton variant="ghost" size="icon" :aria-label="`Mover ${task.title}`" @click="emit('move')">
+        <BaseButton
+          variant="ghost"
+          size="icon"
+          :aria-label="`Mover ${task.title}`"
+          :title="inSuperTask ? SUPER_TASK_REASON.childMove : undefined"
+          :disabled="inSuperTask"
+          data-testid="move-task"
+          @click="emit('move')"
+        >
           <ArrowRightLeft class="size-4" aria-hidden="true" />
         </BaseButton>
         <BaseButton variant="ghost" size="icon" :aria-label="`Arquivar ${task.title}`" @click="emit('archive')">

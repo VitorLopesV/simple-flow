@@ -15,6 +15,7 @@ import PageLayout from '@/components/layouts/PageLayout.vue'
 import { notify } from '@/composables/useNotify'
 import { useAreaStore } from '@/stores/areaStore'
 import { useSprintStore } from '@/stores/sprintStore'
+import { useSuperTaskStore } from '@/stores/superTaskStore'
 import { useTaskStore } from '@/stores/taskStore'
 import type { RoutineOccurrence, SprintWhich } from '@/types/sprint'
 import { SPRINT_WHICH_OPTIONS } from '@/types/sprint'
@@ -25,6 +26,7 @@ import { fullPoints, latePoints, wouldBeLate } from '@/utils/taskCompletion'
 const store = useSprintStore()
 const areaStore = useAreaStore()
 const taskStore = useTaskStore()
+const superTaskStore = useSuperTaskStore()
 
 const addOpen = ref(false)
 const addDay = ref<string | null>(null)
@@ -39,7 +41,8 @@ const toRemove = ref<Task | null>(null)
 const activeDay = ref<string | null>(null)
 
 onMounted(async () => {
-  await store.load()
+  // As Super tasks só dão o nome da etiqueta nas filhas do sprint.
+  await Promise.all([store.load(), superTaskStore.load()])
 })
 
 watch(
@@ -187,6 +190,7 @@ async function confirmRemove(): Promise<void> {
           :key="column.date"
           :column="column"
           :busy="store.saving"
+          :super-task-names="superTaskStore.namesById"
           :class="activeDay === column.date ? '' : 'hidden lg:flex'"
           @add="openAdd(column.date)"
           @move="askMove"

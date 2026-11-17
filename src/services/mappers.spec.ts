@@ -22,12 +22,15 @@ import {
   toRoutinePayloadDto,
   toSprintScoreboard,
   toSprintView,
+  toSuperTask,
+  toSuperTaskEditDto,
+  toSuperTaskPayloadDto,
   toTask,
   toTaskEditDto,
   toTaskPayloadDto,
   toUserSession,
 } from '@/services/mappers'
-import type { DashboardSummaryDto, ExpenseDto, IncomeDto, RoutineItemDto } from '@/types/dto'
+import type { DashboardSummaryDto, ExpenseDto, IncomeDto, RoutineItemDto, SuperTaskDto } from '@/types/dto'
 
 const INCOME_DTO: IncomeDto = {
   id: 'ent_1',
@@ -454,7 +457,7 @@ describe('tarefas', () => {
       done: false,
       completedAt: null,
       late: false,
-      superTaskName: null,
+      superTaskId: null,
       archived: false,
       archivedAt: null,
       createdAt: '2026-11-01T10:00:00.000Z',
@@ -467,8 +470,13 @@ describe('tarefas', () => {
     ).toMatchObject({ done: true, completedAt: '2026-12-01T15:00:00.000Z', late: true })
   })
 
-  it('lê a Super task quando a API passar a devolvê-la', () => {
-    expect(toTask({ ...DTO, superTaskNome: 'Mudança' })).toMatchObject({ superTaskName: 'Mudança' })
+  it('lê a Super task pai da filha', () => {
+    expect(toTask({ ...DTO, superTaskId: 'sup_1' })).toMatchObject({ superTaskId: 'sup_1' })
+  })
+
+  it('trata a ausência de superTaskId como tarefa avulsa', () => {
+    const { superTaskId: _ignored, ...withoutParent } = { ...DTO, superTaskId: 'sup_1' }
+    expect(toTask(withoutParent)).toMatchObject({ superTaskId: null })
   })
 
   it('preserva os campos vazios como null', () => {
@@ -680,6 +688,89 @@ describe('sprint', () => {
         routine: { daysWithRoutine: 5, daysCompleted: 5, pointsPerDay: 40, total: 200, done: 200 },
         tasks: { count: 10, completed: 9, total: 4800, done: 4298 },
       },
+    })
+  })
+})
+
+describe('super task', () => {
+  const CHILD = {
+    id: 'tar_1',
+    areaId: 'are_2',
+    titulo: 'Comprar tinta',
+    dia: null,
+    hora: null,
+    tempoEstimado: null,
+    dificuldade: null,
+    prioridade: null,
+    notas: null,
+    sprintId: null,
+    concluidaEm: '2026-11-10T10:00:00.000Z',
+    concluida: true,
+    atrasada: false,
+    superTaskId: 'sup_1',
+    arquivada: false,
+    arquivadaEm: null,
+    criadoEm: '2026-11-01T10:00:00.000Z',
+  }
+  const DTO: SuperTaskDto = {
+    id: 'sup_1',
+    areaId: 'are_2',
+    titulo: 'Reforma',
+    notas: 'Sala e cozinha',
+    dataTermino: '2026-12-20',
+    concluidaEm: null,
+    concluida: false,
+    arquivada: false,
+    arquivadaEm: null,
+    criadoEm: '2026-11-01T09:00:00.000Z',
+    filhas: [CHILD],
+    totalFilhas: 2,
+    filhasConcluidas: 1,
+    progresso: 50,
+    estado: 'EM_ANDAMENTO',
+    vencida: false,
+    podeConcluir: false,
+  }
+
+  it('converte a Super task detalhada da API, com as filhas', () => {
+    const superTask = toSuperTask(DTO)
+    expect(superTask).toMatchObject({
+      id: 'sup_1',
+      areaId: 'are_2',
+      title: 'Reforma',
+      notes: 'Sala e cozinha',
+      endDate: '2026-12-20',
+      completedAt: null,
+      done: false,
+      archived: false,
+      totalTasks: 2,
+      completedTasks: 1,
+      progress: 50,
+      state: 'EM_ANDAMENTO',
+      overdue: false,
+      canComplete: false,
+    })
+    expect(superTask.tasks).toHaveLength(1)
+    expect(superTask.tasks[0]).toMatchObject({ id: 'tar_1', superTaskId: 'sup_1', done: true })
+  })
+
+  it('lê a Super task concluída, vencida e reaberta em 100%', () => {
+    expect(toSuperTask({ ...DTO, concluida: true, concluidaEm: '2026-11-11T00:00:00.000Z', estado: 'CONCLUIDA' })).toMatchObject({
+      done: true,
+      state: 'CONCLUIDA',
+    })
+    expect(toSuperTask({ ...DTO, vencida: true })).toMatchObject({ overdue: true })
+    expect(toSuperTask({ ...DTO, progresso: 100, podeConcluir: true })).toMatchObject({ progress: 100, canComplete: true })
+  })
+
+  it('monta o payload e a edição no formato da API', () => {
+    const edit = { title: 'Reforma', notes: null, endDate: '2026-12-20' }
+    expect(toSuperTaskEditDto(edit)).toEqual({ titulo: 'Reforma', notas: null, dataTermino: '2026-12-20' })
+    expect(toSuperTaskPayloadDto({ ...edit, areaId: 'are_2' })).toEqual({
+      titulo: 'Reforma',
+      notas: null,
+      dataTermino: '2026-12-20',
+      areaId: 'are_2',
     })
   })
 })

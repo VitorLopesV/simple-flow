@@ -42,6 +42,9 @@ function enterSprintByCompletion(task: Task, at: Date): void {
 /** Concluir é definitivo: o backend recusa (409) qualquer mudança em tarefa concluída. */
 export const DONE_TASK_MESSAGE = 'Tarefa concluída não pode ser alterada: a conclusão é definitiva.'
 
+/** Filha aberta só muda de área junto com a Super task (o backend responde 409). */
+export const CHILD_MOVE_MESSAGE = 'Tarefa que é filha de uma Super task muda de área junto com ela.'
+
 function assertNotDone(task: Task): void {
   if (task.done) throw new Error(DONE_TASK_MESSAGE)
 }
@@ -83,6 +86,7 @@ export const taskService = {
         title: payload.title.trim(),
         id: db.newId('tar'),
         sprintId: null,
+        superTaskId: null,
         done: false,
         completedAt: null,
         late: false,
@@ -118,6 +122,7 @@ export const taskService = {
       const db = await mockDb()
       const task = findTask(db, id)
       assertNotDone(task)
+      if (task.superTaskId) throw new Error(CHILD_MOVE_MESSAGE)
       assertCommonArea(db, areaId)
       task.areaId = areaId
       return delay(db.clone(task))
@@ -169,6 +174,7 @@ export const taskService = {
         task.done = true
         task.completedAt = db.now()
         task.late = wouldBeLate(task, at)
+        db.syncSuperTaskCompletion(task.superTaskId)
       }
       return delay(db.clone(task))
     }
@@ -183,6 +189,7 @@ export const taskService = {
       const task = findTask(db, id)
       assertNotDone(task)
       db.tasks.splice(db.tasks.indexOf(task), 1)
+      db.syncSuperTaskCompletion(task.superTaskId)
       return delay(undefined)
     }
 
