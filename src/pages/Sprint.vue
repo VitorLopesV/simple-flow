@@ -7,9 +7,11 @@ import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import BaseToggleGroup from '@/components/common/BaseToggleGroup.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import CompleteConfirmDialog from '@/components/features/CompleteConfirmDialog.vue'
+import PlanningReminder from '@/components/features/PlanningReminder.vue'
 import SprintAddTaskModal from '@/components/features/SprintAddTaskModal.vue'
 import SprintDayColumn from '@/components/features/SprintDayColumn.vue'
 import SprintMoveDialog from '@/components/features/SprintMoveDialog.vue'
+import SprintRewardCard from '@/components/features/SprintRewardCard.vue'
 import SprintScoreboard from '@/components/features/SprintScoreboard.vue'
 import PageLayout from '@/components/layouts/PageLayout.vue'
 import { notify } from '@/composables/useNotify'
@@ -123,6 +125,14 @@ async function confirmComplete(): Promise<void> {
   occurrenceToComplete.value = null
 }
 
+async function saveReward(reward: string | null): Promise<void> {
+  if (await store.setReward(reward)) notify.success(reward ? 'Recompensa salva' : 'Recompensa removida')
+}
+
+async function saveDefaultReward(reward: string | null): Promise<void> {
+  if (await store.setDefaultReward(reward)) notify.success(reward ? 'Recompensa padrão salva' : 'Recompensa padrão removida')
+}
+
 function askRemove(task: Task): void {
   toRemove.value = task
   removeOpen.value = true
@@ -148,7 +158,7 @@ async function confirmRemove(): Promise<void> {
         label="Sprint exibido"
         @update:model-value="(value: SprintWhich) => store.select(value)"
       />
-      <BaseButton variant="success" class="!h-11" :disabled="!store.view" @click="openAdd(null)">
+      <BaseButton variant="success" class="!h-11" :disabled="!store.view || store.isClosed" @click="openAdd(null)">
         <Plus class="size-4" aria-hidden="true" />
         Adicionar tarefa
       </BaseButton>
@@ -158,12 +168,48 @@ async function confirmRemove(): Promise<void> {
       {{ store.which === 'current' ? 'Sprint atual' : 'Próximo sprint' }} · {{ period }}
     </p>
 
+    <!-- Domingo (America/Sao_Paulo): convida a planejar; no próprio "próximo" não precisa do botão. -->
+    <PlanningReminder>
+      <template v-if="store.which === 'current'" #actions>
+        <BaseButton size="sm" data-testid="go-next" @click="store.select('next')">Ver o próximo sprint</BaseButton>
+      </template>
+    </PlanningReminder>
+
     <div v-if="store.loading && !store.view" class="bg-card border-border rounded-card border p-4">
       <BaseSkeleton :lines="3" height="h-6" />
     </div>
 
     <template v-else-if="store.view && store.scoreboard">
-      <SprintScoreboard :scoreboard="store.scoreboard.scoreboard" :preview="store.isPreview" />
+      <!-- Sprint fechado (sáb/dom): o placar é a foto do fechamento e o planejamento é do próximo. -->
+      <div
+        v-if="store.isClosed"
+        class="bg-muted rounded-card flex flex-wrap items-center gap-3 p-4 text-sm"
+        role="status"
+        data-testid="closed-notice"
+      >
+        <p class="min-w-0 flex-1">Este sprint já foi encerrado. O planejamento da semana é feito no próximo sprint.</p>
+        <BaseButton v-if="store.which === 'current'" size="sm" variant="outline" @click="store.select('next')">
+          Planejar o próximo
+        </BaseButton>
+      </div>
+
+      <SprintScoreboard
+        :scoreboard="store.scoreboard.scoreboard"
+        :preview="store.isPreview"
+        :closed="store.scoreboard.closed"
+        :reward="store.scoreboard.reward"
+      />
+
+      <SprintRewardCard
+        v-if="store.which === 'next'"
+        :reward="store.view.sprint.reward"
+        :default-reward="store.view.defaultReward"
+        :effective-reward="store.view.effectiveReward"
+        :closed="store.isClosed"
+        :saving="store.saving"
+        @save-reward="saveReward"
+        @save-default="saveDefaultReward"
+      />
 
       <!-- Celular: abas, um dia por vez -->
       <div class="flex gap-1 overflow-x-auto lg:hidden" role="tablist" aria-label="Dias do sprint">

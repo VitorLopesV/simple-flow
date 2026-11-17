@@ -37,12 +37,32 @@ export interface Task {
   archived: boolean
   archivedAt: string | null
   createdAt: string
+  /**
+   * Segunda-feira (`YYYY-MM-DD`) do sprint em que a tarefa não foi concluída e foi devolvida ao
+   * backlog no fechamento; `null`/ausente = nunca foi devolvida.
+   */
+  notCompletedInSprintOf?: string | null
+}
+
+/** Tarefa devolvida pelo sprint anterior (no backlog e ainda pendente): destaque do replanejamento. */
+export function returnedFromSprint(task: Pick<Task, 'sprintId' | 'done' | 'notCompletedInSprintOf'>): string | null {
+  return !task.sprintId && !task.done ? (task.notCompletedInSprintOf ?? null) : null
 }
 
 /** Campos editáveis; a área muda só por `move`, que valida o destino. */
 export type TaskEdit = Omit<
   Task,
-  'id' | 'areaId' | 'sprintId' | 'done' | 'completedAt' | 'late' | 'superTaskId' | 'archived' | 'archivedAt' | 'createdAt'
+  | 'id'
+  | 'areaId'
+  | 'sprintId'
+  | 'done'
+  | 'completedAt'
+  | 'late'
+  | 'superTaskId'
+  | 'archived'
+  | 'archivedAt'
+  | 'createdAt'
+  | 'notCompletedInSprintOf'
 >
 
 export type TaskPayload = TaskEdit & Pick<Task, 'areaId'>

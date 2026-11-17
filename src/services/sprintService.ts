@@ -1,6 +1,7 @@
-import type { RoutineOccurrenceDto, SprintScoreboardDto, SprintViewDto, TaskDto } from '@/types/dto'
+import type { DefaultRewardDto, RoutineOccurrenceDto, SprintRewardDto, SprintScoreboardDto, SprintViewDto, TaskDto } from '@/types/dto'
 import type { RoutineItem } from '@/types/routine'
-import type { RoutineOccurrence, Scoreboard, SprintScoreboard, SprintView, SprintWhich } from '@/types/sprint'
+import type { RoutineOccurrence, Scoreboard, SprintReward, SprintScoreboard, SprintView, SprintWhich } from '@/types/sprint'
+import { normalizeReward, REWARD_MAX_LENGTH } from '@/types/sprint'
 import type { Task } from '@/types/task'
 import { missingSprintFields } from '@/types/task'
 import { toDate, toISODate } from '@/utils/dateFormatter'
@@ -8,7 +9,7 @@ import { addDays, mondayOf } from '@/utils/sprint'
 import { fullPoints, latePoints } from '@/utils/taskCompletion'
 import { http, USE_MOCK } from './http'
 import { DONE_TASK_MESSAGE } from './taskService'
-import { toRoutineOccurrence, toSprintScoreboard, toSprintView, toTask } from './mappers'
+import { toRoutineOccurrence, toSprintReward, toSprintScoreboard, toSprintView, toTask } from './mappers'
 import { delay, mockDb } from './mock'
 
 type Db = Awaited<ReturnType<typeof mockDb>>
@@ -78,9 +79,18 @@ function withCompletion(db: Db, list: RoutineOccurrence[]): RoutineOccurrence[] 
   return list.map((entry) => ({ ...entry, completedAt: (entry.id && db.completedOccurrences.get(entry.id)) || null }))
 }
 
+/** No fim de semana o sprint "atual" é o que acabou de fechar, como no backend (#71). */
+function isClosed(which: SprintWhich): boolean {
+  return which === 'current' && isWeekend(today())
+}
+
+const CLOSED_REWARD_MESSAGE = 'O sprint já foi fechado: a recompensa dele não pode mais ser alterada.'
+
 function mockView(db: Db, which: SprintWhich): SprintView {
   const startDate = startOf(which)
   const started = which === 'current'
+  const id = sprintId(startDate)
+  const reward = db.sprintRewards.get(id) ?? null
   const occurrences: RoutineOccurrence[] = []
   const reminders: RoutineOccurrence[] = []
   for (let offset = 0; offset < 7; offset += 1) {
@@ -97,14 +107,18 @@ function mockView(db: Db, which: SprintWhich): SprintView {
       id: sprintId(startDate),
       startDate,
       endDate: addDays(startDate, 4),
-      status: 'ABERTO',
+      status: isClosed(which) ? 'FECHADO' : 'ABERTO',
       startedRoutineAt: started ? db.now() : null,
       createdAt: db.now(),
+      reward,
     },
     started,
     preview: !started,
     occurrences: withCompletion(db, sortOccurrences(occurrences, started)),
     reminders: withCompletion(db, sortOccurrences(reminders, started)),
+    defaultReward: db.defaultReward.value,
+    // Recompensa efetiva: a do sprint, senão a padrão.
+    effectiveReward: reward ?? db.defaultReward.value,
   }
 }
 
@@ -149,6 +163,8 @@ function mockScoreboard(db: Db, which: SprintWhich): SprintScoreboard {
     endDate: view.sprint.endDate,
     started: view.started,
     preview: view.preview,
+    closed: view.sprint.status === 'FECHADO',
+    reward: view.effectiveReward,
     scoreboard,
   }
 }
@@ -270,6 +286,66 @@ export const sprintService = {
 
     const { data } = await http.patch<RoutineOccurrenceDto>(`/sprints/ocorrencias/${occurrenceId}/concluir`)
     return toRoutineOccurrence(data)
+  },
+
+  /**
+   * Define a recompensa do sprint (`null`/vazio volta a usar a padrão). Recusas como no backend:
+   * 409 se o sprint já fechou (ex.: `current` no fim de semana) e 422 se passar de 120 caracteres.
+   */
+  async setReward(which: SprintWhich, reward: string | null): Promise<SprintReward> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      if (isClosed(which)) throw new Error(CLOSED_REWARD_MESSAGE)
+      const text = normalizeReward(reward)
+      if (text && text.length > REWARD_MAX_LENGTH) {
+        throw new Error(`A recompensa deve ter no máximo ${REWARD_MAX_LENGTH} caracteres.`)
+      }
+      const view = mockView(db, which)
+      if (text) db.sprintRewards.set(view.sprint.id, text)
+      else db.sprintRewards.delete(view.sprint.id)
+      const own = text
+      return delay({
+        sprintId: view.sprint.id,
+        startDate: view.sprint.startDate,
+        endDate: view.sprint.endDate,
+        reward: own,
+        defaultReward: db.defaultReward.value,
+        effectiveReward: own ?? db.defaultReward.value,
+      })
+    }
+
+    const { data } = await http.put<SprintRewardDto>(`/sprints/${ROUTE[which]}/recompensa`, {
+      recompensa: normalizeReward(reward),
+    })
+    return toSprintReward(data)
+  },
+
+  /** Recompensa padrão do usuário, usada nos sprints sem recompensa própria. */
+  async getDefaultReward(): Promise<string | null> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      return delay(db.defaultReward.value)
+    }
+
+    const { data } = await http.get<DefaultRewardDto>('/sprints/recompensa-padrao')
+    return data.recompensaPadrao
+  },
+
+  async setDefaultReward(reward: string | null): Promise<string | null> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      const text = normalizeReward(reward)
+      if (text && text.length > REWARD_MAX_LENGTH) {
+        throw new Error(`A recompensa deve ter no máximo ${REWARD_MAX_LENGTH} caracteres.`)
+      }
+      db.defaultReward.value = text
+      return delay(text)
+    }
+
+    const { data } = await http.put<DefaultRewardDto>('/sprints/recompensa-padrao', {
+      recompensaPadrao: normalizeReward(reward),
+    })
+    return data.recompensaPadrao
   },
 
   /** Devolve a tarefa ao backlog (mantém o dia). */

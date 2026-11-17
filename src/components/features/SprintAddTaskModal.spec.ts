@@ -79,4 +79,13 @@ describe('SprintAddTaskModal', () => {
   it('avisa quando o backlog está vazio', () => {
     expect(mountModal([]).find('[data-testid="no-backlog"]').exists()).toBe(true)
   })
+
+  it('destaca e põe primeiro as tarefas devolvidas pelo sprint anterior', () => {
+    const wrapper = mountModal([task('1'), task('2', { notCompletedInSprintOf: '2026-11-09' })])
+
+    const items = wrapper.findAll('[data-testid^="backlog-"]')
+    expect(items.map((item) => item.attributes('data-testid'))).toEqual(['backlog-2', 'backlog-1'])
+    expect(items[0]!.find('[data-testid="returned-badge"]').text()).toBe('Não concluída no sprint de 09/11')
+    expect(items[1]!.find('[data-testid="returned-badge"]').exists()).toBe(false)
+  })
 })

@@ -287,12 +287,24 @@ export interface TaskDto {
   arquivada: boolean
   arquivadaEm: string | null
   criadoEm: string
+  /** Segunda do sprint em que a tarefa não foi concluída (devolvida no fechamento, #71). */
+  naoConcluidaNoSprintDe?: string | null
 }
 
 /** Criação (`POST /tarefas`) e edição (`PUT /tarefas/:id`, sem `areaId`). */
 export type TaskEditDto = Omit<
   TaskDto,
-  'id' | 'areaId' | 'sprintId' | 'concluidaEm' | 'concluida' | 'atrasada' | 'superTaskId' | 'arquivada' | 'arquivadaEm' | 'criadoEm'
+  | 'id'
+  | 'areaId'
+  | 'sprintId'
+  | 'concluidaEm'
+  | 'concluida'
+  | 'atrasada'
+  | 'superTaskId'
+  | 'arquivada'
+  | 'arquivadaEm'
+  | 'criadoEm'
+  | 'naoConcluidaNoSprintDe'
 >
 export type TaskPayloadDto = TaskEditDto & Pick<TaskDto, 'areaId'>
 
@@ -351,6 +363,8 @@ export interface SprintDto {
   situacao: 'ABERTO' | 'FECHADO'
   rotinaGeradaEm: string | null
   criadoEm: string
+  /** Recompensa própria do sprint; `null` = usa a padrão. */
+  recompensa?: string | null
 }
 
 export interface RoutineOccurrenceDto {
@@ -371,6 +385,23 @@ export interface SprintViewDto {
   previa: boolean
   ocorrencias: RoutineOccurrenceDto[]
   lembretes: RoutineOccurrenceDto[]
+  recompensaPadrao?: string | null
+  recompensaEfetiva?: string | null
+}
+
+/** `PUT /sprints/{atual|proximo}/recompensa`. */
+export interface SprintRewardDto {
+  sprintId: ID
+  inicio: string
+  fim: string
+  recompensa: string | null
+  recompensaPadrao: string | null
+  recompensaEfetiva: string | null
+}
+
+/** `GET`/`PUT /sprints/recompensa-padrao`. */
+export interface DefaultRewardDto {
+  recompensaPadrao: string | null
 }
 
 /** `GET /sprints/atual/placar` e `GET /sprints/proximo/placar`. */
@@ -380,6 +411,9 @@ export interface SprintScoreboardDto {
   fim: string
   iniciado: boolean
   previa: boolean
+  /** Sprint fechado: `placar` é a foto gravada no fechamento. */
+  fechado?: boolean
+  recompensa?: string | null
   placar: {
     total: number
     feitos: number

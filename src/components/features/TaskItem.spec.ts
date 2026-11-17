@@ -109,3 +109,17 @@ describe('TaskItem — Super task', () => {
     expect(wrapper.get('[data-testid="move-task"]').attributes('disabled')).toBeDefined()
   })
 })
+
+describe('TaskItem — devolvida pelo sprint anterior', () => {
+  it('destaca "não concluída no sprint de DD/MM" só no backlog e pendente', () => {
+    const returned: Task = { ...task, notCompletedInSprintOf: '2026-11-09' }
+    const badge = mount(TaskItem, { props: { task: returned } }).find('[data-testid="returned-badge"]')
+    expect(badge.text()).toBe('Não concluída no sprint de 09/11')
+
+    for (const patch of [{ sprintId: 'spr_1' }, { done: true }, { archived: true }]) {
+      const wrapper = mount(TaskItem, { props: { task: { ...returned, ...patch } } })
+      expect(wrapper.find('[data-testid="returned-badge"]').exists()).toBe(false)
+    }
+    expect(mount(TaskItem, { props: { task } }).find('[data-testid="returned-badge"]').exists()).toBe(false)
+  })
+})

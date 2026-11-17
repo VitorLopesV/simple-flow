@@ -10,7 +10,7 @@ import type { Area, AreaPayload } from '@/types/area'
 import type { User, UserSession, LoginPayload, ProfilePayload, RegisterPayload } from '@/types/auth'
 import type { Category } from '@/types/category'
 import type { RoutineItem, RoutinePayload } from '@/types/routine'
-import type { RoutineOccurrence, Sprint, SprintScoreboard, SprintView } from '@/types/sprint'
+import type { RoutineOccurrence, Sprint, SprintReward, SprintScoreboard, SprintView } from '@/types/sprint'
 import type { SuperTask, SuperTaskEdit, SuperTaskPayload } from '@/types/superTask'
 import type { Task, TaskEdit, TaskPayload } from '@/types/task'
 import type { Paginated, SeriesPoint } from '@/types/common'
@@ -37,6 +37,7 @@ import type {
   RoutineOccurrenceDto,
   RoutinePayloadDto,
   SprintDto,
+  SprintRewardDto,
   SprintScoreboardDto,
   SprintViewDto,
   SuperTaskDto,
@@ -397,6 +398,7 @@ export function toTask(dto: TaskDto): Task {
     archived: dto.arquivada,
     archivedAt: dto.arquivadaEm,
     createdAt: dto.criadoEm,
+    notCompletedInSprintOf: dto.naoConcluidaNoSprintDe ?? null,
   }
 }
 
@@ -487,6 +489,7 @@ export function toSprint(dto: SprintDto): Sprint {
     status: dto.situacao,
     startedRoutineAt: dto.rotinaGeradaEm,
     createdAt: dto.criadoEm,
+    reward: dto.recompensa ?? null,
   }
 }
 
@@ -510,6 +513,8 @@ export function toSprintView(dto: SprintViewDto): SprintView {
     preview: dto.previa,
     occurrences: dto.ocorrencias.map(toRoutineOccurrence),
     reminders: dto.lembretes.map(toRoutineOccurrence),
+    defaultReward: dto.recompensaPadrao ?? null,
+    effectiveReward: dto.recompensaEfetiva ?? null,
   }
 }
 
@@ -521,6 +526,8 @@ export function toSprintScoreboard(dto: SprintScoreboardDto): SprintScoreboard {
     endDate: dto.fim,
     started: dto.iniciado,
     preview: dto.previa,
+    closed: dto.fechado ?? false,
+    reward: dto.recompensa ?? null,
     scoreboard: {
       total: placar.total,
       done: placar.feitos,
@@ -540,5 +547,17 @@ export function toSprintScoreboard(dto: SprintScoreboardDto): SprintScoreboard {
         done: placar.tarefas.feitos,
       },
     },
+  }
+}
+
+/** Resposta de `PUT /sprints/{atual|proximo}/recompensa`. */
+export function toSprintReward(dto: SprintRewardDto): SprintReward {
+  return {
+    sprintId: dto.sprintId,
+    startDate: dto.inicio,
+    endDate: dto.fim,
+    reward: dto.recompensa,
+    defaultReward: dto.recompensaPadrao,
+    effectiveReward: dto.recompensaEfetiva,
   }
 }

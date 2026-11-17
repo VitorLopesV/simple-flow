@@ -42,3 +42,21 @@ export function formatMinutes(minutes: number): string {
   if (hours) return `${hours} h`
   return `${rest} min`
 }
+
+const SAO_PAULO = 'America/Sao_Paulo'
+
+/** Data de hoje (`YYYY-MM-DD`) em America/Sao_Paulo, e não no fuso do navegador. */
+export function todayInSaoPaulo(now: Date = new Date()): string {
+  // `en-CA` formata como `YYYY-MM-DD`.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: SAO_PAULO,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now)
+}
+
+/** `true` se, em America/Sao_Paulo, hoje é domingo: dia de planejar o próximo sprint. */
+export function isSundayInSaoPaulo(now: Date = new Date()): boolean {
+  return toDate(todayInSaoPaulo(now)).getDay() === 0
+}

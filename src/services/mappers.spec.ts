@@ -20,6 +20,7 @@ import {
   toRegisterDto,
   toRoutineItem,
   toRoutinePayloadDto,
+  toSprintReward,
   toSprintScoreboard,
   toSprintView,
   toSuperTask,
@@ -461,7 +462,14 @@ describe('tarefas', () => {
       archived: false,
       archivedAt: null,
       createdAt: '2026-11-01T10:00:00.000Z',
+      notCompletedInSprintOf: null,
     })
+  })
+
+  it('converte naoConcluidaNoSprintDe da tarefa devolvida pelo fechamento', () => {
+    expect(toTask({ ...DTO, sprintId: null, naoConcluidaNoSprintDe: '2026-11-09' }).notCompletedInSprintOf).toBe(
+      '2026-11-09',
+    )
   })
 
   it('lê a conclusão definitiva e o atraso devolvidos pela API', () => {
@@ -633,6 +641,8 @@ describe('sprint', () => {
       previa: false,
       ocorrencias: [occurrence],
       lembretes: [{ ...occurrence, id: null, itemId: null, data: '2026-11-21', hora: null }],
+      recompensaPadrao: 'Pizza',
+      recompensaEfetiva: 'Cinema',
     })
 
     expect(view.sprint).toEqual({
@@ -642,8 +652,9 @@ describe('sprint', () => {
       status: 'ABERTO',
       startedRoutineAt: '2026-11-16T03:00:00.000Z',
       createdAt: '2026-11-15T00:00:00.000Z',
+      reward: null,
     })
-    expect(view).toMatchObject({ started: true, preview: false })
+    expect(view).toMatchObject({ started: true, preview: false, defaultReward: 'Pizza', effectiveReward: 'Cinema' })
     expect(view.occurrences[0]).toEqual({
       id: 'o1',
       itemId: 'r1',
@@ -664,6 +675,8 @@ describe('sprint', () => {
       fim: '2026-11-20',
       iniciado: true,
       previa: false,
+      fechado: true,
+      recompensa: 'Cinema',
       placar: {
         total: 5000,
         feitos: 4498,
@@ -680,6 +693,8 @@ describe('sprint', () => {
       endDate: '2026-11-20',
       started: true,
       preview: false,
+      closed: true,
+      reward: 'Cinema',
       scoreboard: {
         total: 5000,
         done: 4498,
@@ -690,6 +705,48 @@ describe('sprint', () => {
       },
     })
   })
+})
+
+describe('recompensa do sprint', () => {
+  it('converte a resposta de PUT /sprints/proximo/recompensa', () => {
+    expect(
+      toSprintReward({
+        sprintId: 'spr_2',
+        inicio: '2026-11-23',
+        fim: '2026-11-27',
+        recompensa: null,
+        recompensaPadrao: 'Pizza',
+        recompensaEfetiva: 'Pizza',
+      }),
+    ).toEqual({
+      sprintId: 'spr_2',
+      startDate: '2026-11-23',
+      endDate: '2026-11-27',
+      reward: null,
+      defaultReward: 'Pizza',
+      effectiveReward: 'Pizza',
+    })
+  })
+
+  it('assume placar aberto e sem recompensa quando a API omite os campos', () => {
+    const result = toSprintScoreboard({
+      sprintId: 'spr_1',
+      inicio: '2026-11-16',
+      fim: '2026-11-20',
+      iniciado: true,
+      previa: false,
+      placar: {
+        total: 0,
+        feitos: 0,
+        percentual: 0,
+        bonus: false,
+        rotina: { diasComRotina: 0, diasCumpridos: 0, pontosPorDia: 40, total: 0, feitos: 0 },
+        tarefas: { quantidade: 0, concluidas: 0, total: 0, feitos: 0 },
+      },
+    })
+    expect(result).toMatchObject({ closed: false, reward: null })
+  })
+
 })
 
 describe('super task', () => {
