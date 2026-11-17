@@ -468,3 +468,90 @@ export interface SprintHistoryEntryDto {
 
 /** `GET /sprints/historico?page&pageSize`; `totalPages` é 0 quando não há sprint fechado. */
 export type SprintHistoryPageDto = Paginated<SprintHistoryEntryDto>
+
+// --------------------------------------------------------------------- home
+
+export interface HomeOccurrenceDto {
+  id: ID | null
+  nome: string
+  data: string
+  hora: string | null
+  concluida: boolean
+  concluidaEm: string | null
+}
+
+export interface HomeTaskDto {
+  id: ID
+  titulo: string
+  areaId: ID
+  dia: string
+  hora: string | null
+  tempoEstimado: 15 | 30 | 60 | 120 | 240 | null
+  dificuldade: 'FACIL' | 'MEDIA' | 'DIFICIL' | null
+  prioridade: 'BAIXA' | 'MEDIA' | 'ALTA' | null
+  noSprint: boolean
+  concluida: boolean
+  concluidaEm: string | null
+  atrasada: boolean
+}
+
+export interface HomeBillDto {
+  id: ID
+  descricao: string
+  valor: number
+  vencimento: string
+  vencida: boolean
+  automatica: boolean
+  categoriaId: ID
+  formaPagamento: PaymentMethod
+}
+
+/** `GET /home/resumo`. */
+export interface HomeSummaryDto {
+  hoje: string
+  fimDeSemana: boolean
+  semana: { inicio: string; fim: string }
+  missaoDoDia: { total: number; concluidas: number; ocorrencias: HomeOccurrenceDto[] }
+  tarefasDeHoje: HomeTaskDto[]
+  placar: {
+    sprintId: ID
+    inicio: string
+    fim: string
+    fechado: boolean
+    fechadoEm: string | null
+    total: number
+    feitos: number
+    percentual: number
+    bonus: boolean
+    recompensa: string | null
+  }
+  contasDaSemana: { total: number; quantidade: number; contas: HomeBillDto[] }
+  financas: {
+    competencia: string
+    totalEntradas: number
+    totalSaidas: number
+    saldo: number
+    totalFaturas: number
+    variacaoEntradas: number
+    variacaoSaidas: number
+    serieEntradas: SeriesPointDto[]
+    serieSaidas: SeriesPointDto[]
+  }
+  lembretes: HomeOccurrenceDto[]
+}
+
+// ------------------------------------------------------------------- alertas
+
+/** Item de `GET /alertas`. */
+export interface AlertDto {
+  id: string
+  tipo: 'TAREFA_ATRASADA' | 'ROTINA_INCOMPLETA' | 'RESULTADO_SPRINT'
+  titulo: string
+  descricao: string
+  data: string
+}
+
+export interface AlertsDto {
+  hoje: string
+  alertas: AlertDto[]
+}

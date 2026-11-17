@@ -70,13 +70,13 @@ describe('botão de notificações', () => {
 
     expect(badge(screen).text()).toBe('2')
     expect(badge(screen).attributes('aria-hidden')).toBe('true')
-    expect(bell(screen).attributes('aria-label')).toBe('Notificações: 2 alertas')
+    expect(bell(screen).attributes('aria-label')).toBe('Notificações: 2 alertas novos')
   })
 
   it('usa o singular com um alerta', () => {
     const screen = mountComponent(NOTIFICATIONS.slice(0, 1))
 
-    expect(bell(screen).attributes('aria-label')).toBe('Notificações: 1 alerta')
+    expect(bell(screen).attributes('aria-label')).toBe('Notificações: 1 alerta novo')
   })
 
   it('limita o badge em "9+"', () => {
@@ -195,5 +195,106 @@ describe('popup', () => {
     await popup(screen).trigger('focusout', { relatedTarget: bell(screen).element })
 
     expect(popup(screen).exists()).toBe(true)
+  })
+})
+
+describe('novos alertas, carregamento e erro', () => {
+  function mountWith(props: Record<string, unknown>) {
+    wrapper = mount(NotificationMenu, { props: { notifications: NOTIFICATIONS, ...props }, attachTo: document.body })
+    return wrapper
+  }
+
+  it('o badge conta só os alertas ainda não vistos', () => {
+    const screen = mountWith({ seenIds: ['n1'] })
+
+    expect(badge(screen).text()).toBe('1')
+    expect(bell(screen).attributes('aria-label')).toBe('Notificações: 1 alerta novo')
+  })
+
+  it('com todos vistos não há badge, mas o popup continua listando todos', async () => {
+    const screen = mountWith({ seenIds: ['n1', 'n2'] })
+
+    expect(badge(screen).exists()).toBe(false)
+    expect(bell(screen).attributes('aria-label')).toBe('Notificações')
+    await open(screen)
+    expect(screen.findAll('[data-testid="notification-item"]')).toHaveLength(2)
+  })
+
+  it('ao abrir, avisa o pai (para recarregar) e informa os ids exibidos como vistos', async () => {
+    const screen = mountWith({})
+
+    await open(screen)
+
+    expect(screen.emitted('open')).toHaveLength(1)
+    expect(screen.emitted('seen')![0]).toEqual([['n1', 'n2']])
+  })
+
+  it('destaca como novos, até fechar, os alertas que eram novos na abertura', async () => {
+    const screen = mountWith({ seenIds: ['n1'] })
+
+    await open(screen)
+    await screen.setProps({ seenIds: ['n1', 'n2'] })
+
+    const items = screen.findAll('[data-testid="notification-item"]')
+    expect(items[0]!.text()).not.toContain('Novo:')
+    expect(items[1]!.text()).toContain('Novo:')
+  })
+
+  it('mostra o ícone do tipo de alerta', async () => {
+    const screen = mountWith({ notifications: [{ ...NOTIFICATIONS[0]!, kind: 'TAREFA_ATRASADA' }, NOTIFICATIONS[1]!] })
+
+    await open(screen)
+
+    const items = screen.findAll('[data-testid="notification-item"]')
+    expect(items[0]!.find('svg').exists()).toBe(true)
+    expect(items[1]!.find('svg').exists()).toBe(false)
+  })
+
+  it('carregando sem alertas: mostra o esqueleto, não o estado vazio', async () => {
+    const screen = mountWith({ notifications: [], loading: true })
+
+    await open(screen)
+
+    expect(screen.find('[data-testid="notifications-loading"]').exists()).toBe(true)
+    expect(screen.find('[data-testid="notifications-empty"]').exists()).toBe(false)
+  })
+
+  it('erro sem alertas: mostra a mensagem como alerta e permite tentar de novo', async () => {
+    const screen = mountWith({ notifications: [], error: 'Não foi possível carregar os alertas.' })
+
+    await open(screen)
+
+    expect(screen.get('[data-testid="notifications-error"] [role="alert"]').text()).toBe('Não foi possível carregar os alertas.')
+    await screen.get('[data-testid="notifications-retry"]').trigger('click')
+    expect(screen.emitted('retry')).toHaveLength(1)
+    expect(screen.find('[data-testid="notifications-empty"]').exists()).toBe(false)
+  })
+
+  it('com alertas já na lista, um erro de recarga não esconde a lista', async () => {
+    const screen = mountWith({ error: 'falhou' })
+
+    await open(screen)
+
+    expect(screen.findAll('[data-testid="notification-item"]')).toHaveLength(2)
+    expect(screen.find('[data-testid="notifications-error"]').exists()).toBe(false)
+  })
+
+  it('sem alertas e sem erro, mostra o estado vazio', async () => {
+    const screen = mountWith({ notifications: [] })
+
+    await open(screen)
+
+    expect(screen.find('[data-testid="notifications-empty"]').exists()).toBe(true)
+  })
+
+  it('Esc fecha e devolve o foco ao sino', async () => {
+    const screen = mountWith({})
+    await open(screen)
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await screen.vm.$nextTick()
+
+    expect(popup(screen).exists()).toBe(false)
+    expect(document.activeElement).toBe(bell(screen).element)
   })
 })
