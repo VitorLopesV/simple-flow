@@ -75,8 +75,18 @@ export const areaService = {
       if (areaTasks.length && !destination) {
         throw new Error('A área tem tarefas: escolha mover ou excluir.')
       }
-      if (destination?.action === 'move') areaTasks.forEach((task) => (task.areaId = destination.targetAreaId))
-      else db.tasks.splice(0, db.tasks.length, ...db.tasks.filter((task) => task.areaId !== id))
+      // As Super tasks da área seguem o mesmo destino das tarefas.
+      const areaSuperTasks = db.superTasks.filter((item) => item.areaId === id)
+      if (areaSuperTasks.length && !destination) {
+        throw new Error('A área tem tarefas: escolha mover ou excluir.')
+      }
+      if (destination?.action === 'move') {
+        areaTasks.forEach((task) => (task.areaId = destination.targetAreaId))
+        areaSuperTasks.forEach((item) => (item.areaId = destination.targetAreaId))
+      } else {
+        db.tasks.splice(0, db.tasks.length, ...db.tasks.filter((task) => task.areaId !== id))
+        db.superTasks.splice(0, db.superTasks.length, ...db.superTasks.filter((item) => item.areaId !== id))
+      }
 
       db.areas.splice(index, 1)
       return delay(undefined)

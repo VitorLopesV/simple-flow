@@ -5,11 +5,17 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import type { Area } from '@/types/area'
-import type { Task } from '@/types/task'
 
-const props = withDefaults(defineProps<{ task: Task | null; areas: Area[]; loading?: boolean }>(), {
-  loading: false,
-})
+/** Serve para tarefa e para Super task: só precisa do título e da área atual. */
+const props = withDefaults(
+  defineProps<{
+    task: { title: string; areaId: string } | null
+    areas: Area[]
+    loading?: boolean
+    title?: string
+  }>(),
+  { loading: false, title: 'Mover tarefa' },
+)
 
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{ confirm: [areaId: string] }>()
@@ -31,7 +37,7 @@ function confirm(): void {
 </script>
 
 <template>
-  <BaseModal v-model:open="open" title="Mover tarefa" :description="task?.title" width="sm">
+  <BaseModal v-model:open="open" :title="title" :description="task?.title" width="sm">
     <p v-if="!targets().length" class="text-muted-foreground text-sm">
       Crie outra área para poder mover a tarefa.
     </p>

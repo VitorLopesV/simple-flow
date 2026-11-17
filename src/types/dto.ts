@@ -282,8 +282,8 @@ export interface TaskDto {
   concluidaEm: string | null
   concluida: boolean
   atrasada: boolean
-  /** Ainda não vem do backend (#65); opcional por segurança. */
-  superTaskNome?: string | null
+  /** Super task pai (#65); `null` em tarefa avulsa. */
+  superTaskId?: ID | null
   arquivada: boolean
   arquivadaEm: string | null
   criadoEm: string
@@ -292,9 +292,37 @@ export interface TaskDto {
 /** Criação (`POST /tarefas`) e edição (`PUT /tarefas/:id`, sem `areaId`). */
 export type TaskEditDto = Omit<
   TaskDto,
-  'id' | 'areaId' | 'sprintId' | 'concluidaEm' | 'concluida' | 'atrasada' | 'superTaskNome' | 'arquivada' | 'arquivadaEm' | 'criadoEm'
+  'id' | 'areaId' | 'sprintId' | 'concluidaEm' | 'concluida' | 'atrasada' | 'superTaskId' | 'arquivada' | 'arquivadaEm' | 'criadoEm'
 >
 export type TaskPayloadDto = TaskEditDto & Pick<TaskDto, 'areaId'>
+
+// ------------------------------------------------------------- super task
+
+/** Super task detalhada (#65): as filhas e os valores derivados vêm calculados pela API. */
+export interface SuperTaskDto {
+  id: ID
+  areaId: ID
+  titulo: string
+  notas: string | null
+  /** YYYY-MM-DD */
+  dataTermino: string | null
+  concluidaEm: string | null
+  concluida: boolean
+  arquivada: boolean
+  arquivadaEm: string | null
+  criadoEm: string
+  filhas: TaskDto[]
+  totalFilhas: number
+  filhasConcluidas: number
+  /** 0 a 100, arredondado para baixo. */
+  progresso: number
+  estado: 'NAO_INICIADA' | 'EM_ANDAMENTO' | 'CONCLUIDA'
+  vencida: boolean
+  podeConcluir: boolean
+}
+
+export type SuperTaskEditDto = Pick<SuperTaskDto, 'titulo' | 'notas' | 'dataTermino'>
+export type SuperTaskPayloadDto = SuperTaskEditDto & Pick<SuperTaskDto, 'areaId'>
 
 // ------------------------------------------------------------------- rotina
 

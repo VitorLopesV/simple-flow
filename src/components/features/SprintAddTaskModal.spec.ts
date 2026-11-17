@@ -26,6 +26,7 @@ function task(id: string, overrides: Partial<Task> = {}): Task {
     archived: false,
     done: false,
     completedAt: null,
+    superTaskId: null,
     late: false,
     archivedAt: null,
     createdAt: '',

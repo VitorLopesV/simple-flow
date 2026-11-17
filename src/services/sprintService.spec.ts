@@ -31,6 +31,7 @@ function readyTask(id: string, day: string | null, overrides: Partial<Task> = {}
     archived: false,
     done: false,
     completedAt: null,
+    superTaskId: null,
     late: false,
     archivedAt: null,
     createdAt: '2026-11-01T00:00:00.000Z',

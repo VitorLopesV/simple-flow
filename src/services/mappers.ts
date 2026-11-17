@@ -11,6 +11,7 @@ import type { User, UserSession, LoginPayload, ProfilePayload, RegisterPayload }
 import type { Category } from '@/types/category'
 import type { RoutineItem, RoutinePayload } from '@/types/routine'
 import type { RoutineOccurrence, Sprint, SprintScoreboard, SprintView } from '@/types/sprint'
+import type { SuperTask, SuperTaskEdit, SuperTaskPayload } from '@/types/superTask'
 import type { Task, TaskEdit, TaskPayload } from '@/types/task'
 import type { Paginated, SeriesPoint } from '@/types/common'
 import type {
@@ -38,6 +39,9 @@ import type {
   SprintDto,
   SprintScoreboardDto,
   SprintViewDto,
+  SuperTaskDto,
+  SuperTaskEditDto,
+  SuperTaskPayloadDto,
   TaskDto,
   TaskEditDto,
   TaskPayloadDto,
@@ -389,7 +393,7 @@ export function toTask(dto: TaskDto): Task {
     done: dto.concluida,
     completedAt: dto.concluidaEm,
     late: dto.atrasada,
-    superTaskName: dto.superTaskNome ?? null,
+    superTaskId: dto.superTaskId ?? null,
     archived: dto.arquivada,
     archivedAt: dto.arquivadaEm,
     createdAt: dto.criadoEm,
@@ -410,6 +414,38 @@ export function toTaskEditDto(edit: TaskEdit): TaskEditDto {
 
 export function toTaskPayloadDto(payload: TaskPayload): TaskPayloadDto {
   return { ...toTaskEditDto(payload), areaId: payload.areaId }
+}
+
+// -------------------------------------------------------------- super task
+
+export function toSuperTask(dto: SuperTaskDto): SuperTask {
+  return {
+    id: dto.id,
+    areaId: dto.areaId,
+    title: dto.titulo,
+    notes: dto.notas,
+    endDate: dto.dataTermino,
+    completedAt: dto.concluidaEm,
+    done: dto.concluida,
+    archived: dto.arquivada,
+    archivedAt: dto.arquivadaEm,
+    createdAt: dto.criadoEm,
+    tasks: dto.filhas.map(toTask),
+    totalTasks: dto.totalFilhas,
+    completedTasks: dto.filhasConcluidas,
+    progress: dto.progresso,
+    state: dto.estado,
+    overdue: dto.vencida,
+    canComplete: dto.podeConcluir,
+  }
+}
+
+export function toSuperTaskEditDto(edit: SuperTaskEdit): SuperTaskEditDto {
+  return { titulo: edit.title, notas: edit.notes, dataTermino: edit.endDate }
+}
+
+export function toSuperTaskPayloadDto(payload: SuperTaskPayload): SuperTaskPayloadDto {
+  return { ...toSuperTaskEditDto(payload), areaId: payload.areaId }
 }
 
 // ------------------------------------------------------------------ rotina

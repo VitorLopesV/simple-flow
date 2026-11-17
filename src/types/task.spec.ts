@@ -17,6 +17,7 @@ const BASE: Task = {
   sprintId: null,
   done: false,
   completedAt: null,
+  superTaskId: null,
   late: false,
   archivedAt: null,
   createdAt: '',

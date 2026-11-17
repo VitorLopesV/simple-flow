@@ -19,6 +19,7 @@ const task: Task = {
   sprintId: null,
   done: false,
   completedAt: null,
+  superTaskId: null,
   late: false,
   archivedAt: null,
   createdAt: '2026-11-01T00:00:00Z',
@@ -57,7 +58,8 @@ describe('TaskItem — conclusão', () => {
     const wrapper = mount(TaskItem, { props: { task: { ...ready, done: true, completedAt: '2026-11-18T10:00:00Z' } } })
 
     expect(wrapper.find('[data-testid="complete-task"]').exists()).toBe(false)
-    expect(wrapper.findAll('button')).toHaveLength(0)
+    // Só sobra o "transformar em Super task", visível porém desabilitado e explicado.
+    expect(wrapper.findAll('button:not([disabled])')).toHaveLength(0)
     expect(wrapper.get('[data-testid="deadline-done"]').text()).toContain('15 pts')
   })
 
@@ -77,5 +79,33 @@ describe('TaskItem — conclusão', () => {
     const wrapper = mount(TaskItem, { props: { task: ready } })
 
     expect(wrapper.find('[data-testid="deadline-overdue"]').exists()).toBe(false)
+  })
+})
+
+describe('TaskItem — Super task', () => {
+  it('avulsa oferece transformar em Super task', async () => {
+    const wrapper = mount(TaskItem, { props: { task } })
+    const button = wrapper.get('[data-testid="convert-task"]')
+    expect(button.attributes('disabled')).toBeUndefined()
+    await button.trigger('click')
+    expect(wrapper.emitted('convert')).toHaveLength(1)
+  })
+
+  it.each([
+    ['no sprint', { sprintId: 'spr_1' }, 'sprint'],
+    ['concluída', { done: true }, 'concluída'],
+  ])('transformar fica desabilitado e explicado quando a tarefa está %s', (_label, patch, reason) => {
+    const wrapper = mount(TaskItem, { props: { task: { ...task, ...patch } } })
+    const button = wrapper.get('[data-testid="convert-task"]')
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.attributes('title')).toContain(reason)
+    expect(wrapper.get(`#${button.attributes('aria-describedby')}`).text()).toContain(reason)
+  })
+
+  it('filha troca "transformar" por "retirar" e não oferece mover', () => {
+    const wrapper = mount(TaskItem, { props: { task: { ...task, superTaskId: 'sup_1' }, inSuperTask: true } })
+    expect(wrapper.find('[data-testid="convert-task"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="unlink-task"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-testid="move-task"]').attributes('disabled')).toBeDefined()
   })
 })
