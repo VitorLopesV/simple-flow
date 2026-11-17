@@ -10,7 +10,14 @@ import type { Area, AreaPayload } from '@/types/area'
 import type { User, UserSession, LoginPayload, ProfilePayload, RegisterPayload } from '@/types/auth'
 import type { Category } from '@/types/category'
 import type { RoutineItem, RoutinePayload } from '@/types/routine'
-import type { RoutineOccurrence, Sprint, SprintReward, SprintScoreboard, SprintView } from '@/types/sprint'
+import type {
+  RoutineOccurrence,
+  Sprint,
+  SprintHistoryEntry,
+  SprintReward,
+  SprintScoreboard,
+  SprintView,
+} from '@/types/sprint'
 import type { SuperTask, SuperTaskEdit, SuperTaskPayload } from '@/types/superTask'
 import type { Task, TaskEdit, TaskPayload } from '@/types/task'
 import type { Paginated, SeriesPoint } from '@/types/common'
@@ -37,6 +44,8 @@ import type {
   RoutineOccurrenceDto,
   RoutinePayloadDto,
   SprintDto,
+  SprintHistoryEntryDto,
+  SprintHistoryPageDto,
   SprintRewardDto,
   SprintScoreboardDto,
   SprintViewDto,
@@ -560,4 +569,58 @@ export function toSprintReward(dto: SprintRewardDto): SprintReward {
     defaultReward: dto.recompensaPadrao,
     effectiveReward: dto.recompensaEfetiva,
   }
+}
+
+// -------------------------------------------------------------- sprint history
+
+export function toSprintHistoryEntry(dto: SprintHistoryEntryDto): SprintHistoryEntry {
+  const { rotina, tarefas } = dto
+  return {
+    sprintId: dto.sprintId,
+    startDate: dto.inicio,
+    endDate: dto.fim,
+    closedAt: dto.fechadoEm,
+    total: dto.total,
+    done: dto.feitos,
+    percentage: dto.percentual,
+    bonus: dto.bonus,
+    reward: dto.recompensa ?? null,
+    rewardEarned: dto.recompensaConquistada,
+    routine: {
+      daysWithRoutine: rotina.diasComRotina,
+      daysCompleted: rotina.diasCumpridos,
+      pointsPerDay: rotina.pontosPorDia,
+      total: rotina.total,
+      done: rotina.feitos,
+      days: rotina.dias.map((day) => ({
+        date: day.data,
+        completed: day.cumprido,
+        items: day.itens.map((item) => ({ name: item.nome, time: item.hora, completed: item.concluida })),
+      })),
+    },
+    tasks: {
+      count: tarefas.quantidade,
+      completed: tarefas.concluidas,
+      total: tarefas.total,
+      done: tarefas.feitos,
+      late: tarefas.atrasadas,
+      notCompleted: tarefas.naoConcluidas,
+      items: tarefas.itens.map((item) => ({
+        id: item.id,
+        title: item.titulo,
+        day: item.dia,
+        time: item.hora,
+        estimateMinutes: item.tempoEstimado,
+        difficulty: item.dificuldade,
+        priority: item.prioridade,
+        points: item.pontos,
+        earnedPoints: item.pontosGanhos,
+        outcome: item.situacao,
+      })),
+    },
+  }
+}
+
+export function toSprintHistoryPage(dto: SprintHistoryPageDto): Paginated<SprintHistoryEntry> {
+  return mapPage(dto, toSprintHistoryEntry)
 }

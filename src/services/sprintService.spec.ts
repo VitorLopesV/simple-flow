@@ -305,3 +305,81 @@ describe('sprintService (mock) — conclusão', () => {
     })
   })
 })
+
+describe('sprintService.listHistory (mock)', () => {
+  it('lista os sprints fechados do mais recente ao mais antigo, paginados', async () => {
+    const first = await sprintService.listHistory({ page: 1, pageSize: 5 })
+    expect(first).toMatchObject({ page: 1, pageSize: 5, total: 12, totalPages: 3 })
+    expect(first.items).toHaveLength(5)
+    expect(first.items[0].startDate).toBe('2026-11-09')
+    const starts = first.items.map((entry) => entry.startDate)
+    expect([...starts].sort().reverse()).toEqual(starts)
+
+    const last = await sprintService.listHistory({ page: 3, pageSize: 5 })
+    expect(last.items).toHaveLength(2)
+  })
+
+  it('o bônus vem de feitos*10 >= total*9 e a recompensa só é conquistada com bônus e texto', async () => {
+    const { items } = await sprintService.listHistory({ page: 1, pageSize: 12 })
+    items.forEach((entry) => {
+      expect(entry.bonus).toBe(entry.done * 10 >= entry.total * 9)
+      expect(entry.rewardEarned).toBe(entry.bonus && entry.reward !== null)
+    })
+    expect(items.some((entry) => entry.bonus)).toBe(true)
+    expect(items.some((entry) => !entry.bonus)).toBe(true)
+  })
+
+  it('traz o detalhe de tarefas e da rotina por dia', async () => {
+    const [entry] = (await sprintService.listHistory({ page: 1, pageSize: 1 })).items
+    expect(entry.routine.days).toHaveLength(5)
+    expect(entry.tasks.items.length).toBe(entry.tasks.count)
+    expect(entry.tasks.completed).toBe(entry.tasks.items.filter((task) => task.outcome !== 'NAO_CONCLUIDA').length)
+  })
+
+  it('recusa pageSize acima de 50 e página fora do intervalo, como a API', async () => {
+    await expect(sprintService.listHistory({ page: 1, pageSize: 51 })).rejects.toThrow(/entre 1 e 50/)
+    await expect(sprintService.listHistory({ page: 9, pageSize: 5 })).rejects.toThrow(/fora do intervalo/)
+  })
+})
+
+describe('sprintService.listHistory (mock)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(TODAY)
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('lista os sprints fechados do mais recente ao mais antigo, paginados', async () => {
+    const first = await sprintService.listHistory({ page: 1, pageSize: 5 })
+    expect(first).toMatchObject({ page: 1, pageSize: 5, total: 12, totalPages: 3 })
+    expect(first.items).toHaveLength(5)
+    expect(first.items[0].startDate).toBe('2026-11-09')
+    const starts = first.items.map((entry) => entry.startDate)
+    expect([...starts].sort().reverse()).toEqual(starts)
+
+    const last = await sprintService.listHistory({ page: 3, pageSize: 5 })
+    expect(last.items).toHaveLength(2)
+  })
+
+  it('o bônus vem de feitos*10 >= total*9 e a recompensa só é conquistada com bônus e texto', async () => {
+    const { items } = await sprintService.listHistory({ page: 1, pageSize: 12 })
+    items.forEach((entry) => {
+      expect(entry.bonus).toBe(entry.done * 10 >= entry.total * 9)
+      expect(entry.rewardEarned).toBe(entry.bonus && entry.reward !== null)
+    })
+    expect(items.some((entry) => entry.bonus)).toBe(true)
+    expect(items.some((entry) => !entry.bonus)).toBe(true)
+  })
+
+  it('traz o detalhe de tarefas e da rotina por dia', async () => {
+    const [entry] = (await sprintService.listHistory({ page: 1, pageSize: 1 })).items
+    expect(entry.routine.days).toHaveLength(5)
+    expect(entry.tasks.items.length).toBe(entry.tasks.count)
+    expect(entry.tasks.completed).toBe(entry.tasks.items.filter((task) => task.outcome !== 'NAO_CONCLUIDA').length)
+  })
+
+  it('recusa pageSize acima de 50 e página fora do intervalo, como a API', async () => {
+    await expect(sprintService.listHistory({ page: 1, pageSize: 51 })).rejects.toThrow(/entre 1 e 50/)
+    await expect(sprintService.listHistory({ page: 9, pageSize: 5 })).rejects.toThrow(/fora do intervalo/)
+  })
+})

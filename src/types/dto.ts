@@ -7,7 +7,7 @@
  * formatos fica em `services/mappers.ts`, chamada só na borda HTTP dos services.
  */
 import type { CategoryType, Movement } from './category'
-import type { ID } from './common'
+import type { ID, Paginated } from './common'
 import type { ActivityAction } from './dashboard'
 import type { CardBrand, InvoiceStatus } from './creditCard'
 import type { ExpenseStatus, ExpenseType, PaymentMethod } from './expense'
@@ -423,3 +423,48 @@ export interface SprintScoreboardDto {
     tarefas: { quantidade: number; concluidas: number; total: number; feitos: number }
   }
 }
+
+/** Item de `GET /sprints/historico`: a foto gravada no fechamento. */
+export interface SprintHistoryEntryDto {
+  sprintId: ID
+  inicio: string
+  fim: string
+  fechadoEm: string
+  total: number
+  feitos: number
+  percentual: number
+  bonus: boolean
+  recompensa: string | null
+  recompensaConquistada: boolean
+  rotina: {
+    diasComRotina: number
+    diasCumpridos: number
+    pontosPorDia: number
+    total: number
+    feitos: number
+    dias: { data: string; cumprido: boolean; itens: { nome: string; hora: string | null; concluida: boolean }[] }[]
+  }
+  tarefas: {
+    quantidade: number
+    concluidas: number
+    total: number
+    feitos: number
+    atrasadas: number
+    naoConcluidas: number
+    itens: {
+      id: ID
+      titulo: string
+      dia: string | null
+      hora: string | null
+      tempoEstimado: number | null
+      dificuldade: string | null
+      prioridade: string | null
+      pontos: number
+      pontosGanhos: number
+      situacao: 'CONCLUIDA' | 'ATRASADA' | 'NAO_CONCLUIDA'
+    }[]
+  }
+}
+
+/** `GET /sprints/historico?page&pageSize`; `totalPages` é 0 quando não há sprint fechado. */
+export type SprintHistoryPageDto = Paginated<SprintHistoryEntryDto>
