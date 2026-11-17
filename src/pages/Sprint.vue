@@ -9,6 +9,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import CompleteConfirmDialog from '@/components/features/CompleteConfirmDialog.vue'
 import PlanningReminder from '@/components/features/PlanningReminder.vue'
 import SprintAddTaskModal from '@/components/features/SprintAddTaskModal.vue'
+import SprintHistory from '@/components/features/SprintHistory.vue'
 import SprintDayColumn from '@/components/features/SprintDayColumn.vue'
 import SprintMoveDialog from '@/components/features/SprintMoveDialog.vue'
 import SprintRewardCard from '@/components/features/SprintRewardCard.vue'
@@ -29,6 +30,13 @@ const store = useSprintStore()
 const areaStore = useAreaStore()
 const taskStore = useTaskStore()
 const superTaskStore = useSuperTaskStore()
+
+/** Seção exibida: a semana (atual/próximo) ou o histórico dos sprints fechados. */
+const section = ref<'week' | 'history'>('week')
+const SECTION_OPTIONS = [
+  { value: 'week' as const, label: 'Semana' },
+  { value: 'history' as const, label: 'Histórico' },
+]
 
 const addOpen = ref(false)
 const addDay = ref<string | null>(null)
@@ -152,18 +160,23 @@ async function confirmRemove(): Promise<void> {
 <template>
   <PageLayout title="Sprint" description="Planeje e acompanhe a semana, de segunda a sexta">
     <template #actions>
+      <BaseToggleGroup v-model="section" :options="SECTION_OPTIONS" label="Seção do sprint" />
       <BaseToggleGroup
+        v-if="section === 'week'"
         :model-value="store.which"
         :options="[...SPRINT_WHICH_OPTIONS]"
         label="Sprint exibido"
         @update:model-value="(value: SprintWhich) => store.select(value)"
       />
-      <BaseButton variant="success" class="!h-11" :disabled="!store.view || store.isClosed" @click="openAdd(null)">
+      <BaseButton v-if="section === 'week'" variant="success" class="!h-11" :disabled="!store.view || store.isClosed" @click="openAdd(null)">
         <Plus class="size-4" aria-hidden="true" />
         Adicionar tarefa
       </BaseButton>
     </template>
 
+    <SprintHistory v-if="section === 'history'" />
+
+    <template v-if="section === 'week'">
     <p v-if="period" class="text-muted-foreground -mt-3 text-sm" data-testid="sprint-period">
       {{ store.which === 'current' ? 'Sprint atual' : 'Próximo sprint' }} · {{ period }}
     </p>
@@ -245,6 +258,7 @@ async function confirmRemove(): Promise<void> {
           @complete-occurrence="askCompleteOccurrence"
         />
       </div>
+    </template>
     </template>
 
     <SprintAddTaskModal

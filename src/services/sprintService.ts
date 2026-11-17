@@ -1,6 +1,15 @@
-import type { DefaultRewardDto, RoutineOccurrenceDto, SprintRewardDto, SprintScoreboardDto, SprintViewDto, TaskDto } from '@/types/dto'
+import type { DefaultRewardDto, SprintHistoryPageDto, RoutineOccurrenceDto, SprintRewardDto, SprintScoreboardDto, SprintViewDto, TaskDto } from '@/types/dto'
 import type { RoutineItem } from '@/types/routine'
-import type { RoutineOccurrence, Scoreboard, SprintReward, SprintScoreboard, SprintView, SprintWhich } from '@/types/sprint'
+import type { PageRequest, Paginated } from '@/types/common'
+import type {
+  RoutineOccurrence,
+  Scoreboard,
+  SprintHistoryEntry,
+  SprintReward,
+  SprintScoreboard,
+  SprintView,
+  SprintWhich,
+} from '@/types/sprint'
 import { normalizeReward, REWARD_MAX_LENGTH } from '@/types/sprint'
 import type { Task } from '@/types/task'
 import { missingSprintFields } from '@/types/task'
@@ -9,8 +18,9 @@ import { addDays, mondayOf } from '@/utils/sprint'
 import { fullPoints, latePoints } from '@/utils/taskCompletion'
 import { http, USE_MOCK } from './http'
 import { DONE_TASK_MESSAGE } from './taskService'
-import { toRoutineOccurrence, toSprintReward, toSprintScoreboard, toSprintView, toTask } from './mappers'
-import { delay, mockDb } from './mock'
+import { toRoutineOccurrence, toSprintHistoryPage, toSprintReward, toSprintScoreboard, toSprintView, toTask } from './mappers'
+import { delay, mockDb, paginate } from './mock'
+import { buildSprintHistory } from './mock/sprintHistory'
 
 type Db = Awaited<ReturnType<typeof mockDb>>
 
@@ -198,7 +208,31 @@ function assertInSprint(task: Task): void {
   if (!task.sprintId) throw new Error('A tarefa não está no sprint.')
 }
 
+/** Máximo de itens por página que a API aceita (422 acima disso). */
+export const SPRINT_HISTORY_MAX_PAGE_SIZE = 50
+
 export const sprintService = {
+  /**
+   * Sprints fechados, do mais recente ao mais antigo, lidos da foto gravada no fechamento.
+   * Como a API: `totalPages` é 0 quando não há nenhum, `pageSize` acima de 50 é recusado e
+   * página fora do intervalo pode falhar (o store volta para uma página válida).
+   */
+  async listHistory({ page, pageSize }: PageRequest): Promise<Paginated<SprintHistoryEntry>> {
+    if (USE_MOCK) {
+      if (pageSize < 1 || pageSize > SPRINT_HISTORY_MAX_PAGE_SIZE) {
+        throw new Error(`O tamanho da página deve estar entre 1 e ${SPRINT_HISTORY_MAX_PAGE_SIZE}.`)
+      }
+      const all = buildSprintHistory(mondayOf(today()))
+      const totalPages = Math.ceil(all.length / pageSize)
+      if (page > Math.max(totalPages, 1)) throw new Error('Página fora do intervalo.')
+      const result = paginate(all, { page, pageSize })
+      return delay({ ...result, totalPages })
+    }
+
+    const { data } = await http.get<SprintHistoryPageDto>('/sprints/historico', { params: { page, pageSize } })
+    return toSprintHistoryPage(data)
+  },
+
   /** Sprint com a rotina da semana. */
   async get(which: SprintWhich): Promise<SprintView> {
     if (USE_MOCK) {

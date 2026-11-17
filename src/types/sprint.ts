@@ -112,3 +112,88 @@ export const SPRINT_WHICH_OPTIONS: readonly { value: SprintWhich; label: string 
   { value: 'current', label: 'Sprint atual' },
   { value: 'next', label: 'Próximo sprint' },
 ]
+
+/** Situação de uma tarefa na foto do sprint fechado (valores gravados na API). */
+export type SprintTaskOutcome = 'CONCLUIDA' | 'ATRASADA' | 'NAO_CONCLUIDA'
+
+export const SPRINT_TASK_OUTCOME_LABEL: Record<SprintTaskOutcome, string> = {
+  CONCLUIDA: 'Concluída',
+  ATRASADA: 'Concluída com atraso',
+  NAO_CONCLUIDA: 'Não concluída',
+}
+
+/** Tarefa como ficou no fechamento do sprint. */
+export interface SprintHistoryTask {
+  id: ID
+  title: string
+  day: string | null
+  time: string | null
+  estimateMinutes: number | null
+  difficulty: string | null
+  priority: string | null
+  points: number
+  earnedPoints: number
+  outcome: SprintTaskOutcome
+}
+
+export interface SprintHistoryRoutineDay {
+  date: string
+  completed: boolean
+  items: { name: string; time: string | null; completed: boolean }[]
+}
+
+/** Um sprint fechado, lido só da foto gravada no fechamento (imutável). */
+export interface SprintHistoryEntry {
+  sprintId: ID
+  startDate: string
+  endDate: string
+  closedAt: string
+  total: number
+  done: number
+  /** Só para exibir: o selo de bônus vem sempre de `bonus`. */
+  percentage: number
+  bonus: boolean
+  /** A que valia no fechamento. */
+  reward: string | null
+  rewardEarned: boolean
+  routine: {
+    daysWithRoutine: number
+    daysCompleted: number
+    pointsPerDay: number
+    total: number
+    done: number
+    days: SprintHistoryRoutineDay[]
+  }
+  tasks: {
+    count: number
+    completed: number
+    total: number
+    done: number
+    late: number
+    notCompleted: number
+    items: SprintHistoryTask[]
+  }
+}
+
+/** Placar do histórico no mesmo formato que o `SprintScoreboard` exibe. */
+export function historyScoreboard(entry: SprintHistoryEntry): Scoreboard {
+  return {
+    total: entry.total,
+    done: entry.done,
+    percentage: entry.percentage,
+    bonus: entry.bonus,
+    routine: {
+      daysWithRoutine: entry.routine.daysWithRoutine,
+      daysCompleted: entry.routine.daysCompleted,
+      pointsPerDay: entry.routine.pointsPerDay,
+      total: entry.routine.total,
+      done: entry.routine.done,
+    },
+    tasks: {
+      count: entry.tasks.count,
+      completed: entry.tasks.completed,
+      total: entry.tasks.total,
+      done: entry.tasks.done,
+    },
+  }
+}

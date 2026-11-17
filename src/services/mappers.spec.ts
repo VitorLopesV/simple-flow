@@ -20,6 +20,8 @@ import {
   toRegisterDto,
   toRoutineItem,
   toRoutinePayloadDto,
+  toSprintHistoryEntry,
+  toSprintHistoryPage,
   toSprintReward,
   toSprintScoreboard,
   toSprintView,
@@ -828,6 +830,91 @@ describe('super task', () => {
       notas: null,
       dataTermino: '2026-12-20',
       areaId: 'are_2',
+    })
+  })
+})
+
+describe('histórico de sprints', () => {
+  const ENTRY_DTO = {
+    sprintId: 'spr_1',
+    inicio: '2026-11-09',
+    fim: '2026-11-13',
+    fechadoEm: '2026-11-14T03:00:00.000Z',
+    total: 100,
+    feitos: 89.96,
+    percentual: 90,
+    bonus: false,
+    recompensa: null,
+    recompensaConquistada: false,
+    rotina: {
+      diasComRotina: 1,
+      diasCumpridos: 1,
+      pontosPorDia: 40,
+      total: 40,
+      feitos: 40,
+      dias: [{ data: '2026-11-09', cumprido: true, itens: [{ nome: 'Treinar', hora: '07:00', concluida: true }] }],
+    },
+    tarefas: {
+      quantidade: 1,
+      concluidas: 1,
+      total: 60,
+      feitos: 12,
+      atrasadas: 1,
+      naoConcluidas: 0,
+      itens: [
+        {
+          id: 'tar_1',
+          titulo: 'Relatório',
+          dia: '2026-11-10',
+          hora: null,
+          tempoEstimado: 60,
+          dificuldade: 'MEDIA',
+          prioridade: 'ALTA',
+          pontos: 60,
+          pontosGanhos: 12,
+          situacao: 'ATRASADA' as const,
+        },
+      ],
+    },
+  }
+
+  it('converte a foto do fechamento para o formato de domínio', () => {
+    const entry = toSprintHistoryEntry(ENTRY_DTO)
+    expect(entry).toMatchObject({
+      sprintId: 'spr_1',
+      startDate: '2026-11-09',
+      endDate: '2026-11-13',
+      done: 89.96,
+      percentage: 90,
+      reward: null,
+      rewardEarned: false,
+    })
+    expect(entry.routine.days[0]).toEqual({
+      date: '2026-11-09',
+      completed: true,
+      items: [{ name: 'Treinar', time: '07:00', completed: true }],
+    })
+    expect(entry.tasks).toMatchObject({ late: 1, notCompleted: 0, done: 12 })
+    expect(entry.tasks.items[0]).toMatchObject({ title: 'Relatório', earnedPoints: 12, outcome: 'ATRASADA' })
+  })
+
+  it('mantém o bônus do campo `bonus`, não do percentual arredondado', () => {
+    expect(toSprintHistoryEntry(ENTRY_DTO).bonus).toBe(false)
+    expect(toSprintHistoryEntry({ ...ENTRY_DTO, bonus: true, recompensa: 'Pizza', recompensaConquistada: true })).toMatchObject({
+      bonus: true,
+      reward: 'Pizza',
+      rewardEarned: true,
+    })
+  })
+
+  it('converte a página, inclusive o estado vazio com totalPages 0', () => {
+    expect(toSprintHistoryPage({ items: [ENTRY_DTO], page: 1, pageSize: 10, total: 1, totalPages: 1 }).items).toHaveLength(1)
+    expect(toSprintHistoryPage({ items: [], page: 1, pageSize: 10, total: 0, totalPages: 0 })).toEqual({
+      items: [],
+      page: 1,
+      pageSize: 10,
+      total: 0,
+      totalPages: 0,
     })
   })
 })
