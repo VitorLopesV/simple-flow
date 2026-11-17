@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ArrowRightLeft, Check, Clock, Lock, Plus, Repeat, Undo2 } from '@lucide/vue'
+import { ArrowRightLeft, Check, CircleCheck, Clock, Lock, Plus, Repeat, Undo2 } from '@lucide/vue'
 import { computed } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import TaskDeadlineBadge from '@/components/features/TaskDeadlineBadge.vue'
 import type { SprintColumn } from '@/stores/sprintStore'
+import type { RoutineOccurrence } from '@/types/sprint'
 import type { Task } from '@/types/task'
 import { TASK_DIFFICULTIES, TASK_PRIORITIES } from '@/types/task'
 import { formatDate } from '@/utils/dateFormatter'
@@ -16,6 +18,8 @@ const emit = defineEmits<{
   add: []
   move: [task: Task]
   remove: [task: Task]
+  completeTask: [task: Task]
+  completeOccurrence: [occurrence: RoutineOccurrence]
 }>()
 
 const headingId = computed(() => `sprint-day-${props.column.date}`)
@@ -67,6 +71,20 @@ function labelOf<V>(options: readonly { value: V; label: string }[], value: V | 
             {{ occurrence.name }}
           </span>
           <span v-if="occurrence.time" class="text-muted-foreground text-xs tabular-nums">{{ occurrence.time }}</span>
+          <!-- O checklist só vale para hoje: outros dias (e a prévia, sem ocorrência gravada) ficam desabilitados. -->
+          <BaseButton
+            v-if="!occurrence.completedAt"
+            variant="ghost"
+            size="icon"
+            class="hover:text-success"
+            :disabled="busy || !column.isToday || !occurrence.id"
+            :aria-label="`Concluir ${occurrence.name}`"
+            :title="column.isToday && occurrence.id ? 'Concluir' : 'A rotina só pode ser concluída no próprio dia'"
+            data-testid="complete-occurrence"
+            @click="emit('completeOccurrence', occurrence)"
+          >
+            <CircleCheck class="size-4" aria-hidden="true" />
+          </BaseButton>
         </li>
       </ul>
       <p v-else class="text-muted-foreground text-sm">Sem rotina neste dia.</p>
@@ -89,6 +107,7 @@ function labelOf<V>(options: readonly { value: V; label: string }[], value: V | 
             <span v-if="task.time" class="text-muted-foreground text-xs tabular-nums">{{ task.time }}</span>
           </div>
           <div class="flex flex-wrap items-center gap-1">
+            <TaskDeadlineBadge :task="task" />
             <BaseBadge v-if="task.superTaskName" tone="info" data-testid="super-task-badge">
               Super task: {{ task.superTaskName }}
             </BaseBadge>
@@ -98,26 +117,40 @@ function labelOf<V>(options: readonly { value: V; label: string }[], value: V | 
               {{ labelOf(TASK_PRIORITIES, task.priority) }}
             </BaseBadge>
           </div>
-          <div v-if="!column.locked" class="flex justify-end gap-1">
+          <!-- Concluída é só leitura. Em dia que já passou só dá para concluir (sem mover nem remover). -->
+          <div v-if="!task.done" class="flex justify-end gap-1">
             <BaseButton
               variant="ghost"
               size="icon"
+              class="hover:text-success"
               :disabled="busy"
-              :aria-label="`Mover ${task.title} para outro dia`"
-              @click="emit('move', task)"
+              :aria-label="`Concluir ${task.title}`"
+              data-testid="complete-task"
+              @click="emit('completeTask', task)"
             >
-              <ArrowRightLeft class="size-4" aria-hidden="true" />
+              <CircleCheck class="size-4" aria-hidden="true" />
             </BaseButton>
-            <BaseButton
-              variant="ghost"
-              size="icon"
-              class="hover:text-danger"
-              :disabled="busy"
-              :aria-label="`Remover ${task.title} do sprint`"
-              @click="emit('remove', task)"
-            >
-              <Undo2 class="size-4" aria-hidden="true" />
-            </BaseButton>
+            <template v-if="!column.locked">
+              <BaseButton
+                variant="ghost"
+                size="icon"
+                :disabled="busy"
+                :aria-label="`Mover ${task.title} para outro dia`"
+                @click="emit('move', task)"
+              >
+                <ArrowRightLeft class="size-4" aria-hidden="true" />
+              </BaseButton>
+              <BaseButton
+                variant="ghost"
+                size="icon"
+                class="hover:text-danger"
+                :disabled="busy"
+                :aria-label="`Remover ${task.title} do sprint`"
+                @click="emit('remove', task)"
+              >
+                <Undo2 class="size-4" aria-hidden="true" />
+              </BaseButton>
+            </template>
           </div>
         </li>
       </ul>

@@ -1,12 +1,14 @@
-import type { SprintScoreboardDto, SprintViewDto, TaskDto } from '@/types/dto'
+import type { RoutineOccurrenceDto, SprintScoreboardDto, SprintViewDto, TaskDto } from '@/types/dto'
 import type { RoutineItem } from '@/types/routine'
 import type { RoutineOccurrence, Scoreboard, SprintScoreboard, SprintView, SprintWhich } from '@/types/sprint'
 import type { Task } from '@/types/task'
 import { missingSprintFields } from '@/types/task'
 import { toDate, toISODate } from '@/utils/dateFormatter'
-import { addDays, mondayOf, taskPoints } from '@/utils/sprint'
+import { addDays, mondayOf } from '@/utils/sprint'
+import { fullPoints, latePoints } from '@/utils/taskCompletion'
 import { http, USE_MOCK } from './http'
-import { toSprintScoreboard, toSprintView, toTask } from './mappers'
+import { DONE_TASK_MESSAGE } from './taskService'
+import { toRoutineOccurrence, toSprintScoreboard, toSprintView, toTask } from './mappers'
 import { delay, mockDb } from './mock'
 
 type Db = Awaited<ReturnType<typeof mockDb>>
@@ -71,6 +73,11 @@ function sortOccurrences(list: RoutineOccurrence[], withIds: boolean): RoutineOc
   }))
 }
 
+/** Aplica as conclusões gravadas no mock (só ocorrências com id, ou seja, de sprint iniciado). */
+function withCompletion(db: Db, list: RoutineOccurrence[]): RoutineOccurrence[] {
+  return list.map((entry) => ({ ...entry, completedAt: (entry.id && db.completedOccurrences.get(entry.id)) || null }))
+}
+
 function mockView(db: Db, which: SprintWhich): SprintView {
   const startDate = startOf(which)
   const started = which === 'current'
@@ -96,8 +103,8 @@ function mockView(db: Db, which: SprintWhich): SprintView {
     },
     started,
     preview: !started,
-    occurrences: sortOccurrences(occurrences, started),
-    reminders: sortOccurrences(reminders, started),
+    occurrences: withCompletion(db, sortOccurrences(occurrences, started)),
+    reminders: withCompletion(db, sortOccurrences(reminders, started)),
   }
 }
 
@@ -108,9 +115,11 @@ function mockScoreboard(db: Db, which: SprintWhich): SprintScoreboard {
   view.occurrences.forEach((entry) => byDay.set(entry.date, [...(byDay.get(entry.date) ?? []), entry]))
   const daysCompleted = [...byDay.values()].filter((list) => list.every((entry) => entry.completedAt)).length
   const sprintTasks = db.tasks.filter((task) => task.sprintId === view.sprint.id && !task.archived)
-  const points = (task: Task) => taskPoints(task.estimateMinutes!, task.difficulty!, task.priority!)
+  // O total mantém os pontos cheios; a tarefa atrasada vale 20% nos feitos.
+  const points = (task: Task) => fullPoints(task) ?? 0
+  const earned = (task: Task) => (task.late ? latePoints(task) : fullPoints(task)) ?? 0
   const tasksTotal = sprintTasks.reduce((sum, task) => sum + points(task), 0)
-  const tasksDone = sprintTasks.filter((task) => task.done).reduce((sum, task) => sum + points(task), 0)
+  const tasksDone = sprintTasks.filter((task) => task.done).reduce((sum, task) => sum + earned(task), 0)
 
   const total = byDay.size * ROUTINE_DAY_POINTS + tasksTotal
   const done = daysCompleted * ROUTINE_DAY_POINTS + tasksDone
@@ -163,6 +172,7 @@ function assertValidDay(day: string): string {
 
 /** Tarefa de dia que já passou fica travada (409 no backend): só poderá ser concluída. */
 function assertUnlocked(task: Task): void {
+  if (task.done) throw new Error(DONE_TASK_MESSAGE)
   if (task.day && task.day < today()) {
     throw new Error('Essa tarefa é de um dia que já passou: ela só pode ser concluída.')
   }
@@ -210,6 +220,7 @@ export const sprintService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const task = findTask(db, taskId)
+      if (task.done) throw new Error(DONE_TASK_MESSAGE)
       if (task.archived) throw new Error('Tarefa arquivada não entra no sprint.')
       if (task.sprintId) throw new Error('A tarefa já está no sprint.')
       const target = day ?? task.day
@@ -229,8 +240,8 @@ export const sprintService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const task = findTask(db, taskId)
-      assertInSprint(task)
       assertUnlocked(task)
+      assertInSprint(task)
       task.sprintId = assertValidDay(day)
       task.day = day
       return delay(db.clone(task))
@@ -238,6 +249,27 @@ export const sprintService = {
 
     const { data } = await http.patch<TaskDto>(`/sprints/tarefas/${taskId}/dia`, { dia: day })
     return toTask(data)
+  },
+
+  /**
+   * Conclui a ocorrência da rotina, só no próprio dia (422 no backend). Idempotente e definitiva.
+   * Na prévia (sprint que não começou) não há ocorrência gravada, então nada a concluir.
+   */
+  async completeOccurrence(occurrenceId: string): Promise<RoutineOccurrence> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      const view = mockView(db, 'current')
+      const occurrence = [...view.occurrences, ...view.reminders].find((entry) => entry.id === occurrenceId)
+      if (!occurrence) throw new Error('Ocorrência não encontrada.')
+      if (occurrence.date !== today()) {
+        throw new Error('A rotina só pode ser concluída no próprio dia.')
+      }
+      if (!db.completedOccurrences.has(occurrenceId)) db.completedOccurrences.set(occurrenceId, db.now())
+      return delay({ ...occurrence, completedAt: db.completedOccurrences.get(occurrenceId)! })
+    }
+
+    const { data } = await http.patch<RoutineOccurrenceDto>(`/sprints/ocorrencias/${occurrenceId}/concluir`)
+    return toRoutineOccurrence(data)
   },
 
   /** Devolve a tarefa ao backlog (mantém o dia). */

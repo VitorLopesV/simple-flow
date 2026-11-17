@@ -62,6 +62,8 @@ export const useTaskStore = defineStore('task', () => {
   const archive = (id: string) => mutate(() => taskService.archive(id), 'Não foi possível arquivar a tarefa.')
   const unarchive = (id: string) =>
     mutate(() => taskService.unarchive(id), 'Não foi possível desarquivar a tarefa.')
+  /** Conclusão definitiva: não existe desmarcar. */
+  const complete = (id: string) => mutate(() => taskService.complete(id), 'Não foi possível concluir a tarefa.')
   const remove = (id: string) => mutate(() => taskService.remove(id), 'Não foi possível excluir a tarefa.')
 
   return {
@@ -79,6 +81,7 @@ export const useTaskStore = defineStore('task', () => {
     move,
     archive,
     unarchive,
+    complete,
     remove,
   }
 })

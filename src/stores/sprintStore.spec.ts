@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { sprintService } from '@/services/sprintService'
+import { taskService } from '@/services/taskService'
 import { useSprintStore } from '@/stores/sprintStore'
 import type { SprintScoreboard, SprintView } from '@/types/sprint'
 import type { Task } from '@/types/task'
@@ -14,8 +15,11 @@ vi.mock('@/services/sprintService', () => ({
     addTask: vi.fn(),
     moveTask: vi.fn(),
     removeTask: vi.fn(),
+    completeOccurrence: vi.fn(),
   },
 }))
+
+vi.mock('@/services/taskService', () => ({ taskService: { complete: vi.fn() } }))
 
 const service = vi.mocked(sprintService)
 
@@ -65,6 +69,9 @@ function task(id: string, day: string, time: string | null, minutes: 15 | 60): T
     notes: null,
     sprintId: 'spr_1',
     archived: false,
+    done: false,
+    completedAt: null,
+    late: false,
     archivedAt: null,
     createdAt: '',
   }
@@ -144,5 +151,27 @@ describe('sprintStore', () => {
 
     service.removeTask.mockResolvedValue(task('1', '2026-11-18', null, 15))
     expect(await store.removeTask('1')).toBe(true)
+  })
+
+  it('concluir tarefa ou rotina recarrega sprint e placar', async () => {
+    const store = useSprintStore()
+    await store.load()
+    vi.mocked(taskService.complete).mockResolvedValue(task('1', '2026-11-18', null, 15))
+    service.completeOccurrence.mockResolvedValue(VIEW.occurrences[0]!)
+
+    expect(await store.completeTask('1')).toBe(true)
+    expect(await store.completeOccurrence('ocr_1')).toBe(true)
+    expect(taskService.complete).toHaveBeenCalledWith('1')
+    expect(service.completeOccurrence).toHaveBeenCalledWith('ocr_1')
+    // Uma carga inicial + uma por conclusão: o placar vem sempre do servidor.
+    expect(service.getScoreboard).toHaveBeenCalledTimes(3)
+  })
+
+  it('falha ao concluir devolve false e guarda a mensagem', async () => {
+    const store = useSprintStore()
+    service.completeOccurrence.mockRejectedValue(new Error('A rotina só pode ser concluída no próprio dia.'))
+
+    expect(await store.completeOccurrence('ocr_1')).toBe(false)
+    expect(store.error).toBe('A rotina só pode ser concluída no próprio dia.')
   })
 })

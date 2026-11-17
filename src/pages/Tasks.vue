@@ -12,6 +12,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import AreaDeleteDialog from '@/components/features/AreaDeleteDialog.vue'
 import AreaForm from '@/components/features/AreaForm.vue'
+import CompleteConfirmDialog from '@/components/features/CompleteConfirmDialog.vue'
 import TaskForm from '@/components/features/TaskForm.vue'
 import TaskItem from '@/components/features/TaskItem.vue'
 import TaskMoveDialog from '@/components/features/TaskMoveDialog.vue'
@@ -21,6 +22,7 @@ import { useAreaStore } from '@/stores/areaStore'
 import { useTaskStore } from '@/stores/taskStore'
 import type { Area, AreaPayload, AreaTasksDestination } from '@/types/area'
 import type { Task, TaskEdit } from '@/types/task'
+import { fullPoints, latePoints, wouldBeLate } from '@/utils/taskCompletion'
 
 const areaStore = useAreaStore()
 const taskStore = useTaskStore()
@@ -36,6 +38,8 @@ const taskModalOpen = ref(false)
 const editingTask = ref<Task | null>(null)
 const moveOpen = ref(false)
 const movingTask = ref<Task | null>(null)
+const completeOpen = ref(false)
+const taskToComplete = ref<Task | null>(null)
 const removeTaskOpen = ref(false)
 const taskToRemove = ref<Task | null>(null)
 
@@ -141,6 +145,21 @@ async function archiveTask(task: Task): Promise<void> {
 
 async function unarchiveTask(task: Task): Promise<void> {
   if (await taskStore.unarchive(task.id)) notify.success('Tarefa desarquivada', task.title)
+}
+
+function askComplete(task: Task): void {
+  taskToComplete.value = task
+  completeOpen.value = true
+}
+
+async function confirmComplete(): Promise<void> {
+  const task = taskToComplete.value
+  if (!task) return
+  if (await taskStore.complete(task.id)) {
+    notify.success('Tarefa concluída', task.title)
+    completeOpen.value = false
+    taskToComplete.value = null
+  }
 }
 
 function askRemoveTask(task: Task): void {
@@ -252,6 +271,7 @@ async function confirmRemoveTask(): Promise<void> {
                 @move="askMove(task)"
                 @archive="archiveTask(task)"
                 @unarchive="unarchiveTask(task)"
+                @complete="askComplete(task)"
                 @remove="askRemoveTask(task)"
               />
             </ul>
@@ -300,6 +320,17 @@ async function confirmRemoveTask(): Promise<void> {
       :areas="areaStore.areas"
       :loading="taskStore.saving"
       @confirm="confirmMove"
+    />
+
+    <CompleteConfirmDialog
+      v-model:open="completeOpen"
+      kind="task"
+      :name="taskToComplete?.title ?? ''"
+      :overdue="taskToComplete ? wouldBeLate(taskToComplete) : false"
+      :points="taskToComplete ? fullPoints(taskToComplete) : null"
+      :reduced-points="taskToComplete ? latePoints(taskToComplete) : null"
+      :loading="taskStore.saving"
+      @confirm="confirmComplete"
     />
 
     <ConfirmDialog

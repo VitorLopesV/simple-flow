@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import { getErrorMessage } from '@/services/http'
 import { sprintService } from '@/services/sprintService'
+import { taskService } from '@/services/taskService'
 import type { RoutineOccurrence, SprintDay, SprintScoreboard, SprintView, SprintWhich } from '@/types/sprint'
 import type { Task } from '@/types/task'
 import { toISODate } from '@/utils/dateFormatter'
@@ -102,6 +103,16 @@ export const useSprintStore = defineStore('sprint', () => {
   const removeTask = (taskId: string) =>
     mutate(() => sprintService.removeTask(taskId), 'Não foi possível remover a tarefa do sprint.')
 
+  /**
+   * Concluir recarrega sprint, tarefas e placar, então o placar já reflete a conclusão.
+   * Ponto de extensão da F#141: ao concluir a última filha de uma Super task, o backend (#65) conclui
+   * a Super task; é aqui, depois do `mutate`, que a tela dela deverá ser atualizada.
+   */
+  const completeTask = (taskId: string) =>
+    mutate(() => taskService.complete(taskId), 'Não foi possível concluir a tarefa.')
+  const completeOccurrence = (occurrenceId: string) =>
+    mutate(() => sprintService.completeOccurrence(occurrenceId), 'Não foi possível concluir a rotina.')
+
   return {
     which,
     view,
@@ -118,5 +129,7 @@ export const useSprintStore = defineStore('sprint', () => {
     addTask,
     moveTask,
     removeTask,
+    completeTask,
+    completeOccurrence,
   }
 })

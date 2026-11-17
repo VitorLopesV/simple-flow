@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Archive, ArchiveRestore, ArrowRightLeft, CalendarPlus, Pencil, Trash2, TriangleAlert } from '@lucide/vue'
+import { Archive, ArchiveRestore, ArrowRightLeft, CalendarPlus, CircleCheck, Pencil, Trash2, TriangleAlert } from '@lucide/vue'
 import { computed } from 'vue'
 
 import BaseBadge from '@/components/common/BaseBadge.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import TaskDeadlineBadge from '@/components/features/TaskDeadlineBadge.vue'
 import type { Task } from '@/types/task'
 import { missingSprintFields, TASK_DIFFICULTIES, TASK_ESTIMATES, TASK_PRIORITIES } from '@/types/task'
 import { formatDate } from '@/utils/dateFormatter'
@@ -16,6 +17,7 @@ const emit = defineEmits<{
   move: []
   archive: []
   unarchive: []
+  complete: []
   remove: []
 }>()
 
@@ -39,7 +41,10 @@ const priority = computed(() => labelOf(TASK_PRIORITIES, props.task.priority))
     :data-testid="`task-${task.id}`"
   >
     <div class="min-w-0 flex-1">
-      <p class="truncate font-medium" :class="task.archived && 'text-muted-foreground line-through'">
+      <p
+        class="truncate font-medium"
+        :class="task.archived ? 'text-muted-foreground line-through' : task.done && 'text-muted-foreground'"
+      >
         {{ task.title }}
       </p>
       <div class="mt-1 flex flex-wrap items-center gap-1.5">
@@ -50,6 +55,7 @@ const priority = computed(() => labelOf(TASK_PRIORITIES, props.task.priority))
           Prioridade {{ priority.toLowerCase() }}
         </BaseBadge>
         <BaseBadge v-if="task.archived" tone="info">Arquivada</BaseBadge>
+        <TaskDeadlineBadge v-if="!task.archived" :task="task" />
         <span
           v-if="missing.length && !task.archived"
           class="bg-warning-soft text-warning inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
@@ -62,8 +68,19 @@ const priority = computed(() => labelOf(TASK_PRIORITIES, props.task.priority))
       </div>
     </div>
 
-    <div class="flex gap-1">
+    <!-- Tarefa concluída é só leitura: a conclusão é definitiva, sem ações. -->
+    <div v-if="!task.done" class="flex gap-1">
       <template v-if="!task.archived">
+        <BaseButton
+          variant="ghost"
+          size="icon"
+          class="hover:text-success"
+          :aria-label="`Concluir ${task.title}`"
+          data-testid="complete-task"
+          @click="emit('complete')"
+        >
+          <CircleCheck class="size-4" aria-hidden="true" />
+        </BaseButton>
         <a
           v-if="calendarUrl"
           :href="calendarUrl"

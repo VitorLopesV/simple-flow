@@ -19,6 +19,9 @@ const TASK: Task = {
   notes: null,
   sprintId: 'spr_1',
   archived: false,
+  done: false,
+  completedAt: null,
+  late: false,
   archivedAt: null,
   createdAt: '',
 }
@@ -81,6 +84,66 @@ describe('SprintDayColumn', () => {
 
     expect(wrapper.get('[data-testid="super-task-badge"]').text()).toContain('Reforma')
     expect(wrapper.get('[aria-label="Missão do dia"]').text()).toContain('Treinar')
+  })
+  it('checklist da rotina só fica habilitado hoje', async () => {
+    const occurrence = { id: 'o1', itemId: 'r', name: 'Treinar', date: '2026-11-18', time: null, index: 0, order: 0, completedAt: null }
+    const today = mount(SprintDayColumn, { props: { column: column({ isToday: true, occurrences: [occurrence] }) } })
+    const other = mount(SprintDayColumn, { props: { column: column({ occurrences: [occurrence] }) } })
+
+    const enabled = today.get('[data-testid="complete-occurrence"]')
+    expect(enabled.attributes('disabled')).toBeUndefined()
+    await enabled.trigger('click')
+    expect(today.emitted('completeOccurrence')?.[0]).toEqual([occurrence])
+    expect(other.get('[data-testid="complete-occurrence"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('na prévia (ocorrência sem id) o checklist fica desabilitado, mesmo hoje', () => {
+    const occurrence = { id: null, itemId: 'r', name: 'Treinar', date: '2026-11-18', time: null, index: 0, order: 0, completedAt: null }
+    const wrapper = mount(SprintDayColumn, { props: { column: column({ isToday: true, occurrences: [occurrence] }) } })
+
+    expect(wrapper.get('[data-testid="complete-occurrence"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('rotina concluída perde o botão', () => {
+    const occurrence = { id: 'o1', itemId: 'r', name: 'Treinar', date: '2026-11-18', time: null, index: 0, order: 0, completedAt: '2026-11-18T10:00:00Z' }
+    const wrapper = mount(SprintDayColumn, { props: { column: column({ isToday: true, occurrences: [occurrence] }) } })
+
+    expect(wrapper.find('[data-testid="complete-occurrence"]').exists()).toBe(false)
+  })
+
+  it('emite a conclusão da tarefa, inclusive em dia passado (onde só dá para concluir)', async () => {
+    const wrapper = mount(SprintDayColumn, { props: { column: column({ locked: true }) } })
+
+    await wrapper.get('[data-testid="complete-task"]').trigger('click')
+    expect(wrapper.emitted('completeTask')?.[0]).toEqual([TASK])
+    expect(wrapper.find('[aria-label^="Mover"]').exists()).toBe(false)
+  })
+
+  it('tarefa concluída fica só leitura, com pontos e sem ações', () => {
+    const wrapper = mount(SprintDayColumn, {
+      props: { column: column({ tasks: [{ ...TASK, done: true, completedAt: '2026-11-18T10:00:00Z' }] }) },
+    })
+
+    expect(wrapper.find('[data-testid="complete-task"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label^="Mover"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label^="Remover"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="deadline-done"]').text()).toContain('18 pts')
+  })
+
+  it('concluída com atraso mostra os pontos reduzidos (20%)', () => {
+    const wrapper = mount(SprintDayColumn, {
+      props: { column: column({ tasks: [{ ...TASK, done: true, late: true, completedAt: '2026-11-19T10:00:00Z' }] }) },
+    })
+
+    expect(wrapper.get('[data-testid="deadline-done-late"]').text()).toContain('4 pts (20%)')
+  })
+
+  it('pendente com prazo vencido avisa que vale 20% antes de concluir', () => {
+    const wrapper = mount(SprintDayColumn, {
+      props: { column: column({ tasks: [{ ...TASK, day: '2020-01-01' }] }) },
+    })
+
+    expect(wrapper.get('[data-testid="deadline-overdue"]').text()).toContain('20%')
   })
 })
 

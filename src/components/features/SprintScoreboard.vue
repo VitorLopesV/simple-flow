@@ -29,19 +29,27 @@ const barWidth = computed(() => `${Math.min(100, Math.max(0, props.scoreboard.pe
       <BaseBadge v-if="preview" tone="info">Planejamento: o sprint ainda não começou</BaseBadge>
     </div>
 
-    <div
-      class="bg-muted h-2 overflow-hidden rounded-full"
-      role="progressbar"
-      aria-label="Pontos feitos do total"
-      aria-valuemin="0"
-      aria-valuemax="100"
-      :aria-valuenow="scoreboard.percentage"
-      :aria-valuetext="`${scoreboard.done} de ${scoreboard.total} pontos`"
-    >
+    <!-- A marca em 90% é a faixa do bônus (o selo vem de `bonus`, não desta posição). -->
+    <div class="relative">
       <div
-        class="h-full rounded-full transition-[width] motion-reduce:transition-none"
-        :class="scoreboard.bonus ? 'bg-success' : 'bg-primary'"
-        :style="{ width: barWidth }"
+        class="bg-muted h-2 overflow-hidden rounded-full"
+        role="progressbar"
+        aria-label="Pontos feitos do total"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        :aria-valuenow="scoreboard.percentage"
+        :aria-valuetext="`${scoreboard.done} de ${scoreboard.total} pontos`"
+      >
+        <div
+          class="h-full rounded-full transition-[width] motion-reduce:transition-none"
+          :class="scoreboard.bonus ? 'bg-success' : 'bg-primary'"
+          :style="{ width: barWidth }"
+        />
+      </div>
+      <span
+        class="bg-foreground/60 absolute -top-0.5 left-[90%] h-3 w-px"
+        aria-hidden="true"
+        data-testid="bonus-threshold"
       />
     </div>
 

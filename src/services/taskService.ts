@@ -1,6 +1,9 @@
 import type { TaskDto } from '@/types/dto'
 import type { Task, TaskEdit, TaskFilter, TaskPayload } from '@/types/task'
 import { http, USE_MOCK } from './http'
+import { toISODate } from '@/utils/dateFormatter'
+import { mondayOf } from '@/utils/sprint'
+import { wouldBeLate } from '@/utils/taskCompletion'
 import { toTask, toTaskEditDto, toTaskPayloadDto } from './mappers'
 import { delay, mockDb } from './mock'
 
@@ -22,6 +25,25 @@ function assertCommonArea(db: Db, areaId: string): void {
   const area = db.areas.find((item) => item.id === areaId)
   if (!area) throw new Error('Área inválida.')
   if (area.system) throw new Error('A área Rotina não aceita tarefas.')
+}
+
+/**
+ * Como `EntrarNoSprintPorConclusao` do backend: tarefa fora do sprint, com pontuação completa e
+ * concluída num dia útil entra no sprint atual com o dia de hoje; senão conclui sem pontuar.
+ */
+function enterSprintByCompletion(task: Task, at: Date): void {
+  const weekday = at.getDay()
+  if (task.sprintId || weekday === 0 || weekday === 6) return
+  if (!task.estimateMinutes || !task.difficulty || !task.priority) return
+  task.sprintId = `spr_${mondayOf(toISODate(at))}`
+  task.day = toISODate(at)
+}
+
+/** Concluir é definitivo: o backend recusa (409) qualquer mudança em tarefa concluída. */
+export const DONE_TASK_MESSAGE = 'Tarefa concluída não pode ser alterada: a conclusão é definitiva.'
+
+function assertNotDone(task: Task): void {
+  if (task.done) throw new Error(DONE_TASK_MESSAGE)
 }
 
 function assertTitle(title: string): void {
@@ -61,6 +83,9 @@ export const taskService = {
         title: payload.title.trim(),
         id: db.newId('tar'),
         sprintId: null,
+        done: false,
+        completedAt: null,
+        late: false,
         archived: false,
         archivedAt: null,
         createdAt: db.now(),
@@ -78,6 +103,7 @@ export const taskService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const task = findTask(db, id)
+      assertNotDone(task)
       assertTitle(edit.title)
       Object.assign(task, edit, { title: edit.title.trim() })
       return delay(db.clone(task))
@@ -91,6 +117,7 @@ export const taskService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const task = findTask(db, id)
+      assertNotDone(task)
       assertCommonArea(db, areaId)
       task.areaId = areaId
       return delay(db.clone(task))
@@ -104,6 +131,7 @@ export const taskService = {
     if (USE_MOCK) {
       const db = await mockDb()
       const task = findTask(db, id)
+      assertNotDone(task)
       task.archived = true
       task.archivedAt = db.now()
       return delay(db.clone(task))
@@ -126,10 +154,35 @@ export const taskService = {
     return toTask(data)
   },
 
+  /**
+   * Conclusão definitiva e idempotente (concluir de novo não muda o instante). Tarefa arquivada
+   * é recusada (422). Não existe "desmarcar": o backend responde sempre 409.
+   */
+  async complete(id: string): Promise<Task> {
+    if (USE_MOCK) {
+      const db = await mockDb()
+      const task = findTask(db, id)
+      if (task.archived) throw new Error('Tarefa arquivada não pode ser concluída.')
+      if (!task.done) {
+        const at = new Date()
+        enterSprintByCompletion(task, at)
+        task.done = true
+        task.completedAt = db.now()
+        task.late = wouldBeLate(task, at)
+      }
+      return delay(db.clone(task))
+    }
+
+    const { data } = await http.patch<TaskDto>(`/tarefas/${id}/concluir`)
+    return toTask(data)
+  },
+
   async remove(id: string): Promise<void> {
     if (USE_MOCK) {
       const db = await mockDb()
-      db.tasks.splice(db.tasks.indexOf(findTask(db, id)), 1)
+      const task = findTask(db, id)
+      assertNotDone(task)
+      db.tasks.splice(db.tasks.indexOf(task), 1)
       return delay(undefined)
     }
 

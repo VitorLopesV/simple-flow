@@ -278,8 +278,11 @@ export interface TaskDto {
   prioridade: 'BAIXA' | 'MEDIA' | 'ALTA' | null
   notas: string | null
   sprintId: ID | null
-  /** Ainda não vêm do backend (#144 e #65); opcionais por segurança. */
-  concluida?: boolean
+  /** Conclusão definitiva (#70): `atrasada` só é verdadeira depois de concluir. */
+  concluidaEm: string | null
+  concluida: boolean
+  atrasada: boolean
+  /** Ainda não vem do backend (#65); opcional por segurança. */
   superTaskNome?: string | null
   arquivada: boolean
   arquivadaEm: string | null
@@ -289,7 +292,7 @@ export interface TaskDto {
 /** Criação (`POST /tarefas`) e edição (`PUT /tarefas/:id`, sem `areaId`). */
 export type TaskEditDto = Omit<
   TaskDto,
-  'id' | 'areaId' | 'sprintId' | 'concluida' | 'superTaskNome' | 'arquivada' | 'arquivadaEm' | 'criadoEm'
+  'id' | 'areaId' | 'sprintId' | 'concluidaEm' | 'concluida' | 'atrasada' | 'superTaskNome' | 'arquivada' | 'arquivadaEm' | 'criadoEm'
 >
 export type TaskPayloadDto = TaskEditDto & Pick<TaskDto, 'areaId'>
 
