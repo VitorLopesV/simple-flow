@@ -124,6 +124,9 @@ export const areas: Area[] = [
 /** Backlog de tarefas; começa vazio, como uma conta nova. */
 export const tasks: Task[] = []
 
+/** Ocorrências de rotina concluídas: id da ocorrência -> instante (ISO). A conclusão é definitiva. */
+export const completedOccurrences = new Map<string, string>()
+
 /** Itens de rotina; começam vazios, como uma conta nova. */
 export const routineItems: RoutineItem[] = []
 

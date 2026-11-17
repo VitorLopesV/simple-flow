@@ -13,6 +13,7 @@ vi.mock('@/services/taskService', () => ({
     move: vi.fn(),
     archive: vi.fn(),
     unarchive: vi.fn(),
+    complete: vi.fn(),
     remove: vi.fn(),
   },
 }))
@@ -32,6 +33,9 @@ function task(id: string, areaId = 'a'): Task {
     notes: null,
     archived: false,
     sprintId: null,
+    done: false,
+    completedAt: null,
+    late: false,
     archivedAt: null,
     createdAt: '',
   }
@@ -88,6 +92,7 @@ describe('taskStore', () => {
     service.move.mockResolvedValue(task('1'))
     service.archive.mockResolvedValue(task('1'))
     service.unarchive.mockResolvedValue(task('1'))
+    service.complete.mockResolvedValue(task('1'))
     service.remove.mockResolvedValue(undefined)
     const store = useTaskStore()
 
@@ -96,8 +101,9 @@ describe('taskStore', () => {
     expect(await store.move('1', 'b')).toBe(true)
     expect(await store.archive('1')).toBe(true)
     expect(await store.unarchive('1')).toBe(true)
+    expect(await store.complete('1')).toBe(true)
     expect(await store.remove('1')).toBe(true)
-    expect(service.list).toHaveBeenCalledTimes(6)
+    expect(service.list).toHaveBeenCalledTimes(7)
   })
 
   it('retorna false e guarda o erro quando a mutação falha', async () => {

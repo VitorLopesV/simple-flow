@@ -17,6 +17,9 @@ const task: Task = {
   notes: null,
   archived: false,
   sprintId: null,
+  done: false,
+  completedAt: null,
+  late: false,
   archivedAt: null,
   createdAt: '2026-11-01T00:00:00Z',
 }
@@ -37,5 +40,42 @@ describe('TaskItem — Google Agenda', () => {
   ])('não mostra o link %s', (_label, patch) => {
     const wrapper = mount(TaskItem, { props: { task: { ...task, ...patch } } })
     expect(wrapper.find('[data-testid="add-to-calendar"]').exists()).toBe(false)
+  })
+})
+
+describe('TaskItem — conclusão', () => {
+  const ready: Task = { ...task, difficulty: 'DIFICIL', priority: 'ALTA', day: '2099-01-01', time: null }
+
+  it('emite complete pelo botão Concluir', async () => {
+    const wrapper = mount(TaskItem, { props: { task: ready } })
+
+    await wrapper.get('[data-testid="complete-task"]').trigger('click')
+    expect(wrapper.emitted('complete')).toHaveLength(1)
+  })
+
+  it('tarefa concluída é só leitura: sem concluir, editar, mover, arquivar nem excluir', () => {
+    const wrapper = mount(TaskItem, { props: { task: { ...ready, done: true, completedAt: '2026-11-18T10:00:00Z' } } })
+
+    expect(wrapper.find('[data-testid="complete-task"]').exists()).toBe(false)
+    expect(wrapper.findAll('button')).toHaveLength(0)
+    expect(wrapper.get('[data-testid="deadline-done"]').text()).toContain('15 pts')
+  })
+
+  it('concluída com atraso mostra os pontos reduzidos (20%)', () => {
+    const wrapper = mount(TaskItem, { props: { task: { ...ready, done: true, late: true } } })
+
+    expect(wrapper.get('[data-testid="deadline-done-late"]').text()).toContain('3 pts (20%)')
+  })
+
+  it('pendente com prazo vencido avisa dos 20% antes de concluir', () => {
+    const wrapper = mount(TaskItem, { props: { task: { ...ready, day: '2020-01-01' } } })
+
+    expect(wrapper.get('[data-testid="deadline-overdue"]').text()).toContain('3 de 15 pts')
+  })
+
+  it('pendente dentro do prazo não mostra aviso de atraso', () => {
+    const wrapper = mount(TaskItem, { props: { task: ready } })
+
+    expect(wrapper.find('[data-testid="deadline-overdue"]').exists()).toBe(false)
   })
 })

@@ -6,6 +6,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import BaseToggleGroup from '@/components/common/BaseToggleGroup.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import CompleteConfirmDialog from '@/components/features/CompleteConfirmDialog.vue'
 import SprintAddTaskModal from '@/components/features/SprintAddTaskModal.vue'
 import SprintDayColumn from '@/components/features/SprintDayColumn.vue'
 import SprintMoveDialog from '@/components/features/SprintMoveDialog.vue'
@@ -15,10 +16,11 @@ import { notify } from '@/composables/useNotify'
 import { useAreaStore } from '@/stores/areaStore'
 import { useSprintStore } from '@/stores/sprintStore'
 import { useTaskStore } from '@/stores/taskStore'
-import type { SprintWhich } from '@/types/sprint'
+import type { RoutineOccurrence, SprintWhich } from '@/types/sprint'
 import { SPRINT_WHICH_OPTIONS } from '@/types/sprint'
 import type { Task } from '@/types/task'
 import { formatDate } from '@/utils/dateFormatter'
+import { fullPoints, latePoints, wouldBeLate } from '@/utils/taskCompletion'
 
 const store = useSprintStore()
 const areaStore = useAreaStore()
@@ -28,6 +30,9 @@ const addOpen = ref(false)
 const addDay = ref<string | null>(null)
 const moveOpen = ref(false)
 const toMove = ref<Task | null>(null)
+const completeOpen = ref(false)
+const taskToComplete = ref<Task | null>(null)
+const occurrenceToComplete = ref<RoutineOccurrence | null>(null)
 const removeOpen = ref(false)
 const toRemove = ref<Task | null>(null)
 /** Dia mostrado no celular (abas); em telas largas todos os dias aparecem. */
@@ -83,6 +88,36 @@ async function confirmMove(day: string): Promise<void> {
     moveOpen.value = false
     toMove.value = null
   }
+}
+
+function askCompleteTask(task: Task): void {
+  taskToComplete.value = task
+  occurrenceToComplete.value = null
+  completeOpen.value = true
+}
+
+function askCompleteOccurrence(occurrence: RoutineOccurrence): void {
+  occurrenceToComplete.value = occurrence
+  taskToComplete.value = null
+  completeOpen.value = true
+}
+
+/** Conclui o que foi confirmado; o store recarrega sprint e placar, que atualizam na hora. */
+async function confirmComplete(): Promise<void> {
+  const task = taskToComplete.value
+  const occurrence = occurrenceToComplete.value
+  if (task) {
+    if (!(await store.completeTask(task.id))) return
+    notify.success('Tarefa concluída', task.title)
+  } else if (occurrence?.id) {
+    if (!(await store.completeOccurrence(occurrence.id))) return
+    notify.success('Rotina concluída', occurrence.name)
+  } else {
+    return
+  }
+  completeOpen.value = false
+  taskToComplete.value = null
+  occurrenceToComplete.value = null
 }
 
 function askRemove(task: Task): void {
@@ -156,6 +191,8 @@ async function confirmRemove(): Promise<void> {
           @add="openAdd(column.date)"
           @move="askMove"
           @remove="askRemove"
+          @complete-task="askCompleteTask"
+          @complete-occurrence="askCompleteOccurrence"
         />
       </div>
     </template>
@@ -176,6 +213,17 @@ async function confirmRemove(): Promise<void> {
       :days="store.columns"
       :loading="store.saving"
       @confirm="confirmMove"
+    />
+
+    <CompleteConfirmDialog
+      v-model:open="completeOpen"
+      :kind="occurrenceToComplete ? 'routine' : 'task'"
+      :name="taskToComplete?.title ?? occurrenceToComplete?.name ?? ''"
+      :overdue="taskToComplete ? wouldBeLate(taskToComplete) : false"
+      :points="taskToComplete ? fullPoints(taskToComplete) : null"
+      :reduced-points="taskToComplete ? latePoints(taskToComplete) : null"
+      :loading="store.saving"
+      @confirm="confirmComplete"
     />
 
     <ConfirmDialog

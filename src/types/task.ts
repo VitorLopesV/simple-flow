@@ -26,11 +26,12 @@ export interface Task {
   notes: string | null
   /** Sprint em que a tarefa está; `null` = só no backlog. */
   sprintId: ID | null
-  /**
-   * Ainda não vêm da API (conclusão é da issue #144 e a Super task da #65): ficam opcionais
-   * para o front não quebrar quando o backend passar a devolvê-los.
-   */
-  done?: boolean
+  /** Conclusão é definitiva: a tarefa concluída fica só para leitura. */
+  done: boolean
+  /** Instante (ISO) da conclusão; `null` enquanto pendente. */
+  completedAt: string | null
+  /** Concluída fora do prazo: vale 20% dos pontos. O backend só marca depois de concluir. */
+  late: boolean
   /** Nome da Super task pai, quando a tarefa é filha de uma. */
   superTaskName?: string | null
   archived: boolean
@@ -41,7 +42,7 @@ export interface Task {
 /** Campos editáveis; a área muda só por `move`, que valida o destino. */
 export type TaskEdit = Omit<
   Task,
-  'id' | 'areaId' | 'sprintId' | 'done' | 'superTaskName' | 'archived' | 'archivedAt' | 'createdAt'
+  'id' | 'areaId' | 'sprintId' | 'done' | 'completedAt' | 'late' | 'superTaskName' | 'archived' | 'archivedAt' | 'createdAt'
 >
 
 export type TaskPayload = TaskEdit & Pick<Task, 'areaId'>

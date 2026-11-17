@@ -431,6 +431,9 @@ describe('tarefas', () => {
     prioridade: 'ALTA' as const,
     notas: 'Comprar tinta',
     sprintId: 'spr_1',
+    concluidaEm: null,
+    concluida: false,
+    atrasada: false,
     arquivada: false,
     arquivadaEm: null,
     criadoEm: '2026-11-01T10:00:00.000Z',
@@ -449,6 +452,8 @@ describe('tarefas', () => {
       notes: 'Comprar tinta',
       sprintId: 'spr_1',
       done: false,
+      completedAt: null,
+      late: false,
       superTaskName: null,
       archived: false,
       archivedAt: null,
@@ -456,11 +461,14 @@ describe('tarefas', () => {
     })
   })
 
-  it('lê conclusão e Super task quando a API passar a devolvê-las', () => {
-    expect(toTask({ ...DTO, concluida: true, superTaskNome: 'Mudança' })).toMatchObject({
-      done: true,
-      superTaskName: 'Mudança',
-    })
+  it('lê a conclusão definitiva e o atraso devolvidos pela API', () => {
+    expect(
+      toTask({ ...DTO, concluida: true, concluidaEm: '2026-12-01T15:00:00.000Z', atrasada: true }),
+    ).toMatchObject({ done: true, completedAt: '2026-12-01T15:00:00.000Z', late: true })
+  })
+
+  it('lê a Super task quando a API passar a devolvê-la', () => {
+    expect(toTask({ ...DTO, superTaskNome: 'Mudança' })).toMatchObject({ superTaskName: 'Mudança' })
   })
 
   it('preserva os campos vazios como null', () => {

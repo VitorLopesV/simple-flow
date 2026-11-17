@@ -88,4 +88,34 @@ describe('taskService (mock)', () => {
     expect(await taskService.list()).toHaveLength(0)
     await expect(taskService.remove(created.id)).rejects.toThrow('não encontrada')
   })
+
+  describe('conclusão', () => {
+    it('conclui de forma definitiva e idempotente', async () => {
+      const created = await taskService.create(payload(areaId))
+      const done = await taskService.complete(created.id)
+      expect(done).toMatchObject({ done: true, late: false, completedAt: expect.any(String) })
+
+      const again = await taskService.complete(created.id)
+      expect(again.completedAt).toBe(done.completedAt)
+    })
+
+    it('tarefa concluída não pode ser editada, movida, arquivada nem excluída', async () => {
+      const other = await areaService.create({ name: 'Faculdade', color: '#10b981' })
+      const created = await taskService.create(payload(areaId))
+      await taskService.complete(created.id)
+
+      await expect(taskService.update(created.id, { ...payload(areaId), title: 'Outro' })).rejects.toThrow(
+        'definitiva',
+      )
+      await expect(taskService.move(created.id, other.id)).rejects.toThrow('definitiva')
+      await expect(taskService.archive(created.id)).rejects.toThrow('definitiva')
+      await expect(taskService.remove(created.id)).rejects.toThrow('definitiva')
+    })
+
+    it('tarefa arquivada não pode ser concluída', async () => {
+      const created = await taskService.create(payload(areaId))
+      await taskService.archive(created.id)
+      await expect(taskService.complete(created.id)).rejects.toThrow('arquivada')
+    })
+  })
 })

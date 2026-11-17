@@ -82,6 +82,9 @@ describe('areaService (mock)', () => {
       notes: null,
       archived: false,
       sprintId: null,
+      done: false,
+      completedAt: null,
+      late: false,
       archivedAt: null,
       createdAt: '',
     })
