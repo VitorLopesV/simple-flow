@@ -1,13 +1,31 @@
 <script setup lang="ts">
-import { CircleCheck } from '@lucide/vue'
+import { CircleCheck, Clock, ListChecks, TriangleAlert, Trophy } from '@lucide/vue'
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseSkeleton from '@/components/common/BaseSkeleton.vue'
 import notificationsIcon from '@/img/notifications_icon.svg'
 import type { AppNotification } from '@/types/notification'
 import { formatDate } from '@/utils/dateFormatter'
 
-const props = defineProps<{ notifications: AppNotification[] }>()
+const props = withDefaults(
+  defineProps<{
+    notifications: AppNotification[]
+    /** Ids já vistos: só os novos entram no contador do sino. */
+    seenIds?: string[]
+    loading?: boolean
+    error?: string | null
+  }>(),
+  { seenIds: () => [], loading: false, error: null },
+)
+
+const emit = defineEmits<{
+  /** O popup abriu: quem controla os dados pode recarregar os alertas. */
+  open: []
+  /** Ids exibidos ao abrir, para virarem "vistos". */
+  seen: [ids: string[]]
+  retry: []
+}>()
 
 const open = ref(false)
 const root = ref<HTMLElement | null>(null)
@@ -19,9 +37,22 @@ const popupId = `${id}-popup`
 const titleId = `${id}-title`
 const contentId = `${id}-content`
 
+/** Total na lista (cabeçalho do popup) e novos (badge do sino e nome acessível). */
 const count = computed(() => props.notifications.length)
+const unseen = computed(() => props.notifications.filter((item) => !props.seenIds.includes(item.id)).length)
 const countLabel = computed(() => `${count.value} ${count.value === 1 ? 'alerta' : 'alertas'}`)
-const triggerLabel = computed(() => (count.value ? `Notificações: ${countLabel.value}` : 'Notificações'))
+const triggerLabel = computed(() => {
+  if (!unseen.value) return 'Notificações'
+  return `Notificações: ${unseen.value} ${unseen.value === 1 ? 'alerta novo' : 'alertas novos'}`
+})
+
+/** Alertas que eram novos quando o popup abriu: ficam destacados até ele fechar, mesmo já marcados como vistos. */
+const highlighted = ref<string[]>([])
+
+const KIND_ICON = { TAREFA_ATRASADA: Clock, ROTINA_INCOMPLETA: ListChecks, RESULTADO_SPRINT: Trophy } as const
+function iconFor(kind: string | undefined) {
+  return KIND_ICON[kind as keyof typeof KIND_ICON] ?? null
+}
 
 /** O `url()` precisa de aspas: o Vite embute o SVG como `data:` URL com espaços, que quebram o CSS sem elas. */
 const iconMask = `url("${notificationsIcon}") center / contain no-repeat`
@@ -53,6 +84,9 @@ function closeOnFocusOut(event: FocusEvent): void {
 // para o popup, e o leitor de tela anuncia o título e o conteúdo.
 watch(open, async (isOpen) => {
   if (isOpen) {
+    highlighted.value = props.notifications.filter((item) => !props.seenIds.includes(item.id)).map((item) => item.id)
+    emit('open')
+    emit('seen', props.notifications.map((item) => item.id))
     window.addEventListener('keydown', closeOnEscape)
     document.addEventListener('mousedown', closeOnClickOutside)
     await nextTick()
@@ -92,12 +126,12 @@ onBeforeUnmount(() => {
         aria-hidden="true"
       ></span>
       <span
-        v-if="count"
+        v-if="unseen"
         data-testid="notification-badge"
         class="bg-danger text-danger-foreground ring-background tabular-number absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[0.625rem] leading-none font-semibold ring-2"
         aria-hidden="true"
       >
-        {{ count > 9 ? '9+' : count }}
+        {{ unseen > 9 ? '9+' : unseen }}
       </span>
     </BaseButton>
 
@@ -119,15 +153,34 @@ onBeforeUnmount(() => {
       </div>
 
       <div :id="contentId">
-        <ul v-if="count" class="thin-scroll divide-border max-h-[min(51.75rem,90vh)] divide-y overflow-y-auto">
+        <div v-if="loading && !count" data-testid="notifications-loading" class="px-4 py-6">
+          <BaseSkeleton :lines="3" height="h-8" />
+        </div>
+
+        <div v-else-if="error && !count" data-testid="notifications-error" class="flex flex-col items-center gap-3 px-6 py-16 text-center">
+          <span class="bg-danger-soft text-danger rounded-full p-3">
+            <TriangleAlert class="size-5" aria-hidden="true" />
+          </span>
+          <p class="text-foreground text-sm font-medium" role="alert">{{ error }}</p>
+          <BaseButton size="sm" variant="outline" data-testid="notifications-retry" @click="emit('retry')">
+            Tentar de novo
+          </BaseButton>
+        </div>
+
+        <ul v-else-if="count" class="thin-scroll divide-border max-h-[min(51.75rem,90vh)] divide-y overflow-y-auto">
           <li
             v-for="notification in notifications"
             :key="notification.id"
             data-testid="notification-item"
             class="px-4 py-3"
+            :class="highlighted.includes(notification.id) && 'bg-primary/5'"
           >
             <div class="flex items-start justify-between gap-3">
-              <p class="text-foreground min-w-0 text-sm font-medium wrap-break-word">{{ notification.title }}</p>
+              <p class="text-foreground flex min-w-0 items-center gap-2 text-sm font-medium wrap-break-word">
+                <component :is="iconFor(notification.kind)" v-if="iconFor(notification.kind)" class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+                <span v-if="highlighted.includes(notification.id)" class="sr-only">Novo: </span>
+                {{ notification.title }}
+              </p>
               <time :datetime="notification.date" class="text-muted-foreground tabular-number shrink-0 text-xs">
                 {{ formatDate(notification.date) }}
               </time>

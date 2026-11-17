@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Menu } from '@lucide/vue'
+import { onMounted } from 'vue'
 
 import BaseButton from '@/components/common/BaseButton.vue'
 import NotificationMenu from '@/components/features/NotificationMenu.vue'
@@ -9,6 +10,9 @@ import { useNotificationStore } from '@/stores/notificationStore'
 const emit = defineEmits<{ openMenu: [] }>()
 
 const notificationStore = useNotificationStore()
+
+// O cabeçalho só existe com sessão aberta: carrega os alertas ao entrar e recarrega a cada abertura do sino.
+onMounted(() => notificationStore.load())
 </script>
 
 <template>
@@ -27,7 +31,15 @@ const notificationStore = useNotificationStore()
     </BaseButton>
 
     <div class="ml-auto flex items-center gap-2">
-      <NotificationMenu :notifications="notificationStore.notifications" />
+      <NotificationMenu
+        :notifications="notificationStore.notifications"
+        :seen-ids="notificationStore.seenIds"
+        :loading="notificationStore.loading"
+        :error="notificationStore.error"
+        @open="notificationStore.load()"
+        @seen="notificationStore.markSeen"
+        @retry="notificationStore.load()"
+      />
       <UserMenu />
     </div>
   </header>

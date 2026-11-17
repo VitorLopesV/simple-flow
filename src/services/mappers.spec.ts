@@ -11,6 +11,8 @@ import {
   toExpense,
   toExpensePayloadDto,
   toExpenseSummary,
+  toHomeSummary,
+  toNotifications,
   toIncome,
   toNavigationLimits,
   toIncomePayloadDto,
@@ -916,5 +918,85 @@ describe('histórico de sprints', () => {
       total: 0,
       totalPages: 0,
     })
+  })
+})
+
+describe('home', () => {
+  const occurrence = { id: 'ocr_1', nome: 'Treino', data: '2026-11-18', hora: '07:00', concluida: true, concluidaEm: '2026-11-18T10:00:00.000Z' }
+
+  it('converte o resumo da Home para o domínio em inglês', () => {
+    const home = toHomeSummary({
+      hoje: '2026-11-18',
+      fimDeSemana: false,
+      semana: { inicio: '2026-11-16', fim: '2026-11-22' },
+      missaoDoDia: { total: 2, concluidas: 1, ocorrencias: [occurrence, { ...occurrence, id: null, concluida: false, concluidaEm: null }] },
+      tarefasDeHoje: [
+        {
+          id: 't1', titulo: 'Estudar', areaId: 'a1', dia: '2026-11-18', hora: '09:00', tempoEstimado: 60,
+          dificuldade: 'MEDIA', prioridade: 'ALTA', noSprint: true, concluida: false, concluidaEm: null, atrasada: true,
+        },
+      ],
+      placar: {
+        sprintId: 'spr_1', inicio: '2026-11-16', fim: '2026-11-20', fechado: true, fechadoEm: '2026-11-20T23:59:00.000Z',
+        total: 100, feitos: 92, percentual: 92, bonus: true, recompensa: 'Cinema',
+      },
+      contasDaSemana: {
+        total: 150.5,
+        quantidade: 1,
+        contas: [
+          { id: 'sai_1', descricao: 'Luz', valor: 150.5, vencimento: '2026-11-19', vencida: false, automatica: true, categoriaId: 'c1', formaPagamento: 'CARTAO_CREDITO' },
+        ],
+      },
+      financas: {
+        competencia: '2026-11', totalEntradas: 1000, totalSaidas: 400, saldo: 600, totalFaturas: 100,
+        variacaoEntradas: 0.1, variacaoSaidas: -0.2,
+        serieEntradas: [{ label: 'nov/26', valor: 1000 }], serieSaidas: [{ label: 'nov/26', valor: 400 }],
+      },
+      lembretes: [{ ...occurrence, id: 'ocr_2', nome: 'Ligar para a família', concluida: false, concluidaEm: null }],
+    })
+
+    expect(home.today).toBe('2026-11-18')
+    expect(home.weekend).toBe(false)
+    expect(home.week).toEqual({ start: '2026-11-16', end: '2026-11-22' })
+    expect(home.mission.occurrences[0]).toEqual({
+      id: 'ocr_1', name: 'Treino', date: '2026-11-18', time: '07:00', done: true, completedAt: '2026-11-18T10:00:00.000Z',
+    })
+    expect(home.mission.occurrences[1]!.id).toBeNull()
+    expect(home.todayTasks[0]).toMatchObject({ title: 'Estudar', day: '2026-11-18', inSprint: true, done: false, overdue: true, estimateMinutes: 60 })
+    expect(home.scoreboard).toEqual({
+      sprintId: 'spr_1', startDate: '2026-11-16', endDate: '2026-11-20', closed: true, closedAt: '2026-11-20T23:59:00.000Z',
+      total: 100, done: 92, percentage: 92, bonus: true, reward: 'Cinema',
+    })
+    expect(home.weekBills).toEqual({
+      total: 150.5,
+      count: 1,
+      bills: [
+        { id: 'sai_1', description: 'Luz', amount: 150.5, dueDate: '2026-11-19', overdue: false, automatic: true, categoryId: 'c1', paymentMethod: 'CARTAO_CREDITO' },
+      ],
+    })
+    expect(home.finances).toMatchObject({ referenceMonth: '2026-11', totalIncome: 1000, totalExpenses: 400, balance: 600, incomeChange: 0.1 })
+    expect(home.finances.incomeSeries).toEqual([{ label: 'nov/26', value: 1000 }])
+    expect(home.reminders[0]).toMatchObject({ name: 'Ligar para a família', done: false })
+  })
+})
+
+describe('alertas do sino', () => {
+  it('converte os alertas, preservando a ordem e o tipo', () => {
+    const list = toNotifications({
+      hoje: '2026-11-18',
+      alertas: [
+        { id: 'rotina-incompleta:2026-11-18', tipo: 'ROTINA_INCOMPLETA', titulo: 'Rotina de hoje incompleta', descricao: 'Você concluiu 1 de 3 itens.', data: '2026-11-18' },
+        { id: 'tarefa-atrasada:t1:2026-11-17', tipo: 'TAREFA_ATRASADA', titulo: 'Tarefa atrasada', descricao: '"Estudar" venceu.', data: '2026-11-17' },
+      ],
+    })
+
+    expect(list).toEqual([
+      { id: 'rotina-incompleta:2026-11-18', kind: 'ROTINA_INCOMPLETA', title: 'Rotina de hoje incompleta', description: 'Você concluiu 1 de 3 itens.', date: '2026-11-18' },
+      { id: 'tarefa-atrasada:t1:2026-11-17', kind: 'TAREFA_ATRASADA', title: 'Tarefa atrasada', description: '"Estudar" venceu.', date: '2026-11-17' },
+    ])
+  })
+
+  it('lista vazia vira lista vazia', () => {
+    expect(toNotifications({ hoje: '2026-11-18', alertas: [] })).toEqual([])
   })
 })

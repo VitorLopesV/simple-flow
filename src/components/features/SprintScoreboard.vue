@@ -6,7 +6,8 @@ import BaseBadge from '@/components/common/BaseBadge.vue'
 import type { Scoreboard } from '@/types/sprint'
 
 const props = defineProps<{
-  scoreboard: Scoreboard
+  /** Na Home só vêm os totais; o detalhe de rotina e tarefas aparece quando informado (página Sprint). */
+  scoreboard: Pick<Scoreboard, 'total' | 'done' | 'percentage' | 'bonus'> & Partial<Pick<Scoreboard, 'routine' | 'tasks'>>
   preview?: boolean
   /** Sprint fechado: o placar é a foto gravada no fechamento. */
   closed?: boolean
@@ -68,7 +69,7 @@ const barWidth = computed(() => `${Math.min(100, Math.max(0, props.scoreboard.pe
       />
     </div>
 
-    <dl class="text-muted-foreground grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
+    <dl v-if="scoreboard.routine && scoreboard.tasks" class="text-muted-foreground grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
       <div class="flex gap-1">
         <dt>Rotina:</dt>
         <dd data-testid="scoreboard-routine">

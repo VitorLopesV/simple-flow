@@ -8,9 +8,13 @@ import ProfileModal from '@/components/features/ProfileModal.vue'
 import UserAvatar from '@/components/features/UserAvatar.vue'
 import { notify } from '@/composables/useNotify'
 import { useAuthStore } from '@/stores/authStore'
+import { useHomeStore } from '@/stores/homeStore'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
+const homeStore = useHomeStore()
 
 const menuOpen = ref(false)
 const profileOpen = ref(false)
@@ -39,6 +43,9 @@ function openProfile(): void {
 
 async function logOut(): Promise<void> {
   menuOpen.value = false
+  // Alertas e resumo da Home são do usuário: não podem aparecer para a próxima conta da mesma aba.
+  notificationStore.reset()
+  homeStore.reset()
   authStore.clearSession()
   notify.success('Deslogado com sucesso')
   await router.push({ name: 'login' })

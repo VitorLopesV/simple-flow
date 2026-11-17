@@ -7,6 +7,8 @@
  * arquivo e `types/dto.ts` mudam.
  */
 import type { Area, AreaPayload } from '@/types/area'
+import type { HomeBill, HomeOccurrence, HomeSummary, HomeTask } from '@/types/home'
+import type { AppNotification } from '@/types/notification'
 import type { User, UserSession, LoginPayload, ProfilePayload, RegisterPayload } from '@/types/auth'
 import type { Category } from '@/types/category'
 import type { RoutineItem, RoutinePayload } from '@/types/routine'
@@ -31,6 +33,12 @@ import type {
 } from '@/types/creditCard'
 import type { CategoryTotal, DashboardSummary, RecentTransaction } from '@/types/dashboard'
 import type {
+  AlertDto,
+  AlertsDto,
+  HomeBillDto,
+  HomeOccurrenceDto,
+  HomeSummaryDto,
+  HomeTaskDto,
   AreaDto,
   AreaPayloadDto,
   CardTransactionDto,
@@ -623,4 +631,102 @@ export function toSprintHistoryEntry(dto: SprintHistoryEntryDto): SprintHistoryE
 
 export function toSprintHistoryPage(dto: SprintHistoryPageDto): Paginated<SprintHistoryEntry> {
   return mapPage(dto, toSprintHistoryEntry)
+}
+
+// -------------------------------------------------------------------- home
+
+function toHomeOccurrence(dto: HomeOccurrenceDto): HomeOccurrence {
+  return {
+    id: dto.id,
+    name: dto.nome,
+    date: dto.data,
+    time: dto.hora,
+    done: dto.concluida,
+    completedAt: dto.concluidaEm,
+  }
+}
+
+function toHomeTask(dto: HomeTaskDto): HomeTask {
+  return {
+    id: dto.id,
+    title: dto.titulo,
+    areaId: dto.areaId,
+    day: dto.dia,
+    time: dto.hora,
+    estimateMinutes: dto.tempoEstimado,
+    difficulty: dto.dificuldade,
+    priority: dto.prioridade,
+    inSprint: dto.noSprint,
+    done: dto.concluida,
+    completedAt: dto.concluidaEm,
+    overdue: dto.atrasada,
+  }
+}
+
+function toHomeBill(dto: HomeBillDto): HomeBill {
+  return {
+    id: dto.id,
+    description: dto.descricao,
+    amount: dto.valor,
+    dueDate: dto.vencimento,
+    overdue: dto.vencida,
+    automatic: dto.automatica,
+    categoryId: dto.categoriaId,
+    paymentMethod: dto.formaPagamento,
+  }
+}
+
+export function toHomeSummary(dto: HomeSummaryDto): HomeSummary {
+  const { placar, financas } = dto
+  return {
+    today: dto.hoje,
+    weekend: dto.fimDeSemana,
+    week: { start: dto.semana.inicio, end: dto.semana.fim },
+    mission: {
+      total: dto.missaoDoDia.total,
+      completed: dto.missaoDoDia.concluidas,
+      occurrences: dto.missaoDoDia.ocorrencias.map(toHomeOccurrence),
+    },
+    todayTasks: dto.tarefasDeHoje.map(toHomeTask),
+    scoreboard: {
+      sprintId: placar.sprintId,
+      startDate: placar.inicio,
+      endDate: placar.fim,
+      closed: placar.fechado,
+      closedAt: placar.fechadoEm,
+      total: placar.total,
+      done: placar.feitos,
+      percentage: placar.percentual,
+      bonus: placar.bonus,
+      reward: placar.recompensa,
+    },
+    weekBills: {
+      total: dto.contasDaSemana.total,
+      count: dto.contasDaSemana.quantidade,
+      bills: dto.contasDaSemana.contas.map(toHomeBill),
+    },
+    finances: {
+      referenceMonth: financas.competencia,
+      totalIncome: financas.totalEntradas,
+      totalExpenses: financas.totalSaidas,
+      balance: financas.saldo,
+      totalInvoices: financas.totalFaturas,
+      incomeChange: financas.variacaoEntradas,
+      expenseChange: financas.variacaoSaidas,
+      incomeSeries: financas.serieEntradas.map(toSeriesPoint),
+      expenseSeries: financas.serieSaidas.map(toSeriesPoint),
+    },
+    reminders: dto.lembretes.map(toHomeOccurrence),
+  }
+}
+
+// ----------------------------------------------------------------- alertas
+
+export function toNotification(dto: AlertDto): AppNotification {
+  return { id: dto.id, kind: dto.tipo, title: dto.titulo, description: dto.descricao, date: dto.data }
+}
+
+/** Resposta de `GET /alertas`: a lista já vem ordenada pelo backend (mais recente primeiro). */
+export function toNotifications(dto: AlertsDto): AppNotification[] {
+  return dto.alertas.map(toNotification)
 }
